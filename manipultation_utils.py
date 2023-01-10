@@ -35,7 +35,7 @@ GVSP_LAYER = 'Gvsp'
 GVCP_LAYER = 'GvcpCmd'
 
 # PARAMETERS
-method = Method.WINDOWS_MATLAB_REC
+method = Method.WINDOWS_VIMBA
 camera_mac = '00:0f:31:03:67:c4'
 cp_mac = '00:18:7d:c8:e6:31'
 
