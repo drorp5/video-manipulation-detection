@@ -47,6 +47,8 @@ if method == Method.WINDOWS_VIMBA:
     img_width = 1936
     img_height = 1216
     max_payload_bytes = 8963
+    sendp_frame_ampiric_time = 0.13
+     
 elif method == Method.WINDOWS_MATLAB_REC:
     interface = 'Ethernet 6'
     cp_ip = '192.168.1.100'
@@ -332,3 +334,11 @@ class GigELink():
         return payload_pixels
 
     
+def main():
+    link = GigELink(interface)
+    link.sniff_link_parameters()
+    fake_path = r'INPUT/stop_sign_road.jpg'
+    link.fake_still_image(fake_path, duration=5, frame_rate=1/sendp_frame_ampiric_time)
+
+if __name__ == "__main__":
+    main()
