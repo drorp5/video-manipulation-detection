@@ -16,6 +16,7 @@ from enum import IntEnum, Enum
 
 class GigERegisters(IntEnum):
     ACQUISITION = 0x000130f4
+    CCP = 0x0a00
 
 class Method(Enum):
     WINDOWS_VIMBA = 1
@@ -161,7 +162,7 @@ class GigELink():
                 gvsp_dst_port = pkt[UDP_LAYER].dport
                 self.set_gvsp_dst_port(gvsp_dst_port)
                 print(f'Found GVSP port {gvsp_dst_port}')
-            elif not gvcp_port_found and pkt.haslayer("GVCP_CMD") and pkt["GVCP_CMD"].Command==0x0080: #TODO change command 
+            elif not gvcp_port_found and pkt.haslayer(GVCP_LAYER) and pkt[GVCP_LAYER].Command==0x0080 and pkt[GVCP_LAYER].RegisterAddress==GigERegisters.CCP: #TODO change command 
                 if pkt[UDP_LAYER].sport not in gvcp_excluded_ports:
                     gvcp_src_port = pkt[UDP_LAYER].sport
                     self.set_gvcp_src_port(gvcp_src_port)
