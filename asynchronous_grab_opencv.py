@@ -30,6 +30,7 @@ import cv2
 from typing import Optional
 from vimba import *
 
+CV2_CONVERSIONS = {PixelFormat.BayerRG8: cv2.COLOR_BayerRG2RGB}
 
 def print_preamble():
     print('///////////////////////////////////////////////////////')
@@ -148,7 +149,12 @@ class Handler:
             print('{} acquired {}'.format(cam, frame), flush=True)
 
             msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-            cv2.imshow(msg.format(cam.get_name()), frame.as_opencv_image())
+            img = frame.as_opencv_image()
+            
+            pixel_format = frame.get_pixel_format()
+            if pixel_format in CV2_CONVERSIONS.keys():
+                img = cv2.cvtColor(img, CV2_CONVERSIONS[pixel_format])
+            
 
         cam.queue_frame(frame)
 
