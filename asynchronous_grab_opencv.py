@@ -121,13 +121,13 @@ def setup_camera(cam: Camera):
         color_fmts = intersect_pixel_formats(cv_fmts, COLOR_PIXEL_FORMATS)
 
         if color_fmts:
-            cam.set_pixel_format(color_fmts[0])
-
+            seleted_frame_format = color_fmts[0]
+            cam.set_pixel_format(seleted_frame_format)            
         else:
             mono_fmts = intersect_pixel_formats(cv_fmts, MONO_PIXEL_FORMATS)
-
             if mono_fmts:
-                cam.set_pixel_format(mono_fmts[0])
+                seleted_frame_format = mono_fmts[0]
+                cam.set_pixel_format(seleted_frame_format)
 
             else:
                 abort('Camera does not support a OpenCV compatible format natively. Abort.')
@@ -155,6 +155,14 @@ class Handler:
             if pixel_format in CV2_CONVERSIONS.keys():
                 img = cv2.cvtColor(img, CV2_CONVERSIONS[pixel_format])
             
+            downfactor = 4
+            width = int(img.shape[1] / downfactor)
+            height = int(img.shape[0] / downfactor)
+            dim = (width, height)
+
+            resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)                
+            window_name = msg.format(cam.get_name())           
+            cv2.imshow(window_name, resized)
 
         cam.queue_frame(frame)
 
