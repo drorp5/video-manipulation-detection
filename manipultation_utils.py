@@ -147,8 +147,8 @@ class GigELink():
                 src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
                 Command="WRITEREG_CMD", Flags=0x01, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
         else:
-        cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
-            src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
+            cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
+                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
                 Command="WRITEREG_CMD", Flags=0x00, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
         return cmd
 
@@ -272,7 +272,7 @@ class GigELink():
             pktdump = PcapWriter('debugging_cfrafted_gvsp.pcap', append=False, sync=True)
             for pkt in gvsp_packets:
                 pktdump.write(pkt)
-        pktdump.close()  
+            pktdump.close()  
 
         return gvsp_packets
         
@@ -301,7 +301,7 @@ class GigELink():
             iteration_ended = time.time()
             iterations_time.append(iteration_ended-itertation_started)
             
-            self.last_block_id =  self.last_block_id + 1
+            self.last_block_id =  self.last_block_id + 1            
              
         aliasing_finished = time.time()
         print(f'Faking for {aliasing_finished-aliasing_started} seconds')
