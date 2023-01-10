@@ -288,18 +288,28 @@ class GigELink():
         num_frames = round(duration * frame_rate)        
         print(f'Number of fake frames = {num_frames}')
         print(f'Last GVSP BlockID = {self.last_block_id}')
-        # gvsp_fake_packets = []
+        gvsp_fake_packets = self.img_to_gvsp(img_path, block_id=default_block_id)
         aliasing_started = time.time()
+        iterations_time = []
         for _ in range(num_frames):
-            gvsp_fake_packets = self.img_to_gvsp(img_path, block_id=self.last_block_id+1)
-            sendp(gvsp_fake_packets, iface=self.interface, count=1, verbose=False) 
+            for pkt in gvsp_fake_packets:
+                pkt[GVSP_LAYER].BlockID = self.last_block_id + 1
+            itertation_started = time.time()
+            sendp(gvsp_fake_packets, iface=self.interface, verbose=False) 
+            iteration_ended = time.time()
+            iterations_time.append(iteration_ended-itertation_started)
+            
             self.last_block_id =  self.last_block_id + 1
+             
         aliasing_finished = time.time()
         print(f'Faking for {aliasing_finished-aliasing_started} seconds')
         
         print("Starting acquisition")
         self.send_start_command(count=1)
 
+        print(f'average iteration time = {np.average(np.array(iterations_time))}')
+        
+        
     def bgr_to_bayer_rg(self, img_bgr):
         # note: in open cv I need to read the image as bayer BG to convert it correctly
         (B,G,R) = cv2.split(img_bgr)
