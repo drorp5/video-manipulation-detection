@@ -139,18 +139,23 @@ class GigELink():
         print('GVSP:')
         print(f'Camera {self.camera_ip}({GVSP_SRC_PORT}) ---> CP {self.cp_ip}({self.gvsp_dst_port})')
 
-    def _get_aquisition_cmd(self, reg_val):
+    def _get_aquisition_cmd(self, reg_val, ack_required = False):
+        if ack_required:
+            cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
+                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
+                Command="WRITEREG_CMD", Flags=0x01, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
+        else:
         cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
             src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
                 Command="WRITEREG_CMD", Flags=0x00, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
         return cmd
 
-    def send_stop_command(self, count=1):
-        cmd = self._get_aquisition_cmd(reg_val=0)
+    def send_stop_command(self, count=1, ack_required = False):
+        cmd = self._get_aquisition_cmd(reg_val=0, ack_required=ack_required)
         sendp(cmd, iface=self.interface, count=count, verbose=False)  
         
-    def send_start_command(self, count=1):
-        cmd = self._get_aquisition_cmd(reg_val=1)
+    def send_start_command(self, count=1, ack_required = False):
+        cmd = self._get_aquisition_cmd(reg_val=1, ack_required=ack_required)
         sendp(cmd, iface=self.interface, count=count, verbose=False)
          
     def sniff_link_parameters(self):
