@@ -9,7 +9,7 @@ NUM_CHANNELS = 3
 class StopSignDetector(ABC):
     @abstractmethod
     def detect(self, img: np.ndarray) -> List[np.ndarray]:
-        pass
+        raise NotImplementedError
 
     @staticmethod
     def draw_bounding_boxes(img, bounding_boxes):
@@ -20,7 +20,7 @@ class StopSignDetector(ABC):
 
 class HaarStopSignDetector(StopSignDetector):
     def __init__(self, config_path, grayscale=False, blur=False):
-        self.stop_sign_cascade = cv2.CascadeClassifier(config_path)
+        self.detector = cv2.CascadeClassifier(config_path)
         self.grayscale = grayscale
         self.blur = blur
 
@@ -29,6 +29,49 @@ class HaarStopSignDetector(StopSignDetector):
             img = cv2.GaussianBlur(img, (5, 5), 0)
         if self.grayscale:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)        
-        stop_signs = self.stop_sign_cascade.detectMultiScale(img, scaleFactor=1.05, minNeighbors=15, minSize=(30, 30))
+        stop_signs = self.detector.detectMultiScale(img, scaleFactor=1.05, minNeighbors=15, minSize=(30, 30))
         return stop_signs
 
+
+class YoloStopSignDetector(StopSignDetector):
+    def __init__(self, confidence_th=0.5, nms_th=0.4 ):
+        self.classes = open('detectors/coco.names').read().strip().split('\n')
+        self.target_class = 11
+        self.config_path = r'detectors/yolov4-tiny.cfg'
+        self.weights_path = r'detectors/yolov4-tiny.weights'
+        self.detector = cv2.dnn.readNetFromDarknet(self.config_path, self.weights_path)
+        ln = self.detector.getLayerNames()
+        self.ln = [ln[i[0] - 1] for i in self.detector.getUnconnectedOutLayers()]
+        self.inference_shape = (416,416)
+        self.confidence_th = confidence_th
+        self.nms_th = nms_th
+
+    def detect(self, img: np.ndarray) -> List[np.ndarray]:
+        blob = cv2.dnn.blobFromImage(img, 1/MAX_PIXEL_VALUE, self.inference_shape, swapRB=True, crop=False)
+        self.detector.setInput(blob)
+        outputs = self.detector.forward(self.ln)
+
+        boxes = []
+        confidences = []
+        h, w = img.shape[:2]
+
+        for output in outputs:
+            for detection in output:
+                scores = detection[5:]
+                classID = np.argmax(scores)
+                if classID == self.target_class:
+                    confidence = scores[classID]
+                    if confidence > self.confidence_th:
+                        box = detection[:4] * np.array([w, h, w, h])
+                        (centerX, centerY, width, height) = box.astype("int")
+                        x = int(centerX - (width / 2))
+                        y = int(centerY - (height / 2))
+                        box = [x, y, int(width), int(height)]
+                        boxes.append(box)
+                        confidences.append(float(confidence))
+        # boxes = np.array(boxes)
+        indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_th, self.nms_th)
+        if len(indices) > 0:
+            indices = indices[:,0]
+        boxes = [boxes[i] for i in indices]
+        return boxes
