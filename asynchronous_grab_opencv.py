@@ -29,7 +29,7 @@ import sys
 import cv2
 from typing import Optional
 from vimba import *
-from detectors.haar_detector import StopSignDetector, draw_bounding_boxes
+from detectors.stop_sign_detectors import StopSignDetector, HaarStopSignDetector
 
 CV2_CONVERSIONS = {PixelFormat.BayerRG8: cv2.COLOR_BayerRG2RGB}
 
@@ -137,7 +137,7 @@ def setup_camera(cam: Camera):
 class Handler:
     def __init__(self):
         self.shutdown_event = threading.Event()
-        self.detector = StopSignDetector(r"./detectors/stop_sign_classifier_2.xml")
+        self.detector = HaarStopSignDetector(r"./detectors/stop_sign_classifier_2.xml")
 
     def __call__(self, cam: Camera, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -164,7 +164,7 @@ class Handler:
             resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)                
 
             detections = self.detector.detect(resized)
-            plotting = draw_bounding_boxes(resized, detections)
+            plotting = StopSignDetector.draw_bounding_boxes(resized, detections)
 
             window_name = msg.format(cam.get_name())           
             cv2.imshow(window_name, plotting)
