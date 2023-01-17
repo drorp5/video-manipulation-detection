@@ -11,16 +11,17 @@ class StopSignDetector(ABC):
     def detect(self, img: np.ndarray) -> List[np.ndarray]:
         raise NotImplementedError
 
-    @staticmethod
-    def draw_bounding_boxes(img, bounding_boxes):
-        for (x,y,w,h) in bounding_boxes:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (MAX_PIXEL_VALUE, MAX_PIXEL_VALUE, 0), NUM_CHANNELS)
-        return img
+    
+def draw_bounding_boxes(img, bounding_boxes):
+    for (x,y,w,h) in bounding_boxes:
+        cv2.rectangle(img, (x, y), (x+w, y+h), (MAX_PIXEL_VALUE, MAX_PIXEL_VALUE, 0), NUM_CHANNELS)
+    return img
 
 
-class HaarStopSignDetector(StopSignDetector):
-    def __init__(self, config_path, grayscale=False, blur=False):
-        self.detector = cv2.CascadeClassifier(config_path)
+class HaarDetector(StopSignDetector):
+    def __init__(self, grayscale=False, blur=False):
+        self.config_path = r"detectors/stop_sign_classifier_2.xml"
+        self.detector = cv2.CascadeClassifier(self.config_path)
         self.grayscale = grayscale
         self.blur = blur
 
@@ -33,7 +34,7 @@ class HaarStopSignDetector(StopSignDetector):
         return stop_signs
 
 
-class YoloStopSignDetector(StopSignDetector):
+class YoloDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5, nms_th=0.4 ):
         self.classes = open('detectors/coco.names').read().strip().split('\n')
         self.target_class = 11

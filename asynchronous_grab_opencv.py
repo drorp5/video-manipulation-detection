@@ -29,7 +29,7 @@ import sys
 import cv2
 from typing import Optional
 from vimba import *
-from detectors.stop_sign_detectors import StopSignDetector, HaarStopSignDetector, YoloStopSignDetector
+from detectors import stop_sign_detectors as detectors 
 
 CV2_CONVERSIONS = {PixelFormat.BayerRG8: cv2.COLOR_BayerRG2RGB}
 
@@ -137,8 +137,10 @@ def setup_camera(cam: Camera):
 class Handler:
     def __init__(self):
         self.shutdown_event = threading.Event()
-        # self.detector = HaarStopSignDetector(r"./detectors/stop_sign_classifier_2.xml")
-        self.detector = YoloStopSignDetector()
+        # self.detector = detectors.HaarDetector()
+        # self.detector = detectors.YoloDetector()
+        self.detector = detectors.MobileNetDetector()
+        self.downfactor = 4
 
     def __call__(self, cam: Camera, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -157,15 +159,13 @@ class Handler:
             pixel_format = frame.get_pixel_format()
             if pixel_format in CV2_CONVERSIONS.keys():
                 img = cv2.cvtColor(img, CV2_CONVERSIONS[pixel_format])
-            
-            downfactor = 4
-            width = int(img.shape[1] / downfactor)
-            height = int(img.shape[0] / downfactor)
+            width = int(img.shape[1] / self.downfactor)
+            height = int(img.shape[0] / self.downfactor)
             dim = (width, height)
             resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)                
 
             detections = self.detector.detect(resized)
-            plotting = StopSignDetector.draw_bounding_boxes(resized, detections)
+            plotting = detectors.draw_bounding_boxes(resized, detections)
 
             window_name = msg.format(cam.get_name())           
             cv2.imshow(window_name, plotting)
