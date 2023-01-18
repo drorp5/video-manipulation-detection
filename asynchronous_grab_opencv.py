@@ -27,9 +27,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import threading
 import sys
 import cv2
-from typing import Optional
+from typing import Dict, Optional
 from vimba import *
 from detectors import stop_sign_detectors as detectors 
+import argparse
 
 CV2_CONVERSIONS = {PixelFormat.BayerRG8: cv2.COLOR_BayerRG2RGB}
 
@@ -58,10 +59,15 @@ def abort(reason: str, return_code: int = 1, usage: bool = False):
     sys.exit(return_code)
 
 
-def parse_args() -> Optional[str]:
-    args = sys.argv[1:]
-    argc = len(args)
+def parse_args() -> Dict:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-id", "--camera_id", help="camera ID for direct access")
+    parser.add_argument("-d", "--detector", choices=detectors.get_detectors_dict(), help="detection method")
 
+    # parser.add_argument("-h", "--help")
+    
+    args = parser.parse_args()
+    """
     for arg in args:
         if arg in ('/h', '-h'):
             print_usage()
@@ -71,7 +77,8 @@ def parse_args() -> Optional[str]:
         abort(reason="Invalid number of arguments. Abort.", return_code=2, usage=True)
 
     return None if argc == 0 else args[0]
-
+    """
+    return args
 
 def get_camera(camera_id: Optional[str]) -> Camera:
     with Vimba.get_instance() as vimba:
@@ -135,11 +142,9 @@ def setup_camera(cam: Camera):
 
 
 class Handler:
-    def __init__(self):
+    def __init__(self, detector_name: str):
         self.shutdown_event = threading.Event()
-        # self.detector = detectors.HaarDetector()
-        # self.detector = detectors.YoloDetector()
-        self.detector = detectors.MobileNetDetector()
+        self.detector = detectors.get_detector(detector_name)
         self.downfactor = 4
 
     def __call__(self, cam: Camera, frame: Frame):
@@ -162,27 +167,28 @@ class Handler:
             width = int(img.shape[1] / self.downfactor)
             height = int(img.shape[0] / self.downfactor)
             dim = (width, height)
-            resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)                
-
-            detections = self.detector.detect(resized)
-            plotting = detectors.draw_bounding_boxes(resized, detections)
+            processed_img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)                
+            if self.detector is not None:
+                detections = self.detector.detect(processed_img)
+                processed_img = detectors.draw_bounding_boxes(processed_img, detections)
 
             window_name = msg.format(cam.get_name())           
-            cv2.imshow(window_name, plotting)
-
+            cv2.imshow(window_name, processed_img)
         cam.queue_frame(frame)
 
 
 def main():
     print_preamble()
-    cam_id = parse_args()
+    args = parse_args()
+    cam_id = args.camera_id
+    detector = args.detector
 
     with Vimba.get_instance():
         with get_camera(cam_id) as cam:
 
             # Start Streaming, wait for five seconds, stop streaming
             setup_camera(cam)
-            handler = Handler()
+            handler = Handler(detector)
 
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
