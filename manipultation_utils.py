@@ -12,7 +12,8 @@ from scapy.all import sniff ,sendp, sendpfast, rdpcap, Raw, PcapWriter,\
 from scapy.all import hexdump
 import time
 from enum import IntEnum, Enum
-
+import argparse
+from pathlib import Path
 
 class GigERegisters(IntEnum):
     ACQUISITION = 0x000130f4
@@ -47,7 +48,7 @@ if method == Method.WINDOWS_VIMBA:
     img_width = 1936
     img_height = 1216
     max_payload_bytes = 8963
-    sendp_frame_ampiric_time = 0.13
+    sendp_ampiric_frame_time = 0.13
      
 elif method == Method.WINDOWS_MATLAB_REC:
     interface = 'Ethernet 6'
@@ -333,12 +334,26 @@ class GigELink():
         payload_pixels.append(dst_pixels[(num_packets-1)*self.max_payload_bytes:])
         return payload_pixels
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--path", required=True, help="path to fake image")
+    parser.add_argument("-d", "--duration", type=float, default=5, help="duration of faking")
+    parser.add_argument("-r", "--frame_rate", type=float, default=1/sendp_ampiric_frame_time,
+        help="stream frame rate")
     
+    args = parser.parse_args()
+    path = Path(args.path)
+    if not path.exists():
+        parser.exit(1, message="The input image doesn't exist")
+    args.path = str(path.resolve())
+    return args
+
 def main():
+    args = parse_args()
     link = GigELink(interface)
     link.sniff_link_parameters()
-    fake_path = r'INPUT/stop_sign_road.jpg'
-    link.fake_still_image(fake_path, duration=5, frame_rate=1/sendp_frame_ampiric_time)
+    link.fake_still_image(args.path, duration=args.duration, frame_rate=args.frame_rate)
 
 if __name__ == "__main__":
     main()
