@@ -10,13 +10,27 @@ class StopSignDetector(ABC):
     @abstractmethod
     def detect(self, img: np.ndarray) -> List[np.ndarray]:
         raise NotImplementedError
-
     
 def draw_bounding_boxes(img, bounding_boxes):
     for (x,y,w,h) in bounding_boxes:
         cv2.rectangle(img, (x, y), (x+w, y+h), (MAX_PIXEL_VALUE, MAX_PIXEL_VALUE, 0), NUM_CHANNELS)
     return img
 
+def list_detectors() -> List[str]:
+        return list(get_detectors_dict().keys())
+
+def get_detectors_dict():
+    return {"Haar": HaarDetector, 
+            "Yolo": YoloDetector,
+            "MobileNet": MobileNetDetector}
+
+def get_detector(detector_name: str) -> StopSignDetector:
+    if detector_name is None:
+        return None
+    detectors_dict = get_detectors_dict()
+    if detector_name not in detectors_dict:
+        raise ValueError
+    return detectors_dict[detector_name]()
 
 class HaarDetector(StopSignDetector):
     def __init__(self, grayscale=False, blur=False):
