@@ -31,8 +31,8 @@ from typing import Dict, Optional
 from vimba import *
 from detectors import stop_sign_detectors as detectors 
 import argparse
+from config import CV2_CONVERSIONS
 
-CV2_CONVERSIONS = {PixelFormat.BayerRG8: cv2.COLOR_BayerRG2RGB}
 
 def print_preamble():
     print('///////////////////////////////////////////////////////')
