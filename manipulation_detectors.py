@@ -284,25 +284,34 @@ class CombinedDetector(ManipulationDetector):
                 return detector_status
         return ManipulationDetectionResult(None, True, FakeDetectionStatus.REAL)
 
-    def validate_experiments(self) -> Dict[str, float]:
-        results = {}
-        for detector in self.metadata_detectors + self.image_processing_detectors:
-            detector_status = detector.validate()
-            results[detector.name] = detector_status.score
-        return results
-
     def post_process(self) -> None:
         for detector in self.metadata_detectors + self.image_processing_detectors:
             detector.post_process()
 
     def detect(self, frame: Frame) -> Tuple[bool, str]:
         self.pre_process(frame)
-        detection_results = self.validate()
+        detection_result = self.validate()
         self.post_process()
-        is_real_img = detection_results.passed
-        message = detection_results.message.value
+        is_real_img = detection_result.passed
+        message = detection_result.message.value
         return is_real_img, message
     
+    def validate_experiments(self) -> Tuple[bool, Dict[str, float]]:
+        results = {}
+        passed = True
+        for detector in self.metadata_detectors + self.image_processing_detectors:
+            detector_status = detector.validate()
+            results[detector.name] = detector_status.score
+            if not detector_status.passed:
+                passed = False
+        return passed, results
+
+    def detect_experiments(self, frame: Frame) -> Tuple[bool, Dict]:
+        self.pre_process(frame)
+        passed, detection_results = self.validate_experiments()
+        self.post_process()
+        return passed, detection_results
+
 
 if __name__ == "__main__":
     path1 = r"INPUT/stop_sign_road.jpg"
