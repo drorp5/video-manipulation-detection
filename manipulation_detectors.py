@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from vimba import Frame, PixelFormat
 import numpy as np
 import cv2
@@ -11,14 +11,41 @@ from skimage import metrics
 
 class FakeDetectionStatus(Enum):
     REAL = 'OK'
-    WIDTH_FAILURE = 'Width Mismatch'
-    HEIGHT_FAILURE = 'Height Mismatch'
-    PIXEL_FORMAT_FAILURE = 'Pixel Format Mismatch'
+    FIRST = 'Not compared to anything'
+    CONSTANT_METADATA_FAILURE = "The constant metadata does not match the previoous frame"
     FRAME_ID_FAILURE = 'Frame ID Mismatch'
     TIMESTAMP_FAILURE = 'Timestamp Mismatch'
+    TIMESTAMP_RATE_FAILURE = 'Timestamp Mismatch'
     IDENTICAL_DETECTED = 'Identical Image Detected'
     HISTOGRAM_MISMATCH = "Hue Saturation Histogram Mismatch"
     
+
+@dataclass
+class ManipulationDetectionResult():
+    score: float
+    passed: bool
+    message: FakeDetectionStatus
+    
+
+class ManipulationDetector(ABC):
+    """Abstract class for manipulation detector"""
+    @abstractmethod
+    def validate(self) -> ManipulationDetectionResult:
+        pass
+
+    @property
+    @abstractmethod
+    def fake_status(self) -> FakeDetectionStatus:
+        pass
+
+    @abstractmethod
+    def post_process(self) -> None:
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
 
 @dataclass
 class FrameConstantMetadata:
@@ -42,7 +69,7 @@ def extract_varying_metadata(frame: Frame) -> FrameVaryingMetadata:
     timestamp = frame.get_timestamp()
     return FrameVaryingMetadata(frame_id=frame_id, timestamp=timestamp)
 
-class MetadataDetector(ABC):
+class MetadataDetector(ManipulationDetector):
     def __init__(self):
         self.current_metadata = None
         self.prev_metadata = None
@@ -51,63 +78,131 @@ class MetadataDetector(ABC):
     def pre_process(self, frame: Frame) -> None:
         pass
 
-    @abstractmethod
-    def validate(self) -> FakeDetectionStatus:
-        pass
-    
     def post_process(self) -> None:
         self.prev_metadata = self.current_metadata
         self.current_metadata = None
 
-
 class ConstantMetadataDetector(MetadataDetector):    
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.CONSTANT_METADATA_FAILURE
+    
     def pre_process(self, frame: Frame):
         self.current_metadata = extract_constant_metadata(frame)
         
-    def validate(self) -> FakeDetectionStatus:
+    def validate(self) -> ManipulationDetectionResult:
         if self.prev_metadata is None:
-            return FakeDetectionStatus.REAL
-        if self.current_metadata.width != self.prev_metadata.width:
-            return FakeDetectionStatus.WIDTH_FAILURE
-        if self.current_metadata.height != self.prev_metadata.height:
-            return FakeDetectionStatus.HEIGHT_FAILURE
-        if self.current_metadata.pixel_format != self.prev_metadata.pixel_format:  # TODO: check if compared like this
-            return FakeDetectionStatus.PIXEL_FORMAT_FAILURE
-        return FakeDetectionStatus.REAL
+            return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
+        if self.current_metadata != self.prev_metadata:  # TODO: check if compared like this
+            return ManipulationDetectionResult(0, False, self.fake_status)
+        return ManipulationDetectionResult(1, True, FakeDetectionStatus.REAL)
 
-        
+    @property
+    def name(self) -> str:
+        return 'ConstantMetadata'
+
 class VaryingMetadataDetector(MetadataDetector):
-    def __init__(self, timestamp_tolerance : float, frame_id_tolerance: int = 1): # TODO: check units of timestamp and add to name
-        self.frame_id_tolerance = frame_id_tolerance
-        self.timestamp_tolerance = timestamp_tolerance
+    """Abstract class for detection based on incremental frmae metadata"""
+    def __init__(self, tolerance):
+        self.tolerance = tolerance
         super().__init__()
     
-    def pre_process(self, frame: Frame) -> None:
-        self.current_metadata = extract_varying_metadata(frame)
+    @abstractmethod
+    def calc_score(self) -> float:
+        pass
 
-    def validate(self) ->FakeDetectionStatus:
+    def validate(self) -> ManipulationDetectionResult:
         if self.prev_metadata is None:
-            return FakeDetectionStatus.REAL
-        if not self.check_frame_id():
-            return FakeDetectionStatus.FRAME_ID_FAILURE
-        if not self.check_timestamp():
-            return FakeDetectionStatus.TIMESTAMP_FAILURE
-        return FakeDetectionStatus.REAL
-        
-    def check_frame_id(self) -> bool:
+            return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
+        score = self.calc_score()
+        if score >  self.tolerance:
+            return ManipulationDetectionResult(score, False, self.fake_status)
+        return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
+
+class FrameIDDetector(VaryingMetadataDetector):
+    """Detection using frame ID"""
+    def __init__(self, tolerance: int = 1):
+        self.tolerance = tolerance
+        super().__init__()
+    
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.FRAME_ID_FAILURE
+    
+    def calc_score(self) -> float:
         current_frame_id = self.current_metadata.frame_id
         prev_frame_id = self.prev_metadata.frame_id
-        return abs(current_frame_id - prev_frame_id) < self.frame_id_tolerance
+        return  abs(current_frame_id - prev_frame_id)   
     
-    def check_timestamp(self) -> bool:
+    @property
+    def name(self) -> str:
+        return "FrameID"
+
+class TimestampDetector(VaryingMetadataDetector):
+    """Detection using frame relative timetamp"""
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.TIMESTAMP_FAILURE
+
+    def calc_score(self) -> float:
         current_timestamp = self.current_metadata.timestamp
         prev_timestamp = self.prev_metadata.timestamp
-        return abs(current_timestamp - prev_timestamp) < self.timestamp_tolerance
+        return abs(current_timestamp - prev_timestamp)
+    
+    @property
+    def name(self) -> str:
+        return "Timestamp"
+        
+class TimestampRateDetector(VaryingMetadataDetector):
+    """Detection using timestamp change rate"""
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.TIMESTAMP_RATE_FAILURE
 
-    def check_timestamp_rate(self, frame: Frame) -> bool:
-        #TODO: implement      
-        return True
+    def calc_score(self) -> float: 
+        #TODO: implement
+        pass
 
+    @property
+    def name(self) -> str:
+        return "TimestampRate"
+      
+class ImageProcessingDetector(ManipulationDetector):
+    "Abstract class for detection based on image processing techniques"
+
+    @abstractmethod
+    def pre_process(self, rgb_img: np.ndarray) -> None:
+        pass
+    
+class MSEImageDetector(ImageProcessingDetector):
+    "Detector based on mean squared error distance to check if identical"
+    def __init__(self, min_th: float) -> None:
+        self.min_th = min_th
+        self.current_rgb_img = None
+        self.prev_rgb_img = None
+
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.IDENTICAL_DETECTED
+
+    def pre_process(self, rgb_img: np.ndarray) -> None:
+        self.current_rgb_img = rgb_img
+    
+    def validate(self) -> ManipulationDetectionResult:
+        if self.prev_rgb_img is None:
+             return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
+        score = metrics.mean_squared_error(self.current_rgb_img, self.prev_rgb_img)
+        if score < self.min_th:
+            return ManipulationDetectionResult(score, False, self.fake_status)
+        return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
+
+    def post_process(self) -> None:
+        self.prev_rgb_img = self.current_rgb_img
+        self.current_rgb_img = None
+    
+    @property
+    def name(self) -> str:
+        return "MSE"
 
 @dataclass
 class Histogram:
@@ -120,42 +215,6 @@ class Histogram:
     def histograms_similarity(self, other : Histogram) -> float:
         """ Measure similarity between two histograms."""
         return cv2.compareHist(self.hist, other.hist, method=3)
-        
-class ImageProcessingDetector(ABC):
-    """Abstract class for detection based on classic image processing techniques"""
-    @abstractmethod
-    def pre_process(self, rgb_img: np.ndarray) -> None:
-        pass    
-
-    @abstractmethod
-    def validate(self) -> FakeDetectionStatus:
-        pass
-
-    @abstractmethod
-    def post_process(self) -> None:
-        pass
-
-class MSEImageDetector(ImageProcessingDetector):
-    "Detector based on mean squared error distance to check if identical"
-    def __init__(self, min_th: float) -> None:
-        self.min_th = min_th
-        self.current_rgb_img = None
-        self.prev_rgb_img = None
-
-    def pre_process(self, rgb_img: np.ndarray) -> None:
-        self.current_rgb_img = rgb_img
-    
-    def validate(self) -> FakeDetectionStatus:
-        if self.prev_rgb_img is None:
-            return FakeDetectionStatus.REAL
-        mean_sqared_error = metrics.mean_squared_error(self.current_rgb_img, self.prev_rgb_img)
-        if mean_sqared_error < self.min_th:
-            return FakeDetectionStatus.IDENTICAL_DETECTED
-        return FakeDetectionStatus.REAL
-
-    def post_process(self) -> None:
-        self.prev_rgb_img = self.current_rgb_img
-        self.current_rgb_img = None
 
 def hue_saturation_histogram(rgb_img: np.ndarray, hue_bins: int = 50, saturation_bins: int = 60) -> Histogram:
     """Calculate Hue-Saturation Histogram."""
@@ -175,19 +234,29 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
         self.hue_bins = hue_bins
         self.saturation_bins = saturation_bins
         
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.HISTOGRAM_MISMATCH
+
     def pre_process(self, rgb_img: np.ndarray) -> None:
         self.current_hist = hue_saturation_histogram(rgb_img, hue_bins=self.hue_bins, saturation_bins=self.saturation_bins)
         self.current_hist.normalize()
 
-    def validate(self) -> FakeDetectionStatus:
-        hist_similarity = self.current_hist.histograms_similarity(self.prev_hist)
-        if hist_similarity < self.min_th:
-            return FakeDetectionStatus.HISTOGRAM_MISMATCH
-        return FakeDetectionStatus.REAL
+    def validate(self) -> ManipulationDetectionResult:
+        if self.prev_rgb_img is None:
+             return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
+        score = self.current_hist.histograms_similarity(self.prev_hist)
+        if score < self.min_th:
+            return ManipulationDetectionResult(score, False, self.fake_status)
+        return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
 
     def post_process(self) -> None:
         self.prev_hist = self.current_hist
         self.current_hist = None
+    
+    @property
+    def name(self) -> str:
+        return "Histogram"
      
 def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: CV2_CONVERSIONS = None): #TODO: change conversion code
     """Extract RGB image from gvsp frame object"""
@@ -195,36 +264,43 @@ def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: CV2_CONVERSIONS = N
     rgb_img = cv2.cvtColor(img, cv2_transformation_code)
     return rgb_img
 
-class CombinedDetector():
+class CombinedDetector(ManipulationDetector):
     """Comibe metadata detectors and image procssing detectors to detect fake frames."""
-    def __init__(self, metadata_detectors: List[MetadataDetector], image_proessing_detectors: List[ImageProcessingDetector]):
+    def __init__(self, metadata_detectors: List[MetadataDetector], image_processing_detectors: List[ImageProcessingDetector]):
         self.metadata_detectors = metadata_detectors
-        self.image_proessing_detectors = image_proessing_detectors
+        self.image_processing_detectors = image_processing_detectors
 
     def pre_process(self, frame: Frame) -> None:
         for detector in self.metadata_detectors:
             detector.pre_process(frame)
         rgb_img = gvsp_frame_to_rgb(frame)
-        for detector in self.image_proessing_detectors:
+        for detector in self.image_processing_detectors:
             detector.pre_process(rgb_img)
 
-    def validate(self) -> FakeDetectionStatus:
-        for detector in self.metadata_detectors + self.image_proessing_detectors:
+    def validate(self) -> ManipulationDetectionResult:
+        for detector in self.metadata_detectors + self.image_processing_detectors:
             detector_status = detector.validate()
-            if not detector_status == FakeDetectionStatus.REAL:
+            if not detector_status.passed:
                 return detector_status
-        return FakeDetectionStatus.REAL
-        
+        return ManipulationDetectionResult(None, True, FakeDetectionStatus.REAL)
+
+    def validate_experiments(self) -> Dict[str, float]:
+        results = {}
+        for detector in self.metadata_detectors + self.image_processing_detectors:
+            detector_status = detector.validate()
+            results[detector.name] = detector_status.score
+        return results
+
     def post_process(self) -> None:
-        for detector in self.metadata_detectors + self.image_proessing_detectors:
+        for detector in self.metadata_detectors + self.image_processing_detectors:
             detector.post_process()
 
     def detect(self, frame: Frame) -> Tuple[bool, str]:
         self.pre_process(frame)
-        fake_detection_status = self.validate()
+        detection_results = self.validate()
         self.post_process()
-        is_real_img = fake_detection_status == FakeDetectionStatus.REAL
-        message = fake_detection_status.value
+        is_real_img = detection_results.passed
+        message = detection_results.message.value
         return is_real_img, message
     
 
