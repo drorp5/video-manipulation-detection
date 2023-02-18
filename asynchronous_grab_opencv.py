@@ -29,7 +29,7 @@ import sys
 import cv2
 from typing import Dict, Optional
 from vimba import *
-from detectors import stop_sign_detectors as detectors 
+from sign_detectors import stop_sign_detectors as detectors 
 import argparse
 from config import CV2_CONVERSIONS
 

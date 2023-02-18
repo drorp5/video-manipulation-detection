@@ -34,7 +34,7 @@ def get_detector(detector_name: str) -> StopSignDetector:
 
 class HaarDetector(StopSignDetector):
     def __init__(self, grayscale=False, blur=False):
-        self.config_path = r"detectors/stop_sign_classifier_2.xml"
+        self.config_path = r"sign_detectors/stop_sign_classifier_2.xml"
         self.detector = cv2.CascadeClassifier(self.config_path)
         self.grayscale = grayscale
         self.blur = blur
@@ -50,10 +50,10 @@ class HaarDetector(StopSignDetector):
 
 class YoloDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5, nms_th=0.4 ):
-        self.classes = open('detectors/coco.names').read().strip().split('\n')
+        self.classes = open('sign_detectors/coco.names').read().strip().split('\n')
         self.target_class = 11
-        self.config_path = r'detectors/yolov4-tiny.cfg'
-        self.weights_path = r'detectors/yolov4-tiny.weights'
+        self.config_path = r'sign_detectors/yolov4-tiny.cfg'
+        self.weights_path = r'sign_detectors/yolov4-tiny.weights'
         self.detector = cv2.dnn.readNetFromDarknet(self.config_path, self.weights_path)
         ln = self.detector.getLayerNames()
         self.ln = [ln[i[0] - 1] for i in self.detector.getUnconnectedOutLayers()]
@@ -93,10 +93,10 @@ class YoloDetector(StopSignDetector):
 
 class MobileNetDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5):
-        self.classes = open('detectors/coco.names').read().strip().split('\n')
+        self.classes = open('sign_detectors/coco.names').read().strip().split('\n')
         self.target_class = [11,13]
-        self.config_path = r'detectors/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
-        self.weights_path = r'detectors/ssd_mobilenet_v3_largefrozen_inference_graph.pb'
+        self.config_path = r'sign_detectors/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
+        self.weights_path = r'sign_detectors/ssd_mobilenet_v3_largefrozen_inference_graph.pb'
         self.detector = cv2.dnn_DetectionModel(self.weights_path, self.config_path)
         self.inference_shape = (320,320)
         self.detector.setInputSize(self.inference_shape[0], self.inference_shape[1]) #greater this value better the reults tune it for best output
