@@ -3,22 +3,29 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Tuple
+import pandas as pd
 from vimba import Frame, PixelFormat
 import numpy as np
 import cv2
 from config import CV2_CONVERSIONS, MAX_PIXEL_VAL, MAX_SATURATION, MAX_HUE
 from skimage import metrics
+from transmission_mock import *
+from sign_detectors.stop_sign_detectors import HaarDetector
 
 class FakeDetectionStatus(Enum):
     REAL = 'OK'
     FIRST = 'Not compared to anything'
-    CONSTANT_METADATA_FAILURE = "The constant metadata does not match the previoous frame"
+    CONSTANT_METADATA_FAILURE = "The constant metadata does not match the previous frame"
     FRAME_ID_FAILURE = 'Frame ID Mismatch'
     TIMESTAMP_FAILURE = 'Timestamp Mismatch'
     TIMESTAMP_RATE_FAILURE = 'Timestamp Mismatch'
     IDENTICAL_DETECTED = 'Identical Image Detected'
     HISTOGRAM_MISMATCH = "Hue Saturation Histogram Mismatch"
+    COMBINED = "Any of the other failure messages"
     
+
+def nanoseconds_to_seconds(nano_sec: float) -> float:
+    return nano_sec / 1e9
 
 @dataclass
 class ManipulationDetectionResult():
@@ -62,12 +69,12 @@ def extract_constant_metadata(frame: Frame) -> FrameConstantMetadata:
 @dataclass
 class FrameVaryingMetadata:
     frame_id : int
-    timestamp : float # TODO: check and add units
+    timestamp_seconds : float
 
 def extract_varying_metadata(frame: Frame) -> FrameVaryingMetadata:
     frame_id = frame.get_id()
-    timestamp = frame.get_timestamp()
-    return FrameVaryingMetadata(frame_id=frame_id, timestamp=timestamp)
+    timestamp_seconds = nanoseconds_to_seconds(frame.get_timestamp())
+    return FrameVaryingMetadata(frame_id=frame_id, timestamp_seconds=timestamp_seconds)
 
 class MetadataDetector(ManipulationDetector):
     def __init__(self):
@@ -81,6 +88,14 @@ class MetadataDetector(ManipulationDetector):
     def post_process(self) -> None:
         self.prev_metadata = self.current_metadata
         self.current_metadata = None
+
+    def detect(self, frame: Frame) -> Tuple[bool, str]:
+        self.pre_process(frame)
+        detection_result = self.validate()
+        self.post_process()
+        is_real_img = detection_result.passed
+        message = detection_result.message.value
+        return is_real_img, message
 
 class ConstantMetadataDetector(MetadataDetector):    
     @property
@@ -102,11 +117,14 @@ class ConstantMetadataDetector(MetadataDetector):
         return 'ConstantMetadata'
 
 class VaryingMetadataDetector(MetadataDetector):
-    """Abstract class for detection based on incremental frmae metadata"""
+    """Abstract class for detection based on incremental frame metadata"""
     def __init__(self, tolerance):
         self.tolerance = tolerance
         super().__init__()
     
+    def pre_process(self, frame: Frame) -> None:
+        self.current_metadata = extract_varying_metadata(frame)
+
     @abstractmethod
     def calc_score(self) -> float:
         pass
@@ -122,8 +140,7 @@ class VaryingMetadataDetector(MetadataDetector):
 class FrameIDDetector(VaryingMetadataDetector):
     """Detection using frame ID"""
     def __init__(self, tolerance: int = 1):
-        self.tolerance = tolerance
-        super().__init__()
+        super().__init__(tolerance)
     
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -139,14 +156,14 @@ class FrameIDDetector(VaryingMetadataDetector):
         return "FrameID"
 
 class TimestampDetector(VaryingMetadataDetector):
-    """Detection using frame relative timetamp"""
+    """Detection using frame relative timestamp"""
     @property
     def fake_status(self) -> FakeDetectionStatus:
         return FakeDetectionStatus.TIMESTAMP_FAILURE
 
     def calc_score(self) -> float:
-        current_timestamp = self.current_metadata.timestamp
-        prev_timestamp = self.prev_metadata.timestamp
+        current_timestamp = self.current_metadata.timestamp_seconds
+        prev_timestamp = self.prev_metadata.timestamp_seconds
         return abs(current_timestamp - prev_timestamp)
     
     @property
@@ -174,6 +191,14 @@ class ImageProcessingDetector(ManipulationDetector):
     def pre_process(self, rgb_img: np.ndarray) -> None:
         pass
     
+    def detect(self, rgb_img: np.ndarray) -> Tuple[bool, str]:
+        self.pre_process(rgb_img)
+        detection_result = self.validate()
+        self.post_process()
+        is_real_img = detection_result.passed
+        message = detection_result.message.value
+        return is_real_img, message
+
 class MSEImageDetector(ImageProcessingDetector):
     "Detector based on mean squared error distance to check if identical"
     def __init__(self, min_th: float) -> None:
@@ -212,8 +237,8 @@ class Histogram:
         """ Normalize histogram. """
         self.hist = self.hist / np.sum(self.hist, axis=axis)
 
-    def histograms_similarity(self, other : Histogram) -> float:
-        """ Measure similarity between two histograms."""
+    def histograms_distance(self, other : Histogram) -> float:
+        """ Measure distance between two histograms."""
         return cv2.compareHist(self.hist, other.hist, method=3)
 
 def hue_saturation_histogram(rgb_img: np.ndarray, hue_bins: int = 50, saturation_bins: int = 60) -> Histogram:
@@ -233,6 +258,7 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
         self.min_th = min_th
         self.hue_bins = hue_bins
         self.saturation_bins = saturation_bins
+        self.prev_hist = None
         
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -243,10 +269,10 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
         self.current_hist.normalize()
 
     def validate(self) -> ManipulationDetectionResult:
-        if self.prev_rgb_img is None:
+        if self.prev_hist is None:
              return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
-        score = self.current_hist.histograms_similarity(self.prev_hist)
-        if score < self.min_th:
+        score = self.current_hist.histograms_distance(self.prev_hist)
+        if score > self.min_th:
             return ManipulationDetectionResult(score, False, self.fake_status)
         return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
 
@@ -258,7 +284,7 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
     def name(self) -> str:
         return "Histogram"
      
-def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: CV2_CONVERSIONS = None): #TODO: change conversion code
+def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: int =  CV2_CONVERSIONS[PixelFormat.BayerRG8]):
     """Extract RGB image from gvsp frame object"""
     img = frame.as_opencv_image()
     rgb_img = cv2.cvtColor(img, cv2_transformation_code)
@@ -270,10 +296,20 @@ class CombinedDetector(ManipulationDetector):
         self.metadata_detectors = metadata_detectors
         self.image_processing_detectors = image_processing_detectors
 
+    @property
+    def fake_status(self) -> FakeDetectionStatus:
+        return FakeDetectionStatus.COMBINED
+
+    @property
+    def name(self) -> str:
+        return "Combined"
+
+
     def pre_process(self, frame: Frame) -> None:
         for detector in self.metadata_detectors:
             detector.pre_process(frame)
         rgb_img = gvsp_frame_to_rgb(frame)
+        # plot_rgb(rgb_img)
         for detector in self.image_processing_detectors:
             detector.pre_process(rgb_img)
 
@@ -296,39 +332,75 @@ class CombinedDetector(ManipulationDetector):
         message = detection_result.message.value
         return is_real_img, message
     
-    def validate_experiments(self) -> Tuple[bool, Dict[str, float]]:
+    def validate_experiments(self) -> Tuple[bool, Dict[str, float, List[FakeDetectionStatus]]]:
         results = {}
         passed = True
+        status = []
         for detector in self.metadata_detectors + self.image_processing_detectors:
             detector_status = detector.validate()
             results[detector.name] = detector_status.score
             if not detector_status.passed:
                 passed = False
-        return passed, results
+                status.append(detector_status.message)
+        if len(status) == 0:
+            status.append(FakeDetectionStatus.REAL)
+        return passed, results, status
 
-    def detect_experiments(self, frame: Frame) -> Tuple[bool, Dict]:
+    def detect_experiments(self, frame: Frame) -> Tuple[bool, Dict, List[FakeDetectionStatus]]:
         self.pre_process(frame)
-        passed, detection_results = self.validate_experiments()
+        passed, detection_results, status = self.validate_experiments()
         self.post_process()
-        return passed, detection_results
+        return passed, detection_results, status
 
+
+def plot_rgb(rgb_img: np.ndarray) -> None:
+    fig, ax = plt.subplots(figsize=(10,5))
+    ax.imshow(rgb_img)
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
-    path1 = r"INPUT/stop_sign_road.jpg"
-    path2 = r"INPUT/stop_sign_road_2.jpg"
-    path3 = r"INPUT/stop_sign_road_3.jpg"
+    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
+    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\faking_matlab_rec_3.pcapng"
+    
+    
+    gvsp_transmission = MockGvspTransmission(gvsp_pcap_path=gvsp_path)
+    
+    constant_metadata_detector = ConstantMetadataDetector()
+    frame_id_detector = FrameIDDetector()
+    timestamp_detector = TimestampDetector(0.1 * 3)
 
-    img1 = cv2.imread(path1)
-    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
-    img2 = cv2.imread(path2)
-    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-    img3 = cv2.imread(path3)
-    img3 = cv2.cvtColor(img3, cv2.COLOR_BGR2RGB)
+    histogram_detector = HueSaturationHistogramDetector(0.4)
+    mse_detector = MSEImageDetector(0.01)
+    
+    combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector], [mse_detector, histogram_detector])
+    
+    stop_sign_detector = HaarDetector()
 
-    enriched_image_1 = EnrichedImage(img1)    
-    enriched_image_2 = EnrichedImage(img2)
-    enriched_image_3 = EnrichedImage(img3)
+    scores = []
+    stop_sign_detection = []
+    for frame in gvsp_transmission.frames:
+        if frame is not None:
+            passed, detection_results, status = combined_detector.detect_experiments(frame)
+            scores.append(detection_results)
+            ic(passed)
+            if not(passed):
+                ic(status)
+            # ic(combined_detector.detect_experiments(frame))
 
-    print(enriched_image_1.compare_histograms(enriched_image_2))
-    print(enriched_image_1.compare_histograms(enriched_image_3))
-    print(enriched_image_2.compare_histograms(enriched_image_3))
+            detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
+            stop_sign_detection.append(len(detections) > 0)
+            
+    scores_df = pd.DataFrame(scores)
+    fig, axs = plt.subplots(6,1)
+    axs[0].plot(stop_sign_detection)
+    axs[0].set_ylabel('stop sign')
+    ax_id = 1
+    for name, res in scores_df.iteritems():
+        ax = axs[ax_id]
+        res.plot(ax=axs[ax_id])
+        ax.grid(True)
+        ax.set_ylabel(name)
+        ax_id +=1
+    plt.show()
+    print(passed)
