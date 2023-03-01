@@ -30,6 +30,7 @@ import cv2
 from typing import Dict, Optional
 from vimba import *
 from sign_detectors import stop_sign_detectors as detectors 
+import time
 import argparse
 from config import CV2_CONVERSIONS
 
@@ -161,19 +162,36 @@ class Handler:
             msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
             img = frame.as_opencv_image()
             
+            conversion_started = time.time()
             pixel_format = frame.get_pixel_format()
             if pixel_format in CV2_CONVERSIONS.keys():
                 img = cv2.cvtColor(img, CV2_CONVERSIONS[pixel_format])
+            conversion_finished = time.time()
+            conversion_time = conversion_finished - conversion_started
+
+            resizing_started = time.time()
+            
             width = int(img.shape[1] / self.downfactor)
             height = int(img.shape[0] / self.downfactor)
             dim = (width, height)
             processed_img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)                
+            resizing_finished = time.time()
+            resizing_time = resizing_finished - resizing_started
+            
+            detection_started = time.time()
             if self.detector is not None:
                 detections = self.detector.detect(processed_img)
                 processed_img = detectors.draw_bounding_boxes(processed_img, detections)
+            detection_finished = time.time()
+            detection_time = detection_finished - detection_started
 
             window_name = msg.format(cam.get_name())           
             cv2.imshow(window_name, processed_img)
+            
+            print(f'Conversion time = {conversion_time}')
+            print(f'resizing time = {resizing_time}')
+            print(f'detection time = {detection_time}')
+            print(f'total processing time = {conversion_time + resizing_time + detection_time}')
         cam.queue_frame(frame)
 
 
