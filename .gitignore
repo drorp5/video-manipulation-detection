@@ -130,3 +130,4 @@ dmypy.json
 *.pcap
 
 settings.json
+INPUT/*.pcapng
