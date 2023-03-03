@@ -23,12 +23,7 @@ class MockFrame:
     def __init__(self, gvsp_frame_packets: PacketList):
         # check that starts with leader and ends with trailer
         assert gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER)
-        leader = gvsp_frame_packets[0]
-        self._id = leader.BlockID
-        self._timestamp = leader.Timestamp
-        self._width = leader.SizeX
-        self._height = leader.SizeY
-        self._pixel_format = INT_TO_PIXEL_FORMAT[leader.PixelFormat]
+        self.leader = gvsp_frame_packets[0]
         
         assert gvsp_frame_packets[1].PacketID == 1
         payload_length = len(bytes(gvsp_frame_packets[1][GVSP_LAYER].payload))
@@ -46,10 +41,10 @@ class MockFrame:
             pixels_bytes += pkt_bytes
             next_frame_id += 1
             
-        assert len(pixels_bytes) == self._height * self._width
+        assert len(pixels_bytes) == self.height * self.width
         pixels = np.array(pixels_bytes, dtype=np.uint8)
-        bggr_pixels = pixels.reshape((self._height, self._width))
-        self._img = np.empty((self._height, self._width), np.uint8)
+        bggr_pixels = pixels.reshape((self.height, self.width))
+        self._img = np.empty((self.height, self.width), np.uint8)
         # strided slicing for this pattern:
         #   R G
         #   G B
@@ -60,35 +55,35 @@ class MockFrame:
 
     @property
     def width(self):
-        return self._width
+        return self.leader.SizeX
 
     def get_width(self):
         return self.width
 
     @property
     def height(self):
-        return self._height
+        return self.leader.SizeY
 
     def get_height(self):
         return self.height
 
     @property
     def pixel_format(self):
-        return self._pixel_format
+        return self.INT_TO_PIXEL_FORMAT[self.leader.PixelFormat]
 
     def get_pixel_format(self):
         return self.pixel_format
 
     @property
     def id(self):
-        return self._id
+        return self.leader.BlockID
     
     def get_id(self):
         return self.id
 
     @property
     def timestamp(self):
-        return self._timestamp
+        return self.leader.Timestamp
 
     def get_timestamp(self):
         return self.timestamp
