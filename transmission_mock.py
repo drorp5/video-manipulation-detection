@@ -15,6 +15,8 @@ GVSP_TRAILER_LAYER = "GVSP_TRAILER"
 INT_TO_PIXEL_FORMAT = {0x1080009: PixelFormat.BayerRG8}
     
 
+class MissingLeaderError(Exception):
+    pass
 
 class MockFrame:
     """This class mocks GVSP frame for testing.
@@ -22,10 +24,12 @@ class MockFrame:
 
     def __init__(self, gvsp_frame_packets: PacketList):
         # check that starts with leader and ends with trailer
-        assert gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER)
+        if not gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER):
+            raise MissingLeaderError
         self.leader = gvsp_frame_packets[0]
 
-        raw_pixels = self.payload_packets_to_raw_image(gvsp_frame_packets[1:-1])        
+        raw_pixels, success_status = self.payload_packets_to_raw_image(gvsp_frame_packets[1:-1])        
+        self._success_status = success_status
         self._img = self.adjust_raw_image(raw_pixels) #TODO: account for pixel format
     
     def packet_id_to_payload_indices(self, packet_id: int, payload_size_bytes: int, max_payload_size_bytes: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -35,8 +39,10 @@ class MockFrame:
         start_index_ravelled =  (packet_id - 1) * pixels_per_packet
         return np.unravel_index(np.arange(payload_size_pixels) + start_index_ravelled, self.shape)
     
-    def payload_packets_to_raw_image(self, payload_packets: PacketList) -> np.ndarray:
+    def payload_packets_to_raw_image(self, payload_packets: PacketList) -> Tuple[np.ndarray, bool]:
         raw_pixels = np.zeros(self.shape, dtype=np.uint8)
+        assigned_pixels = np.zeros(self.shape, dtype=bool)
+        
         max_payload_size_bytes = np.max([len(bytes(pkt[GVSP_LAYER].payload)) for pkt in payload_packets])
         for packet in payload_packets:
             current_id = packet.PacketID
@@ -44,7 +50,8 @@ class MockFrame:
             rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id,payload_size_bytes=len(pkt_bytes),
                                                                         max_payload_size_bytes=max_payload_size_bytes)
             raw_pixels[rows_indices, cols_indices] = np.frombuffer(pkt_bytes, dtype=np.uint8)
-        return raw_pixels
+            assigned_pixels[rows_indices, cols_indices] = True
+        return raw_pixels, np.all(assigned_pixels)
     
     def bggr_to_rggb(self, bggr_pixels: np.ndarray) -> np.ndarray:
         rggb_pixels = np.empty((self.height, self.width), np.uint8)
@@ -55,7 +62,6 @@ class MockFrame:
         rggb_pixels[0::2, 0::2] = bggr_pixels[1::2, 1::2] # top left
         rggb_pixels[1::2, 1::2] = bggr_pixels[0::2, 0::2] # bottom right
         return rggb_pixels
-
 
     def adjust_raw_image(self, raw_image: np.ndarray) -> np.ndarray:
         return self.bggr_to_rggb(raw_image)
@@ -105,6 +111,10 @@ class MockFrame:
 
     def as_opencv_image(self):
         return self.img
+    
+    @property
+    def success_status(self):
+        return self._success_status
 
 
 class MockGvspTransmission():
@@ -114,7 +124,6 @@ class MockGvspTransmission():
         
     def _next(self) -> MockFrame or None:
         frame_id = None
-
         while(frame_id is None):
             try:
                 pkt = next(self.pcap_reader)
@@ -146,11 +155,11 @@ class MockGvspTransmission():
             yield frame
             try:
                 frame = self._next()
-            except Exception as e:
+                if not frame.success_status:
+                    frame = None
+            except MissingLeaderError as e:
                 frame = None
                         
-
-
 if __name__ == "__main__":
     from manipulation_detectors import gvsp_frame_to_rgb
     # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\single_frame_gvsp.pcapng"
