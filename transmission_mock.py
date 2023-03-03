@@ -135,7 +135,7 @@ class MockGvspTransmission():
             
         frame_packets = []
         is_gvsp_packet = pkt.haslayer(GVSP_LAYER)
-        while(pkt.BlockID == frame_id or not is_gvsp_packet):
+        while(not is_gvsp_packet or pkt.BlockID == frame_id):
             if is_gvsp_packet:
                 frame_packets.append(pkt)
                 if pkt.haslayer(GVSP_TRAILER_LAYER):
