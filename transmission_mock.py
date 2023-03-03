@@ -155,8 +155,6 @@ class MockGvspTransmission():
             yield frame
             try:
                 frame = self._next()
-                if not frame.success_status:
-                    frame = None
             except MissingLeaderError as e:
                 frame = None
                         
