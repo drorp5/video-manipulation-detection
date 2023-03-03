@@ -1,5 +1,5 @@
 from typing import Tuple
-from scapy.all import rdpcap, PacketList
+from scapy.all import rdpcap, PacketList, PcapReader
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer
 from vimba import PixelFormat
 import numpy as np
@@ -13,6 +13,8 @@ GVSP_LEADER_LAYER = "GVSP_LEADER"
 GVSP_TRAILER_LAYER = "GVSP_TRAILER"
 
 INT_TO_PIXEL_FORMAT = {0x1080009: PixelFormat.BayerRG8}
+    
+
 
 class MockFrame:
     """This class mocks GVSP frame for testing.
@@ -21,8 +23,6 @@ class MockFrame:
     def __init__(self, gvsp_frame_packets: PacketList):
         # check that starts with leader and ends with trailer
         assert gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER)
-        # assert gvsp_frame_packets[-1].haslayer(GVSP_TRAILER_LAYER)
-
         leader = gvsp_frame_packets[0]
         self._id = leader.BlockID
         self._timestamp = leader.Timestamp
@@ -32,7 +32,6 @@ class MockFrame:
         
         assert gvsp_frame_packets[1].PacketID == 1
         payload_length = len(bytes(gvsp_frame_packets[1][GVSP_LAYER].payload))
-        expected_payload_packets = int(np.ceil((self._height * self._width)/payload_length))
 
         pixels_bytes = []
         next_frame_id = 1
@@ -104,44 +103,50 @@ class MockFrame:
 
 class MockGvspTransmission():
     def __init__(self, gvsp_pcap_path: str):
-        self.packets = rdpcap(gvsp_pcap_path)
-        self._num_packets = len(self.packets)
-        self._offset = 0 
+        self.pcap_reader = PcapReader(gvsp_pcap_path)
+        self.iteration_stopped = False
         
-    def _get_next_frame(self) -> MockFrame or None:
-        frame_id = -1
-        for pkt in self.packets[self._offset:]:
-            if pkt.haslayer(GVSP_LEADER_LAYER):
-               frame_id = pkt.BlockID
-               break
-            self._offset += 1
-        
+    def _next(self) -> MockFrame or None:
+        frame_id = None
+
+        while(frame_id is None):
+            try:
+                pkt = next(self.pcap_reader)
+                if pkt.haslayer(GVSP_LEADER_LAYER):
+                    frame_id = pkt.BlockID
+            except StopIteration:
+                self.iteration_stopped = True
+                return None
+            
         frame_packets = []
-        finished = False
-        for pkt in self.packets[self._offset:]:
-            if pkt.haslayer(GVSP_LAYER):
-                if not pkt.BlockID == frame_id:
-                    break
+        is_gvsp_packet = pkt.haslayer(GVSP_LAYER)
+        while(pkt.BlockID == frame_id or not is_gvsp_packet):
+            if is_gvsp_packet:
                 frame_packets.append(pkt)
-                self._offset += 1
                 if pkt.haslayer(GVSP_TRAILER_LAYER):
-                   return MockFrame(PacketList(frame_packets))
+                    return MockFrame(PacketList(frame_packets))
+            try:
+                pkt = next(self.pcap_reader)
+                is_gvsp_packet = pkt.haslayer(GVSP_LAYER)
+            except StopIteration:
+                self.iteration_stopped = True
+                break
         return None
         
     @property
     def frames(self):
-        frame = self._get_next_frame()
-        while self._offset < self._num_packets:
+        frame = self._next()
+        while not self.iteration_stopped:
             yield frame
             try:
-                frame = self._get_next_frame()
-            except:
+                frame = self._next()
+            except Exception as e:
                 frame = None
-                continue
-        
+                        
 
 
 if __name__ == "__main__":
+    from manipulation_detectors import gvsp_frame_to_rgb
     # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\single_frame_gvsp.pcapng"
     gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_part.pcapng"
 
@@ -150,5 +155,7 @@ if __name__ == "__main__":
     for frame in gvsp_transmission.frames:
         if frame is not None:
             rgb_img = gvsp_frame_to_rgb(frame)
-        num_frames += 1
-        ic(num_frames)
+            # plt.imshow(rgb_img)
+            # plt.show()
+            num_frames += 1
+            ic(frame.id)
