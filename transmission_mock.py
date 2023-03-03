@@ -24,35 +24,42 @@ class MockFrame:
         # check that starts with leader and ends with trailer
         assert gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER)
         self.leader = gvsp_frame_packets[0]
-        
-        assert gvsp_frame_packets[1].PacketID == 1
-        payload_length = len(bytes(gvsp_frame_packets[1][GVSP_LAYER].payload))
 
-        pixels_bytes = []
-        next_frame_id = 1
-        for packet in gvsp_frame_packets[1:-1]:
+        raw_pixels = self.payload_packets_to_raw_image(gvsp_frame_packets[1:-1])        
+        self._img = self.adjust_raw_image(raw_pixels) #TODO: account for pixel format
+    
+    def packet_id_to_payload_indices(self, packet_id: int, payload_size_bytes: int, max_payload_size_bytes: int) -> Tuple[np.ndarray, np.ndarray]:
+        bytes_per_pixel = 1
+        pixels_per_packet = int(max_payload_size_bytes / bytes_per_pixel)
+        payload_size_pixels = int(payload_size_bytes / bytes_per_pixel)
+        start_index_ravelled =  (packet_id - 1) * pixels_per_packet
+        return np.unravel_index(np.arange(payload_size_pixels) + start_index_ravelled, self.shape)
+    
+    def payload_packets_to_raw_image(self, payload_packets: PacketList) -> np.ndarray:
+        raw_pixels = np.zeros(self.shape, dtype=np.uint8)
+        max_payload_size_bytes = np.max([len(bytes(pkt[GVSP_LAYER].payload)) for pkt in payload_packets])
+        for packet in payload_packets:
             current_id = packet.PacketID
-            if current_id != next_frame_id:
-                missing_frames = current_id - next_frame_id
-                filling_bytes = bytes([0] * payload_length * missing_frames)
-                pixels_bytes += filling_bytes
-                next_frame_id = current_id
             pkt_bytes = bytes(packet[GVSP_LAYER].payload)
-            pixels_bytes += pkt_bytes
-            next_frame_id += 1
-            
-        assert len(pixels_bytes) == self.height * self.width
-        pixels = np.array(pixels_bytes, dtype=np.uint8)
-        bggr_pixels = pixels.reshape((self.height, self.width))
-        self._img = np.empty((self.height, self.width), np.uint8)
+            rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id,payload_size_bytes=len(pkt_bytes),
+                                                                        max_payload_size_bytes=max_payload_size_bytes)
+            raw_pixels[rows_indices, cols_indices] = np.frombuffer(pkt_bytes, dtype=np.uint8)
+        return raw_pixels
+    
+    def bggr_to_rggb(self, bggr_pixels: np.ndarray) -> np.ndarray:
+        rggb_pixels = np.empty((self.height, self.width), np.uint8)
+        rggb_pixels = np.copy(bggr_pixels)
         # strided slicing for this pattern:
         #   R G
         #   G B
-        self._img[0::2, 0::2] = bggr_pixels[1::2, 1::2] # top left
-        self._img[0::2, 1::2] = bggr_pixels[0::2, 1::2] # top right
-        self._img[1::2, 0::2] = bggr_pixels[1::2, 0::2] # bottom left
-        self._img[1::2, 1::2] = bggr_pixels[0::2, 0::2] # bottom right
+        rggb_pixels[0::2, 0::2] = bggr_pixels[1::2, 1::2] # top left
+        rggb_pixels[1::2, 1::2] = bggr_pixels[0::2, 0::2] # bottom right
+        return rggb_pixels
 
+
+    def adjust_raw_image(self, raw_image: np.ndarray) -> np.ndarray:
+        return self.bggr_to_rggb(raw_image)
+    
     @property
     def width(self):
         return self.leader.SizeX
@@ -66,6 +73,10 @@ class MockFrame:
 
     def get_height(self):
         return self.height
+    
+    @property
+    def shape(self):
+        return (self.height, self.width)
 
     @property
     def pixel_format(self):
