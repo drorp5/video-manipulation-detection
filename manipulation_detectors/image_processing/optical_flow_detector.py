@@ -50,11 +50,12 @@ class OpticalFlowDetector(ImageProcessingDetector):
             self.current_features = good_new.reshape(-1,1,2)
             good_old = self.prev_features[status==1]
             err = err[status==1]
-        # self.draw_optical_flow_tracks(good_new, good_old)
-
-        score = np.mean(abs(err))
-        if score > self.min_th:
-            return ManipulationDetectionResult(score, False, self.fake_status)
+            score = np.mean(abs(err))
+            # self.draw_optical_flow_tracks(good_new, good_old)
+            if score > self.min_th:
+                return ManipulationDetectionResult(score, False, self.fake_status)
+        else:
+            score = np.nan
         return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
 
     def post_process(self) -> None:
