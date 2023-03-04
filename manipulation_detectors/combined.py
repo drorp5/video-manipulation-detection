@@ -47,22 +47,15 @@ class CombinedDetector(ManipulationDetector):
         message = detection_result.message.value
         return is_real_img, message
     
-    def validate_experiments(self) -> Tuple[bool, Dict[str, float], List[FakeDetectionStatus]]:
+    def validate_experiments(self) -> Dict[str, ManipulationDetectionResult]:
         results = {}
-        passed = True
-        status = []
         for detector in self.metadata_detectors + self.image_processing_detectors:
-            detector_status = detector.validate()
-            results[detector.name] = detector_status.score
-            if not detector_status.passed:
-                passed = False
-                status.append(detector_status.message)
-        if len(status) == 0:
-            status.append(FakeDetectionStatus.REAL)
-        return passed, results, status
+            detector_result = detector.validate()
+            results[detector.name] = detector_result
+        return results
 
-    def detect_experiments(self, frame: Frame) -> Tuple[bool, Dict, List[FakeDetectionStatus]]:
+    def detect_experiments(self, frame: Frame) -> Dict[str, ManipulationDetectionResult]:
         self.pre_process(frame)
-        passed, detection_results, status = self.validate_experiments()
+        results = self.validate_experiments()
         self.post_process()
-        return passed, detection_results, status
+        return results

@@ -18,14 +18,18 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
     scores = []
     for frame in gvsp_transmission.frames:
         if frame is not None and frame.success_status:
-            passed, detection_results, status = combined_detector.detect_experiments(frame)
+            stop_sign_detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
+            detection_scores = {'stop_sign' :  int(len(stop_sign_detections) > 0)}
+
+            manipulation_detection_results = combined_detector.detect_experiments(frame)
+            failed_status = [res.message for res in manipulation_detection_results.values() if not res.passed]
+            passed = len(failed_status) == 0
             ic(passed)
             if not(passed):
-                ic(status)
-
-            stop_sign_detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
-            detection_results['stop_sign'] = int(len(stop_sign_detections) > 0)
-            scores.append(detection_results)
+                ic(failed_status)
+            manipulation_detection_scores = zip(manipulation_detection_results.keys(), [res.score for res in manipulation_detection_results.values()])
+            detection_scores.update(manipulation_detection_scores)
+            scores.append(detection_scores)
             
     scores_df = pd.DataFrame(scores)
     return scores_df
