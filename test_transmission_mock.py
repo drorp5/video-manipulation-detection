@@ -3,14 +3,14 @@ from matplotlib import pyplot as plt
 from icecream import ic
 from transmission_mock.gvsp_transmission import MockGvspTransmission
 from manipulation_detectors.utils import gvsp_frame_to_rgb
-
+from pathlib import Path
 
 if __name__ == "__main__":
     # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\single_frame_gvsp.pcapng"
     gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_part.pcapng"
     # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\driving_in_uni_1-001.pcapng"
 
-    gvsp_transmission = MockGvspTransmission(gvsp_pcap_path=gvsp_pcap_path)
+    gvsp_transmission = MockGvspTransmission(gvsp_pcap_path=Path(gvsp_pcap_path))
     
     num_frames = 0
     for frame in gvsp_transmission.frames:

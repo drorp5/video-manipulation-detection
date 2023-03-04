@@ -17,6 +17,8 @@ if __name__ == "__main__":
     # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\short_driving_in_parking-002.pcapng"
     
     
+    gvsp_path = Path(gvsp_path)
+    
     gvsp_transmission = MockGvspTransmission(gvsp_pcap_path=gvsp_path)
     
     constant_metadata_detector = ConstantMetadataDetector()

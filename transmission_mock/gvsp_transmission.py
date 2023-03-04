@@ -2,11 +2,12 @@ from scapy.all import PacketList, PcapReader
 from .gvsp_frame import MockFrame, MissingLeaderError
 from .constansts import *
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
+from pathlib import Path
 
 
 class MockGvspTransmission():
-    def __init__(self, gvsp_pcap_path: str):
-        self.pcap_reader = PcapReader(gvsp_pcap_path)
+    def __init__(self, gvsp_pcap_path: Path):
+        self.pcap_reader = PcapReader(gvsp_pcap_path.as_posix())
         self.iteration_stopped = False
         
     def _next(self) -> MockFrame or None:
