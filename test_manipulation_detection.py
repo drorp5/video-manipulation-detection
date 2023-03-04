@@ -39,11 +39,15 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
     return scores_df, process_time_df
 
 def plot_results(results_df: pd.DataFrame):
-    fig, axs = plt.subplots(len(results_df.columns),1)
+    num_graphs = len(results_df.columns)
+    fig, axs = plt.subplots(num_graphs, 1)
     ax_id = 0
     for name, res in results_df.iteritems():
-        ax = axs[ax_id]
-        res.plot(ax=axs[ax_id])
+        if num_graphs > 1:
+            ax = axs[ax_id]
+        else:
+            ax = axs
+        res.plot(ax=ax)
         ax.grid(True)
         ax.set_ylabel(name)
         ax_id +=1
