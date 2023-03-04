@@ -49,7 +49,7 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
     @timeit
     def validate(self) -> ManipulationDetectionResult:
         if self.prev_hist is None:
-             return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
+            return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
         score = self.current_hist.histograms_distance(self.prev_hist)
         if score > self.min_th:
             return ManipulationDetectionResult(score, False, self.fake_status)
