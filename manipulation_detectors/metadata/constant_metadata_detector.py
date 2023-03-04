@@ -1,6 +1,9 @@
 from .abstract_metadata_detector import *
 from .constant_metadata import *
 
+POSITIVE_RESULT = 0
+NEGATIVE_RESULT = 1
+
 class ConstantMetadataDetector(MetadataDetector):    
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -12,10 +15,10 @@ class ConstantMetadataDetector(MetadataDetector):
     @timeit    
     def validate(self) -> ManipulationDetectionResult:
         if self.prev_metadata is None:
-            return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
+            return ManipulationDetectionResult(NEGATIVE_RESULT, True, FakeDetectionStatus.FIRST)
         if self.current_metadata != self.prev_metadata:  # TODO: check if compared like this
-            return ManipulationDetectionResult(0, False, self.fake_status)
-        return ManipulationDetectionResult(1, True, FakeDetectionStatus.REAL)
+            return ManipulationDetectionResult(NEGATIVE_RESULT, False, self.fake_status)
+        return ManipulationDetectionResult(POSITIVE_RESULT, True, FakeDetectionStatus.REAL)
 
     @property
     def name(self) -> str:
