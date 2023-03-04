@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -14,8 +15,9 @@ from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector
 
 def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                                 combined_detector: CombinedDetector,
-                                stop_sign_detector: StopSignDetector) -> pd.DataFrame:
+                                stop_sign_detector: StopSignDetector) -> Tuple[pd.DataFrame, pd.DataFrame] :
     scores = []
+    process_time = []
     for frame in gvsp_transmission.frames:
         if frame is not None and frame.success_status:
             stop_sign_detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
@@ -30,12 +32,14 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
             manipulation_detection_scores = zip(manipulation_detection_results.keys(), [res.score for res in manipulation_detection_results.values()])
             detection_scores.update(manipulation_detection_scores)
             scores.append(detection_scores)
+            process_time.append(dict(zip(manipulation_detection_results.keys(), [res.process_time_sec for res in manipulation_detection_results.values()])))
             
     scores_df = pd.DataFrame(scores)
-    return scores_df
+    process_time_df = pd.DataFrame(process_time)
+    return scores_df, process_time_df
 
 def plot_results(results_df: pd.DataFrame):
-    fig, axs = plt.subplots(6,1)
+    fig, axs = plt.subplots(len(results_df.columns),1)
     ax_id = 0
     for name, res in results_df.iteritems():
         ax = axs[ax_id]
@@ -67,8 +71,9 @@ if __name__ == "__main__":
     
     stop_sign_detector = HaarDetector()
 
-    results_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission, combined_detector=combined_detector, stop_sign_detector=stop_sign_detector)
+    results_df, process_time_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission, combined_detector=combined_detector, stop_sign_detector=stop_sign_detector)
     results_df.to_pickle(dst_dir/f'{gvsp_path.stem}.pkl')
     plot_results(results_df)
+    plot_results(process_time_df)
 
 
