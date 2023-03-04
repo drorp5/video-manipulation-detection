@@ -47,11 +47,10 @@ class OpticalFlowDetector(ImageProcessingDetector):
         next_points, status, err = cv2.calcOpticalFlowPyrLK(self.prev_gray_img, self.current_gray_img, self.prev_features, None, **lk_params)
         if next_points is not None:
             good_new = next_points[status==1]
+            self.current_features = good_new.reshape(-1,1,2)
             good_old = self.prev_features[status==1]
             err = err[status==1]
         # self.draw_optical_flow_tracks(good_new, good_old)
-
-        self.current_features = good_new.reshape(-1,1,2)
 
         score = np.mean(abs(err))
         if score > self.min_th:
