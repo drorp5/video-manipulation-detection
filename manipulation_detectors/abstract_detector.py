@@ -14,6 +14,7 @@ class FakeDetectionStatus(Enum):
     TIMESTAMP_RATE_FAILURE = 'Timestamp Mismatch'
     IDENTICAL_DETECTED = 'Identical Image Detected'
     HISTOGRAM_MISMATCH = "Hue Saturation Histogram Mismatch"
+    OPTICAL_FLOW_MISMATCH = "Optical flow of interest point mismatch"
     COMBINED = "Any of the other failure messages"
     
 

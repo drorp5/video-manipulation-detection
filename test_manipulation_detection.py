@@ -56,8 +56,8 @@ def plot_results(results_df: pd.DataFrame):
 if __name__ == "__main__":
     dst_dir = Path('OUTPUT')
     
-    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
-    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\faking_matlab_rec_3.pcapng"
+    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
+    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\faking_matlab_rec_3.pcapng"
     # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\short_driving_in_parking-002.pcapng"
     
     gvsp_path = Path(gvsp_path)
@@ -70,8 +70,10 @@ if __name__ == "__main__":
 
     histogram_detector = HueSaturationHistogramDetector(0.4)
     mse_detector = MSEImageDetector(0.01)
+    optical_flow_detector = OpticalFlowDetector(20)
     
-    combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector], [mse_detector, histogram_detector])
+    combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector], [mse_detector, histogram_detector, optical_flow_detector])
+    # combined_detector = CombinedDetector([], [optical_flow_detector])
     
     stop_sign_detector = HaarDetector()
 

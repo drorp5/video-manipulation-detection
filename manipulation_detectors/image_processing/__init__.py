@@ -1,4 +1,5 @@
 from .abstract_image_processing_detector import ImageProcessingDetector
 from .histogram_detector import HueSaturationHistogramDetector
 from .mse_detector import MSEImageDetector
+from .optical_flow_detector import OpticalFlowDetector
 import cv2
