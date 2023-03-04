@@ -15,22 +15,27 @@ from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector
 
 def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                                 combined_detector: CombinedDetector,
-                                stop_sign_detector: StopSignDetector) -> pd.DataFrame:
+                                stop_sign_detector: StopSignDetector,
+                                print_every: int = 1) -> pd.DataFrame:
+    
     scores = []
     process_time = []
     frames = []
+    num_frames = 0
     for frame in gvsp_transmission.frames:
         if frame is not None and frame.success_status:
             frames.append(frame.id)
+            num_frames += 1
             stop_sign_detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
             detection_scores = {'stop_sign' :  int(len(stop_sign_detections) > 0)}
 
             manipulation_detection_results = combined_detector.detect_experiments(frame)
             failed_status = [res.message for res in manipulation_detection_results.values() if not res.passed]
             passed = len(failed_status) == 0
-            ic(passed)
-            if not(passed):
-                ic(failed_status)
+            if num_frames % print_every == 0:
+                print(f'frame {frame.id} : {passed}')
+                if not(passed):
+                    ic(failed_status)
             manipulation_detection_scores = zip(manipulation_detection_results.keys(), [res.score for res in manipulation_detection_results.values()])
             detection_scores.update(manipulation_detection_scores)
             scores.append(detection_scores)
