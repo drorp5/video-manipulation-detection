@@ -15,11 +15,13 @@ from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector
 
 def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                                 combined_detector: CombinedDetector,
-                                stop_sign_detector: StopSignDetector) -> Tuple[pd.DataFrame, pd.DataFrame] :
+                                stop_sign_detector: StopSignDetector) -> pd.DataFrame:
     scores = []
     process_time = []
+    frames = []
     for frame in gvsp_transmission.frames:
         if frame is not None and frame.success_status:
+            frames.append(frame.id)
             stop_sign_detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
             detection_scores = {'stop_sign' :  int(len(stop_sign_detections) > 0)}
 
@@ -34,9 +36,10 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
             scores.append(detection_scores)
             process_time.append(dict(zip(manipulation_detection_results.keys(), [res.process_time_sec for res in manipulation_detection_results.values()])))
             
-    scores_df = pd.DataFrame(scores)
-    process_time_df = pd.DataFrame(process_time)
-    return scores_df, process_time_df
+    scores_df = pd.DataFrame(scores, index=frames)
+    process_time_df = pd.DataFrame(process_time, index=frames)
+    results_df = pd.concat([scores_df, process_time_df.add_prefix('time_')], axis=1)
+    return results_df
 
 def plot_results(results_df: pd.DataFrame):
     num_graphs = len(results_df.columns)
@@ -56,8 +59,8 @@ def plot_results(results_df: pd.DataFrame):
 if __name__ == "__main__":
     dst_dir = Path('OUTPUT')
     
-    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
-    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\faking_matlab_rec_3.pcapng"
+    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
+    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\faking_matlab_rec_3.pcapng"
     # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\short_driving_in_parking-002.pcapng"
     
     gvsp_path = Path(gvsp_path)
@@ -77,9 +80,7 @@ if __name__ == "__main__":
     
     stop_sign_detector = HaarDetector()
 
-    results_df, process_time_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission, combined_detector=combined_detector, stop_sign_detector=stop_sign_detector)
+    results_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission, combined_detector=combined_detector, stop_sign_detector=stop_sign_detector)
     results_df.to_pickle(dst_dir/f'{gvsp_path.stem}.pkl')
-    plot_results(results_df)
-    plot_results(process_time_df)
-
-
+    plot_results(results_df[[col for col in results_df if not col.startswith('time_')]])
+    plot_results(results_df[[col for col in results_df if col.startswith('time_')]])
