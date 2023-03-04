@@ -12,9 +12,6 @@ class MSEImageDetector(ImageProcessingDetector):
     @property
     def fake_status(self) -> FakeDetectionStatus:
         return FakeDetectionStatus.IDENTICAL_DETECTED
-
-    def pre_process(self, rgb_img: np.ndarray) -> None:
-        self.current_rgb_img = rgb_img
     
     @timeit
     def validate(self) -> ManipulationDetectionResult:
@@ -24,10 +21,6 @@ class MSEImageDetector(ImageProcessingDetector):
         if score < self.min_th:
             return ManipulationDetectionResult(score, False, self.fake_status)
         return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
-
-    def post_process(self) -> None:
-        self.prev_rgb_img = self.current_rgb_img
-        self.current_rgb_img = None
     
     @property
     def name(self) -> str:
