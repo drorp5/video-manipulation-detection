@@ -45,19 +45,38 @@ class FrameIDDetector(VaryingMetadataDetector):
 
 class TimestampDetector(VaryingMetadataDetector):
     """Detection using frame relative timestamp"""
+    
+    def __init__(self, tolerance):
+        self.estimated_timestamp_sec = 0
+        self.estimated_rate_sec = 0
+        self.proportional_error_coef = 1
+        self.differential_error_coef = 0
+        super().__init__(tolerance)
+
     @property
     def fake_status(self) -> FakeDetectionStatus:
         return FakeDetectionStatus.TIMESTAMP_FAILURE
 
+    def pre_process(self, frame: Frame) -> None:
+        self.current_metadata = extract_varying_metadata(frame)
+        self.estimated_timestamp_sec += self.estimated_rate_sec
+        
     def calc_score(self) -> float:
-        current_timestamp = self.current_metadata.timestamp_seconds
-        prev_timestamp = self.prev_metadata.timestamp_seconds
-        return abs(current_timestamp - prev_timestamp)
+        return abs(self.calc_error())
     
+    def calc_error(self) -> float:
+        current_timestamp = self.current_metadata.timestamp_seconds
+        # prev_timestamp = self.prev_metadata.timestamp_seconds
+        return current_timestamp - self.estimated_timestamp_sec
+    
+    def post_process(self) -> None:
+        err = self.calc_error()
+        self.estimated_timestamp_sec += self.proportional_error_coef * err
+        return super().post_process()
+        
     @property
     def name(self) -> str:
         return "Timestamp"
-        
         
 class TimestampRateDetector(VaryingMetadataDetector):
     """Detection using timestamp change rate"""
