@@ -8,7 +8,8 @@ class ConstantMetadataDetector(MetadataDetector):
     
     def pre_process(self, frame: Frame):
         self.current_metadata = extract_constant_metadata(frame)
-        
+
+    @timeit    
     def validate(self) -> ManipulationDetectionResult:
         if self.prev_metadata is None:
             return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)

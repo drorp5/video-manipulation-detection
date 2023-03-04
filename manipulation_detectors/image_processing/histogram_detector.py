@@ -46,6 +46,7 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
         self.current_hist = hue_saturation_histogram(rgb_img, hue_bins=self.hue_bins, saturation_bins=self.saturation_bins)
         self.current_hist.normalize()
 
+    @timeit
     def validate(self) -> ManipulationDetectionResult:
         if self.prev_hist is None:
              return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)

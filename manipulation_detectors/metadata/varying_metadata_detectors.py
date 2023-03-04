@@ -14,6 +14,7 @@ class VaryingMetadataDetector(MetadataDetector):
     def calc_score(self) -> float:
         pass
 
+    @timeit
     def validate(self) -> ManipulationDetectionResult:
         if self.prev_metadata is None:
             return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)

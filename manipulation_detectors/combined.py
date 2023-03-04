@@ -27,6 +27,7 @@ class CombinedDetector(ManipulationDetector):
         for detector in self.image_processing_detectors:
             detector.pre_process(rgb_img)
 
+    @timeit
     def validate(self) -> ManipulationDetectionResult:
         for detector in self.metadata_detectors + self.image_processing_detectors:
             detector_status = detector.validate()

@@ -16,6 +16,7 @@ class MSEImageDetector(ImageProcessingDetector):
     def pre_process(self, rgb_img: np.ndarray) -> None:
         self.current_rgb_img = rgb_img
     
+    @timeit
     def validate(self) -> ManipulationDetectionResult:
         if self.prev_rgb_img is None:
              return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
