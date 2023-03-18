@@ -2,6 +2,7 @@
     https://docs.opencv.org/3.4/d4/dee/tutorial_optical_flow.html
 """
 
+from pathlib import Path
 from .abstract_image_processing_detector import *
 
 
@@ -28,6 +29,7 @@ class OpticalFlowDetector(ImageProcessingDetector):
         self.prev_gray_img: np.ndarray = None
         self.prev_features: np.ndarray = None
         self.mask: np.ndarray = None
+        self.video_writer = None
         
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -80,5 +82,14 @@ class OpticalFlowDetector(ImageProcessingDetector):
             mask = cv2.line(mask, (int(a), int(b)), (int(c), int(d)), color[i].tolist(), 2)
             rgb_img = cv2.circle(rgb_img, (int(a), int(b)), 5, color[i].tolist(), -1)
         img = cv2.add(rgb_img, mask)
-        cv2.imshow('frame', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        cv2.waitKey(1)
+        # cv2.imshow('frame', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        
+        if self.video_writer is None:
+            out_path = r'C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\OUTPUT\faking_matlab_rec_optical_flow.mp4'
+            height, width, _ = self.current_rgb_img.shape        
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fps = 30
+            self.video_writer =  cv2.VideoWriter(out_path, fourcc, fps, (width, height))
+
+        self.video_writer.write(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        # cv2.waitKey(1)
