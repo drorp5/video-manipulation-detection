@@ -108,6 +108,8 @@ class MobileNetDetector(StopSignDetector):
     def detect(self, img: np.ndarray) -> List[np.ndarray]:
         boxes = []
         detections_class_index, detections_confidence, detections_bbox = self.detector.detect(img, confThreshold=self.confidence_th)
+        if len(detections_class_index) == 0:
+            return boxes
         for class_ind, confidence, dedection_box in zip(detections_class_index.flatten(), detections_confidence.flatten(), detections_bbox):
             if class_ind in self.target_class and confidence >= self.confidence_th:
                 boxes.append(dedection_box)
