@@ -94,7 +94,7 @@ class YoloDetector(StopSignDetector):
 class MobileNetDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5):
         self.classes = open('sign_detectors/coco.names').read().strip().split('\n')
-        self.target_class = [11,13]
+        self.target_class = [10,11,13]
         self.config_path = r'sign_detectors/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
         self.weights_path = r'sign_detectors/ssd_mobilenet_v3_largefrozen_inference_graph.pb'
         self.detector = cv2.dnn_DetectionModel(self.weights_path, self.config_path)
@@ -108,6 +108,8 @@ class MobileNetDetector(StopSignDetector):
     def detect(self, img: np.ndarray) -> List[np.ndarray]:
         boxes = []
         detections_class_index, detections_confidence, detections_bbox = self.detector.detect(img, confThreshold=self.confidence_th)
+        if len(detections_class_index) == 0:
+            return boxes
         for class_ind, confidence, dedection_box in zip(detections_class_index.flatten(), detections_confidence.flatten(), detections_bbox):
             if class_ind in self.target_class and confidence >= self.confidence_th:
                 boxes.append(dedection_box)
