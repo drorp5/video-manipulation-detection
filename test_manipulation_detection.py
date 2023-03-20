@@ -10,12 +10,12 @@ from manipulation_detectors.metadata import *
 from manipulation_detectors.image_processing import *
 from manipulation_detectors.combined import CombinedDetector
 from manipulation_detectors.utils import *
-from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector
+from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector, MobileNetDetector
 
 
 def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                                 combined_detector: CombinedDetector,
-                                stop_sign_detector: StopSignDetector,
+                                vehicle_detector: StopSignDetector,
                                 print_every: int = 1) -> pd.DataFrame:
     
     scores = []
@@ -26,8 +26,8 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
         if frame is not None and frame.success_status:
             frames.append(frame.id)
             num_frames += 1
-            stop_sign_detections = stop_sign_detector.detect(gvsp_frame_to_rgb(frame))
-            detection_scores = {'stop_sign' :  int(len(stop_sign_detections) > 0)}
+            vehicle_detections = vehicle_detector.detect(gvsp_frame_to_rgb(frame))
+            detection_scores = {'vehicle' :  int(len(vehicle_detections) > 0)}
 
             manipulation_detection_results = combined_detector.detect_experiments(frame)
             failed_status = [res.message for res in manipulation_detection_results.values() if not res.passed]
@@ -83,7 +83,8 @@ if __name__ == "__main__":
     combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector], [mse_detector, histogram_detector, optical_flow_detector])
     # combined_detector = CombinedDetector([], [optical_flow_detector])
     
-    stop_sign_detector = HaarDetector()
+    # stop_sign_detector = HaarDetector()
+    stop_sign_detector = MobileNetDetector()
 
     results_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission, combined_detector=combined_detector, stop_sign_detector=stop_sign_detector)
     results_df.to_pickle(dst_dir/f'{gvsp_path.stem}.pkl')
