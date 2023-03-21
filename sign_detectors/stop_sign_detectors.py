@@ -11,6 +11,11 @@ class StopSignDetector(ABC):
     def detect(self, img: np.ndarray) -> List[np.ndarray]:
         raise NotImplementedError
     
+    @property
+    @abstractmethod
+    def name(self):
+        raise NotImplementedError
+    
 def draw_bounding_boxes(img, bounding_boxes):
     for (x,y,w,h) in bounding_boxes:
         cv2.rectangle(img, (x, y), (x+w, y+h), (MAX_PIXEL_VALUE, MAX_PIXEL_VALUE, 0), NUM_CHANNELS)
@@ -32,6 +37,7 @@ def get_detector(detector_name: str) -> StopSignDetector:
         raise ValueError
     return detectors_dict[detector_name]()
 
+
 class HaarDetector(StopSignDetector):
     def __init__(self, grayscale=False, blur=False):
         self.config_path = r"sign_detectors/stop_sign_classifier_2.xml"
@@ -46,6 +52,10 @@ class HaarDetector(StopSignDetector):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)        
         stop_signs = self.detector.detectMultiScale(img, scaleFactor=1.05, minNeighbors=15, minSize=(30, 30))
         return stop_signs
+    
+    @property
+    def name(self):
+        return "Haar"
 
 
 class YoloDetector(StopSignDetector):
@@ -90,6 +100,11 @@ class YoloDetector(StopSignDetector):
             indices = indices[:,0]
         boxes = [boxes[i] for i in indices]
         return boxes
+    
+    @property
+    def name(self):
+        return "Yolo"
+
 
 class MobileNetDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5):
@@ -114,3 +129,7 @@ class MobileNetDetector(StopSignDetector):
             if class_ind in self.target_class and confidence >= self.confidence_th:
                 boxes.append(dedection_box)
         return boxes
+        
+    @property
+    def name(self):
+        return "MobileNet"
