@@ -8,7 +8,7 @@ class RegionOfInterestDetector(ImageProcessingDetector):
     
     def __init__(self, min_th: float, roi_json: Path) -> None:
         self.min_th = min_th
-        self.roi_mask = binary_mask_from_json(roi_json)
+        self.mask = binary_mask_from_json(roi_json)
         self.current_rgb_img = None
         self.prev_rgb_img = None
 
@@ -17,9 +17,9 @@ class RegionOfInterestDetector(ImageProcessingDetector):
         FakeDetectionStatus.ROI_MISMATCH
 
     def pre_process(self, rgb_img: np.ndarray) -> None:
-        if rgb_img.shape != self.roi_mask.shape:
-            width = int(self.roi_mask.shape[1])
-            height = int(self.roi_mask.shape[0])
+        if rgb_img.shape != self.mask.shape:
+            width = int(self.mask.shape[1])
+            height = int(self.mask.shape[0])
             rgb_img = cv2.resize(rgb_img, (width, height))
         self.current_rgb_img = cv2.bitwise_and(rgb_img, rgb_img, mask=self.mask)
         
