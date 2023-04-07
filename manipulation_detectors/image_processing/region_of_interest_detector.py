@@ -34,7 +34,7 @@ class RegionOfInterestDetector(ImageProcessingDetector):
 
     @property
     def name(self) -> str:
-        return "Region Of Interest"
+        return "RegionOfInterest"
 
 def binary_mask_from_json(roi_json: Path) -> np.ndarray:
     """ Turn annotations json to binary mask.
