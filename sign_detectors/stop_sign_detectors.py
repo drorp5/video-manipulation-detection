@@ -61,12 +61,12 @@ class HaarDetector(StopSignDetector):
 class YoloDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5, nms_th=0.4 ):
         self.classes = open('sign_detectors/coco.names').read().strip().split('\n')
-        self.target_class = 11
+        self.target_class = [9, 11]
         self.config_path = r'sign_detectors/yolov4-tiny.cfg'
         self.weights_path = r'sign_detectors/yolov4-tiny.weights'
         self.detector = cv2.dnn.readNetFromDarknet(self.config_path, self.weights_path)
         ln = self.detector.getLayerNames()
-        self.ln = [ln[i[0] - 1] for i in self.detector.getUnconnectedOutLayers()]
+        self.ln = [ln[i - 1] for i in self.detector.getUnconnectedOutLayers()]
         self.inference_shape = (416,416)
         self.confidence_th = confidence_th
         self.nms_th = nms_th
@@ -84,7 +84,7 @@ class YoloDetector(StopSignDetector):
             for detection in output:
                 scores = detection[5:]
                 classID = np.argmax(scores)
-                if classID == self.target_class:
+                if classID in self.target_class:
                     confidence = scores[classID]
                     if confidence > self.confidence_th:
                         box = detection[:4] * np.array([w, h, w, h])
