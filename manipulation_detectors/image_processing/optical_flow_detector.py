@@ -28,8 +28,10 @@ class OpticalFlowDetector(ImageProcessingDetector):
         self.current_features: np.ndarray = None
         self.prev_gray_img: np.ndarray = None
         self.prev_features: np.ndarray = None
-        self.mask: np.ndarray = None
-        self.video_writer = None
+
+        self.good_old = None
+        self.good_new = None
+        self.img_shape = None
         
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -39,6 +41,7 @@ class OpticalFlowDetector(ImageProcessingDetector):
         self.current_rgb_img = rgb_img
         self.current_gray_img = cv2.cvtColor(rgb_img, cv2.COLOR_RGB2GRAY)
         self.current_features = cv2.goodFeaturesToTrack(self.current_gray_img, mask=None, **feature_params)
+        self.img_shape = rgb_img.shape
     
     @timeit
     def validate(self) -> ManipulationDetectionResult:
@@ -53,7 +56,9 @@ class OpticalFlowDetector(ImageProcessingDetector):
             good_old = self.prev_features[status==1]
             err = err[status==1]
             score = np.mean(abs(err))
-            # self.draw_optical_flow_tracks(good_new, good_old)
+            self.good_new = good_new
+            self.good_old = good_old
+
             if score > self.min_th:
                 return ManipulationDetectionResult(score, False, self.fake_status)
         else:
@@ -71,25 +76,11 @@ class OpticalFlowDetector(ImageProcessingDetector):
     def name(self) -> str:
         return "OpticalFlow"
     
-    def draw_optical_flow_tracks(self, good_new: np.ndarray, good_old: np.ndarray):
-        rgb_img = self.current_rgb_img.copy()
-        mask = np.zeros_like(self.current_rgb_img)
-        # if self.mask is None:
-            # self.mask = np.zeros_like(self.current_rgb_img)
-        for i, (new, old) in enumerate(zip(good_new, good_old)):
+    def draw_optical_flow_tracks(self) -> np.ndarray:
+        mask = np.zeros(shape=self.img_shape, dtype=np.uint8)
+        for i, (new, old) in enumerate(zip(self.good_new, self.good_old)):
             a, b = new.ravel()
             c, d = old.ravel()
             mask = cv2.line(mask, (int(a), int(b)), (int(c), int(d)), color[i].tolist(), 2)
-            rgb_img = cv2.circle(rgb_img, (int(a), int(b)), 5, color[i].tolist(), -1)
-        img = cv2.add(rgb_img, mask)
-        # cv2.imshow('frame', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        
-        if self.video_writer is None:
-            out_path = r'C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\OUTPUT\faking_matlab_rec_optical_flow.mp4'
-            height, width, _ = self.current_rgb_img.shape        
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            fps = 30
-            self.video_writer =  cv2.VideoWriter(out_path, fourcc, fps, (width, height))
-
-        self.video_writer.write(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        # cv2.waitKey(1)
+            mask = cv2.circle(mask, (int(a), int(b)), 5, color[i].tolist(), -1)
+        return mask

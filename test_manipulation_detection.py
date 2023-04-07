@@ -11,62 +11,79 @@ from manipulation_detectors.image_processing import *
 from manipulation_detectors.combined import CombinedDetector
 from manipulation_detectors.utils import *
 from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector, MobileNetDetector
+from sign_detectors.stop_sign_detectors import draw_bounding_boxes, get_detector
 
 
 def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                                 combined_detector: CombinedDetector,
                                 vehicle_detector: StopSignDetector,
-                                print_every: int = 1) -> pd.DataFrame:
+                                print_every: int = 1,
+                                output_video_path: Path = None) -> pd.DataFrame:
     
     scores = []
     process_time = []
     frames = []
     num_frames = 0
-    for frame in gvsp_transmission.frames:
-        if frame is not None and frame.success_status:
-            frames.append(frame.id)
-            num_frames += 1
-            vehicle_detections = vehicle_detector.detect(gvsp_frame_to_rgb(frame))
-            detection_scores = {'vehicle' :  int(len(vehicle_detections) > 0)}
+    video_writer = None        
 
-            manipulation_detection_results = combined_detector.detect_experiments(frame)
-            failed_status = [res.message for res in manipulation_detection_results.values() if not res.passed]
-            passed = len(failed_status) == 0
-            if num_frames % print_every == 0:
-                print(f'frame {frame.id} : {passed}')
-                if not(passed):
-                    ic(failed_status)
-            manipulation_detection_scores = zip(manipulation_detection_results.keys(), [res.score for res in manipulation_detection_results.values()])
-            detection_scores.update(manipulation_detection_scores)
-            scores.append(detection_scores)
-            process_time.append(dict(zip(manipulation_detection_results.keys(), [res.process_time_sec for res in manipulation_detection_results.values()])))
-            
-    scores_df = pd.DataFrame(scores, index=frames)
-    process_time_df = pd.DataFrame(process_time, index=frames)
-    results_df = pd.concat([scores_df, process_time_df.add_prefix('time_')], axis=1)
+    try:
+        for frame in gvsp_transmission.frames:
+            if frame is not None and frame.success_status:
+                frames.append(frame.id)
+                num_frames += 1
+                
+                vehicle_detections = vehicle_detector.detect(gvsp_frame_to_rgb(frame))
+                detection_scores = {'vehicle' :  int(len(vehicle_detections) > 0)}
+                
+                
+                manipulation_detection_results = combined_detector.detect_experiments(frame)
+                failed_status = [res.message for res in manipulation_detection_results.values() if not res.passed]
+                passed = len(failed_status) == 0
+                manipulation_detection_scores = zip(manipulation_detection_results.keys(), [res.score for res in manipulation_detection_results.values()])
+                detection_scores.update(manipulation_detection_scores)
+                scores.append(detection_scores)
+                process_time.append(dict(zip(manipulation_detection_results.keys(), [res.process_time_sec for res in manipulation_detection_results.values()])))
+    
+                if num_frames % print_every == 0:
+                    print(f'frame {frame.id} : {passed}')
+                    if not(passed):
+                        ic(failed_status)
+
+                if output_video_path is not None:
+                    frame_img = gvsp_frame_to_rgb(frame)
+    
+                    if video_writer is None:
+                        height, width, _ = frame_img.shape
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        fps = 20
+                        video_writer =  cv2.VideoWriter(output_video_path.as_posix(), fourcc, fps, (width, height))
+                    if len(vehicle_detections) > 0:
+                        frame_img = draw_bounding_boxes(img=frame_img, bounding_boxes=vehicle_detections)
+                    try:
+                        optical_flow_img = combined_detector.image_processing_detectors[-1].draw_optical_flow_tracks()
+                        frame_img = cv2.add(frame_img, optical_flow_img)
+                    except:
+                        pass
+                    video_writer.write(cv2.cvtColor(frame_img, cv2.COLOR_RGB2BGR))        
+    except:
+        pass
+    finally:
+        if video_writer is not None:
+            video_writer.release()
+        scores_df = pd.DataFrame(scores, index=frames)
+        process_time_df = pd.DataFrame(process_time, index=frames)
+        results_df = pd.concat([scores_df, process_time_df.add_prefix('time_')], axis=1)        
     return results_df
-
-def plot_results(results_df: pd.DataFrame):
-    num_graphs = len(results_df.columns)
-    fig, axs = plt.subplots(num_graphs, 1)
-    ax_id = 0
-    for name, res in results_df.iteritems():
-        if num_graphs > 1:
-            ax = axs[ax_id]
-        else:
-            ax = axs
-        res.plot(ax=ax)
-        ax.grid(True)
-        ax.set_ylabel(name)
-        ax_id +=1
-    plt.show()
 
 if __name__ == "__main__":
     dst_dir = Path('OUTPUT')
     
-    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
+    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_start.pcapng"
     # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\faking_matlab_rec_3.pcapng"
     # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\short_driving_in_parking-002.pcapng"
+    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\driving_in_uni_2.pcapng"
+    # gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\driving_in_uni_1-001.pcapng"
+    gvsp_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\drive_around_uni.pcapng"
     
     gvsp_path = Path(gvsp_path)
     
@@ -83,10 +100,13 @@ if __name__ == "__main__":
     combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector], [mse_detector, histogram_detector, optical_flow_detector])
     # combined_detector = CombinedDetector([], [optical_flow_detector])
     
-    # stop_sign_detector = HaarDetector()
-    stop_sign_detector = MobileNetDetector()
+    # vehicle_detector = get_detector('Haar')
+    # vehicle_detector = get_detector('MobileNet')
+    vehicle_detector = get_detector('Yolo')
 
-    results_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission, combined_detector=combined_detector, stop_sign_detector=stop_sign_detector)
-    results_df.to_pickle(dst_dir/f'{gvsp_path.stem}.pkl')
-    plot_results(results_df[[col for col in results_df if not col.startswith('time_')]])
-    plot_results(results_df[[col for col in results_df if col.startswith('time_')]])
+    results_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission,
+                                            combined_detector=combined_detector,
+                                            vehicle_detector=vehicle_detector,
+                                            print_every=100,
+                                            output_video_path=dst_dir/f'{gvsp_path.stem}_{vehicle_detector.name}.mp4')
+    results_df.to_pickle(dst_dir/f'{gvsp_path.stem}_{vehicle_detector.name}.pkl')
