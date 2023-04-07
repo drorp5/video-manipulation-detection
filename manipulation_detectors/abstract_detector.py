@@ -15,7 +15,9 @@ class FakeDetectionStatus(Enum):
     IDENTICAL_DETECTED = 'Identical Image Detected'
     HISTOGRAM_MISMATCH = "Hue Saturation Histogram Mismatch"
     OPTICAL_FLOW_MISMATCH = "Optical flow of interest point mismatch"
+    ROI_MISMATCH = "Vehicle Region Of Interest Mismatch"
     COMBINED = "Any of the other failure messages"
+
     
 
 @dataclass
