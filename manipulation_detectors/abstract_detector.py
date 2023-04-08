@@ -11,7 +11,7 @@ class FakeDetectionStatus(Enum):
     CONSTANT_METADATA_FAILURE = "The constant metadata does not match the previous frame"
     FRAME_ID_FAILURE = 'Frame ID Mismatch'
     TIMESTAMP_FAILURE = 'Timestamp Mismatch'
-    TIMESTAMP_RATE_FAILURE = 'Timestamp Mismatch'
+    TIMESTAMP_RATE_FAILURE = 'Timestamp Rate Mismatch (Internal VS External)'
     IDENTICAL_DETECTED = 'Identical Image Detected'
     HISTOGRAM_MISMATCH = "Hue Saturation Histogram Mismatch"
     OPTICAL_FLOW_MISMATCH = "Optical flow of interest point mismatch"
