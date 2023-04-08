@@ -61,12 +61,11 @@ def create_video_from_frames_iterator(iterator, output_path: Path, fps=30, frame
 
 
 if __name__ ==  "__main__":
-    # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\single_frame_gvsp.pcapng"
-    # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_part.pcapng"
-    # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\driving_in_uni_1-001.pcapng"
-    # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\short_driving_in_parking-002.pcapng"
-    gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\driving_in_uni_2.pcapng"
+    # gvsp_pcap_path = r"INPUT\single_frame_gvsp.pcapng"
+    # gvsp_pcap_path = r"INPUT\live_stream_defaults_part.pcapng"
+    # gvsp_pcap_path = r"INPUT\driving_in_uni_1-001.pcapng"
+    # gvsp_pcap_path = r"INPUT\short_driving_in_parking-002.pcapng"
+    # gvsp_pcap_path = r"INPUT\driving_in_uni_2.pcapng"
+    gvsp_pcap_path = r"INPUT\drive_around_uni.pcapng"
 
-
-
-    gvsp_pcap_to_video(gvsp_pcap_path, r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\OUTPUT")
+    gvsp_pcap_to_video(gvsp_pcap_path, r"OUTPUT", roi_json=r"INPUT\vehicle_roi_annotation.json", postfix='_masked')
