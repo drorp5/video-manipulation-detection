@@ -92,12 +92,12 @@ if __name__ == "__main__":
     
     constant_metadata_detector = ConstantMetadataDetector()
     frame_id_detector = FrameIDDetector()
-    timestamp_detector = TimestampDetector(0.1 * 3)
+    timestamp_detector = TimestampDetector(max_th=0.1 * 3)
+    timestamp_rate_detector = TimestampRateDetector(min_th=1e-6, max_th=1)
 
-    histogram_detector = HueSaturationHistogramDetector(0.4)
-    mse_detector = MSEImageDetector(0.01)
-    optical_flow_detector = OpticalFlowDetector(20)
-    timestamp_rate_detector = TimestampRateDetector(1)
+    histogram_detector = HueSaturationHistogramDetector(max_th=0.4)
+    mse_detector = MSEImageDetector(min_th=0.01, max_th=1000)
+    optical_flow_detector = OpticalFlowDetector(max_th=20)
     combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector, timestamp_rate_detector], [mse_detector, histogram_detector, optical_flow_detector])
     # combined_detector = CombinedDetector([], [optical_flow_detector])
     

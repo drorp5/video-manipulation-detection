@@ -32,11 +32,11 @@ def hue_saturation_histogram(rgb_img: np.ndarray, hue_bins: int = DEFAULT_HUE_BI
 
 class HueSaturationHistogramDetector(ImageProcessingDetector):
     """Detector based on histogram of the hue-saturation channels"""
-    def __init__(self, min_th: float, hue_bins: int = DEFAULT_HUE_BINS, saturation_bins: int = DEFAULT_SATURATION_BINS):
-        self.min_th = min_th
+    def __init__(self, max_th: float, hue_bins: int = DEFAULT_HUE_BINS, saturation_bins: int = DEFAULT_SATURATION_BINS):
         self.hue_bins = hue_bins
         self.saturation_bins = saturation_bins
         self.prev_hist = None
+        super().__init__(max_th=max_th)
         
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -51,7 +51,7 @@ class HueSaturationHistogramDetector(ImageProcessingDetector):
         if self.prev_hist is None:
             return ManipulationDetectionResult(0, True, FakeDetectionStatus.FIRST)
         score = self.current_hist.histograms_distance(self.prev_hist)
-        if score > self.min_th:
+        if score > self.max_th:
             return ManipulationDetectionResult(score, False, self.fake_status)
         return ManipulationDetectionResult(score, True, FakeDetectionStatus.REAL)
 

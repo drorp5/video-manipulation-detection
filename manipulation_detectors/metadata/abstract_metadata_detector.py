@@ -3,10 +3,12 @@ from vimba import Frame, PixelFormat
 from typing import Tuple
 
 class MetadataDetector(ManipulationDetector):
-    def __init__(self):
-        self.current_metadata = None
+    def __init__(self, min_th:float = 0, max_th:float = np.inf):
+        self.min_th = min_th
+        self.max_th = max_th
         self.prev_metadata = None
-    
+        self.current_metadata = None
+
     @abstractmethod
     def pre_process(self, frame: Frame) -> None:
         pass

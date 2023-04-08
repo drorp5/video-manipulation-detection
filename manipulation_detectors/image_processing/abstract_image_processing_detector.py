@@ -5,6 +5,9 @@ from typing import Tuple
 
 class ImageProcessingDetector(ManipulationDetector):
     "Abstract class for detection based on image processing techniques"
+    def __init__(self, min_th:float = 0, max_th:float = np.inf):
+        self.min_th = min_th
+        self.max_th = max_th
 
     def pre_process(self, rgb_img: np.ndarray) -> None:
         self.current_rgb_img = rgb_img

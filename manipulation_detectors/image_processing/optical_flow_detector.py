@@ -21,17 +21,16 @@ color = np.random.randint(0, 255, (100, 3))
     
 class OpticalFlowDetector(ImageProcessingDetector):
     "Detector based on optical flow mismatch"
-    def __init__(self, min_th: float) -> None:
-        self.min_th = min_th
+    def __init__(self, max_th: float) -> None:
         self.current_rgb_img: np.ndarray = None
         self.current_gray_img: np.ndarray = None
         self.current_features: np.ndarray = None
         self.prev_gray_img: np.ndarray = None
         self.prev_features: np.ndarray = None
-
         self.good_old = None
         self.good_new = None
         self.img_shape = None
+        super().__init__(max_th = max_th)
         
     @property
     def fake_status(self) -> FakeDetectionStatus:
@@ -59,7 +58,7 @@ class OpticalFlowDetector(ImageProcessingDetector):
             self.good_new = good_new
             self.good_old = good_old
 
-            if score > self.min_th:
+            if score > self.max_th:
                 return ManipulationDetectionResult(score, False, self.fake_status)
         else:
             score = np.nan
