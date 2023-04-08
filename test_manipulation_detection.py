@@ -105,9 +105,11 @@ if __name__ == "__main__":
     # vehicle_detector = get_detector('MobileNet')
     vehicle_detector = get_detector('Yolo')
 
+    # output_video_path = dst_dir/f'{gvsp_path.stem}_{vehicle_detector.name}.mp4'
+    output_video_path = None
     results_df = detect_in_gvsp_transmission(gvsp_transmission=gvsp_transmission,
                                             combined_detector=combined_detector,
                                             vehicle_detector=vehicle_detector,
                                             print_every=100,
-                                            output_video_path=dst_dir/f'{gvsp_path.stem}_{vehicle_detector.name}.mp4')
-    results_df.to_pickle(dst_dir/f'{gvsp_path.stem}_{vehicle_detector.name}.pkl')
+                                            output_video_path=output_video_path)
+    results_df.to_pickle(dst_dir/f'ROI_{gvsp_path.stem}_{vehicle_detector.name}.pkl')
