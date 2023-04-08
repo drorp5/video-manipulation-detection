@@ -1,5 +1,6 @@
 from .abstract_metadata_detector import *
 from .varying_metadata import *
+from datetime import datetime
 
 class VaryingMetadataDetector(MetadataDetector):
     """Abstract class for detection based on incremental frame metadata"""
@@ -79,15 +80,31 @@ class TimestampDetector(VaryingMetadataDetector):
         return "Timestamp"
         
 class TimestampRateDetector(VaryingMetadataDetector):
-    """Detection using timestamp change rate"""
+    """Detection using timestamp change rate vs reality """
+    def __init__(self, tolerance):
+        self.prev_internal_timestamp = None
+        self.current_internal_timestamp = None
+        super().__init__(tolerance)
+
     @property
     def fake_status(self) -> FakeDetectionStatus:
         return FakeDetectionStatus.TIMESTAMP_RATE_FAILURE
+    
+    def pre_process(self, frame: Frame) -> None:
+        self.current_metadata = extract_varying_metadata(frame)
+        self.current_internal_timestamp = datetime.now()
 
     def calc_score(self) -> float: 
-        #TODO: implement
-        pass
+        external_timestamp_diff_seconds = self.current_metadata.timestamp_seconds - self.prev_metadata.timestamp_seconds
+        internal_timestamp_diff = self.current_internal_timestamp - self.prev_internal_timestamp
+        internal_timestamp_diff_seconds = internal_timestamp_diff.total_seconds()
+        error = internal_timestamp_diff_seconds - external_timestamp_diff_seconds
+        return abs(error)
 
     @property
     def name(self) -> str:
         return "TimestampRate"
+
+    def post_process(self) -> None:
+        self.prev_internal_timestamp = self.current_internal_timestamp
+        super().post_process()
