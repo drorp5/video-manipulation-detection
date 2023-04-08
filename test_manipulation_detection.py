@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from icecream import ic
+import traceback
 from transmission_mock.gvsp_transmission import MockGvspTransmission
 from manipulation_detectors.abstract_detector import *
 from manipulation_detectors.metadata import *
@@ -65,8 +66,8 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                     except:
                         pass
                     video_writer.write(cv2.cvtColor(frame_img, cv2.COLOR_RGB2BGR))        
-    except:
-        pass
+    except Exception as e:
+        traceback.print_exc() 
     finally:
         if video_writer is not None:
             video_writer.release()
