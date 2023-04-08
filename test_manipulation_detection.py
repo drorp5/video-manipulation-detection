@@ -96,8 +96,8 @@ if __name__ == "__main__":
     histogram_detector = HueSaturationHistogramDetector(0.4)
     mse_detector = MSEImageDetector(0.01)
     optical_flow_detector = OpticalFlowDetector(20)
-    
-    combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector], [mse_detector, histogram_detector, optical_flow_detector])
+    timestamp_rate_detector = TimestampRateDetector(1)
+    combined_detector = CombinedDetector([constant_metadata_detector, frame_id_detector, timestamp_detector, timestamp_rate_detector], [mse_detector, histogram_detector, optical_flow_detector])
     # combined_detector = CombinedDetector([], [optical_flow_detector])
     
     # vehicle_detector = get_detector('Haar')
