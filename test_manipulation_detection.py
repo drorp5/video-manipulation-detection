@@ -23,6 +23,7 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
     
     scores = []
     process_time = []
+    fake = []
     frames = []
     num_frames = 0
     video_writer = None        
@@ -43,8 +44,14 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
                 manipulation_detection_scores = zip(manipulation_detection_results.keys(), [res.score for res in manipulation_detection_results.values()])
                 detection_scores.update(manipulation_detection_scores)
                 scores.append(detection_scores)
+                
+                fake_results = {'combined': not passed}
+                detectors_fake_flag = zip(manipulation_detection_results.keys(), [not res.passed for res in manipulation_detection_results.values()])
+                fake_results.update(detectors_fake_flag)
+                fake.append(fake_results)
+
                 process_time.append(dict(zip(manipulation_detection_results.keys(), [res.process_time_sec for res in manipulation_detection_results.values()])))
-    
+                
                 if num_frames % print_every == 0:
                     print(f'frame {frame.id} : {passed}')
                     if not(passed):
@@ -73,7 +80,8 @@ def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
             video_writer.release()
         scores_df = pd.DataFrame(scores, index=frames)
         process_time_df = pd.DataFrame(process_time, index=frames)
-        results_df = pd.concat([scores_df, process_time_df.add_prefix('time_')], axis=1)        
+        fake_df =  pd.DataFrame(fake, index=frames)
+        results_df = pd.concat([scores_df, fake_df.add_prefix('fake_'), process_time_df.add_prefix('time_')], axis=1)        
     return results_df
 
 if __name__ == "__main__":

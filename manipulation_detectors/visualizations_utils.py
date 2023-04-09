@@ -37,14 +37,17 @@ def plot_results(results_df: pd.DataFrame):
     fig.show()
 
 if __name__ == "__main__":
-    pkl_path = r'C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\OUTPUT\faking_matlab_rec_3.pkl'
+    pkl_path = r'OUTPUT\failed_status_faking_matlab_rec_3_Haar.pkl'
     pkl_path = Path(pkl_path)
 
     df = pd.read_pickle(pkl_path.as_posix())
 
-    scores_df = df[[col for col in df if not col.startswith('time_')]]
+    scores_df = df[[col for col in df if not col.startswith('time_') and not col.startswith('fake_')]]
     # times_df = df[[col for col in df if col.startswith('time_')]]
+    fake_df = df[[col for col in df if col=='vehicle' or col.startswith('fake_')]]
 
     plot_results(scores_df)
+    plot_results(fake_df)
+
 
 
