@@ -1,8 +1,8 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from transmission_mock import MockGvspTransmission
-from manipulation_detectors import gvsp_frame_to_rgb
+from transmission_mock.gvsp_transmission import MockGvspTransmission
+from manipulation_detectors.utils import gvsp_frame_to_rgb
 from pathlib import Path
 from tqdm import tqdm
 
