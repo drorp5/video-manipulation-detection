@@ -24,6 +24,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+from pathlib import Path
 import threading
 import sys
 import cv2
@@ -33,7 +34,9 @@ from sign_detectors import stop_sign_detectors as detectors
 import time
 import argparse
 from config import CV2_CONVERSIONS
-
+import json
+from datetime import datetime
+import subprocess
 
 def print_preamble():
     print('///////////////////////////////////////////////////////')
@@ -143,10 +146,12 @@ def setup_camera(cam: Camera):
 
 
 class Handler:
-    def __init__(self, detector_name: str):
+    def __init__(self, detector_name: str, output_parameters_path:Path):
         self.shutdown_event = threading.Event()
         self.detector = detectors.get_detector(detector_name)
         self.downfactor = 4
+        self.output_parameters_path = output_parameters_path
+
 
     def __call__(self, cam: Camera, frame: Frame):
         ENTER_KEY_CODE = 13
@@ -161,7 +166,22 @@ class Handler:
 
             msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
             img = frame.as_opencv_image()
-            
+
+            # get values of exposure and gain
+            try:
+                exposure_us = cam.get_feature_by_name('ExposureTimeAbs').get()
+                gain_db = cam.get_feature_by_name('Gain').get()
+                with open(self.output_parameters_path.absolute().as_posix(), 'a') as file:
+                    file.write(f"""{{
+        frame_id: {frame.get_id()},
+        exposure_us: {exposure_us},
+        gain_db: {gain_db}
+        }},
+        """)
+            except:
+                print('WARNING: cant query parameters')
+                 
+                
             conversion_started = time.time()
             pixel_format = frame.get_pixel_format()
             if pixel_format in CV2_CONVERSIONS.keys():
@@ -201,12 +221,29 @@ def main():
     cam_id = args.camera_id
     detector = args.detector
 
+    # Get the current time
+    current_time = datetime.now()
+    # Format the current time as a string
+    time_string = current_time.strftime("%H_%M_%S")
+
+    output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+    with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+        file.write(f'{{\n\trecording time = {time_string},\n')
+        
+
+    # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
+    pcap_file = Path(rf'./OUTPUT/recording_{time_string}.pcap')
+    tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_file.absolute().as_posix(), "((src host 192.168.10.150) and (dst host 192.168.1.100)) or ((dst host 192.168.10.150) and (src host 192.168.1.100))"]
+    
+    # Start the subprocess
+    process = subprocess.Popen(tshark_command)
+
     with Vimba.get_instance():
         with get_camera(cam_id) as cam:
 
             # Start Streaming, wait for five seconds, stop streaming
             setup_camera(cam)
-            handler = Handler(detector)
+            handler = Handler(detector, output_parameters_path)
 
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
@@ -215,6 +252,12 @@ def main():
 
             finally:
                 cam.stop_streaming()
+    
+    with open(output_parameters_path.absolute().as_posix(), 'a') as file:
+        file.write(f'\n}}')
+    
+    process.terminate()
+
 
 
 if __name__ == '__main__':
