@@ -37,6 +37,7 @@ from config import CV2_CONVERSIONS
 import json
 from datetime import datetime
 import subprocess
+import re 
 
 def print_preamble():
     print('///////////////////////////////////////////////////////')
@@ -250,6 +251,16 @@ def main():
             finally:
                 cam.stop_streaming()
     process.terminate()
+    # fix json file
+    with open(output_parameters_path.absolute().as_posix(), 'r') as file:
+        json_data = file.read()
+    fixed_json = re.sub(r'\n},?\n{', ',',json_data)
+    with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+        file.write(fixed_json)
+    
+    
+
+    
 
 
 
