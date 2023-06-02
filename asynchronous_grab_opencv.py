@@ -169,15 +169,13 @@ class Handler:
 
             # get values of exposure and gain
             try:
-                exposure_us = cam.get_feature_by_name('ExposureTimeAbs').get()
-                gain_db = cam.get_feature_by_name('Gain').get()
-                with open(self.output_parameters_path.absolute().as_posix(), 'a') as file:
-                    file.write(f"""{{
-        frame_id: {frame.get_id()},
-        exposure_us: {exposure_us},
-        gain_db: {gain_db}
-        }},
-        """)
+                frame_data = {}
+                frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
+                frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
+                json_data = {f'frame_{frame.get_id()}': frame_data}
+                with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
+                    file.write(',\n')
+                    file.write(json.dumps(json_data, indent=2))
             except:
                 print('WARNING: cant query parameters')
                  
@@ -228,8 +226,7 @@ def main():
 
     output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
     with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-        file.write(f'{{\n\trecording time = {time_string},\n')
-        
+        file.write(json.dumps({'recording time': time_string}, indent=2))
 
     # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
     pcap_file = Path(rf'./OUTPUT/recording_{time_string}.pcap')
@@ -252,10 +249,6 @@ def main():
 
             finally:
                 cam.stop_streaming()
-    
-    with open(output_parameters_path.absolute().as_posix(), 'a') as file:
-        file.write(f'\n}}')
-    
     process.terminate()
 
 
