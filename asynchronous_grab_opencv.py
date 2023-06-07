@@ -68,21 +68,12 @@ def parse_args() -> Dict:
     parser = argparse.ArgumentParser()
     parser.add_argument("-id", "--camera_id", help="camera ID for direct access")
     parser.add_argument("-d", "--detector", choices=detectors.get_detectors_dict(), help="detection method")
+    parser.add_argument("-p", "--pcap", type=bool, help="whether to save pcap dump", default=False)
+    parser.add_argument("-ad", "--adaptive", type=bool, help="whether to save adaptive parameters", default=False)
 
     # parser.add_argument("-h", "--help")
     
     args = parser.parse_args()
-    """
-    for arg in args:
-        if arg in ('/h', '-h'):
-            print_usage()
-            sys.exit(0)
-
-    if argc > 1:
-        abort(reason="Invalid number of arguments. Abort.", return_code=2, usage=True)
-
-    return None if argc == 0 else args[0]
-    """
     return args
 
 def get_camera(camera_id: Optional[str]) -> Camera:
@@ -147,11 +138,12 @@ def setup_camera(cam: Camera):
 
 
 class Handler:
-    def __init__(self, detector_name: str, output_parameters_path:Path):
+    def __init__(self, detector_name: str, output_parameters_path:Path=None):
         self.shutdown_event = threading.Event()
         self.detector = detectors.get_detector(detector_name)
         self.downfactor = 4
         self.output_parameters_path = output_parameters_path
+
 
 
     def __call__(self, cam: Camera, frame: Frame):
@@ -169,17 +161,18 @@ class Handler:
             img = frame.as_opencv_image()
 
             # get values of exposure and gain
-            try:
-                frame_data = {}
-                frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
-                frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
-                json_data = {f'frame_{frame.get_id()}': frame_data}
-                with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
-                    file.write(',\n')
-                    file.write(json.dumps(json_data, indent=2))
-            except:
-                print('WARNING: cant query parameters')
-                 
+            if self.output_parameters_path:
+                try:
+                    frame_data = {}
+                    frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
+                    frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
+                    json_data = {f'frame_{frame.get_id()}': frame_data}
+                    with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
+                        file.write(',\n')
+                        file.write(json.dumps(json_data, indent=2))
+                except:
+                    print('WARNING: cant query parameters')
+                    
                 
             conversion_started = time.time()
             pixel_format = frame.get_pixel_format()
@@ -219,22 +212,28 @@ def main():
     args = parse_args()
     cam_id = args.camera_id
     detector = args.detector
+    save_pcap = args.pcap
+    save_adaptive = args.adaptive
 
     # Get the current time
     current_time = datetime.now()
     # Format the current time as a string
     time_string = current_time.strftime("%H_%M_%S")
 
-    output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
-    with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-        file.write(json.dumps({'recording time': time_string}, indent=2))
 
-    # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
-    pcap_file = Path(rf'./OUTPUT/recording_{time_string}.pcap')
-    tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_file.absolute().as_posix(), "((src host 192.168.10.150) and (dst host 192.168.1.100)) or ((dst host 192.168.10.150) and (src host 192.168.1.100))"]
-    
-    # Start the subprocess
-    process = subprocess.Popen(tshark_command)
+    output_parameters_path = None
+    if save_adaptive:
+        output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+        with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+            file.write(json.dumps({'recording time': time_string}, indent=2))
+
+    if save_pcap:
+        # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
+        pcap_file = Path(rf'./OUTPUT/recording_{time_string}.pcap')
+        tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_file.absolute().as_posix(), "((src host 192.168.10.150) and (dst host 192.168.1.100)) or ((dst host 192.168.10.150) and (src host 192.168.1.100))"]
+        
+        # Start the subprocess
+        process = subprocess.Popen(tshark_command)
 
     with Vimba.get_instance():
         with get_camera(cam_id) as cam:
@@ -250,19 +249,16 @@ def main():
 
             finally:
                 cam.stop_streaming()
-    process.terminate()
-    # fix json file
-    with open(output_parameters_path.absolute().as_posix(), 'r') as file:
-        json_data = file.read()
-    fixed_json = re.sub(r'\n},?\n{', ',',json_data)
-    with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-        file.write(fixed_json)
+    if save_pcap:
+        process.terminate()
     
-    
-
-    
-
-
-
+    if save_adaptive:
+        # fix json file
+        with open(output_parameters_path.absolute().as_posix(), 'r') as file:
+            json_data = file.read()
+        fixed_json = re.sub(r'\n},?\n{', ',',json_data)
+        with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+            file.write(fixed_json)
+        
 if __name__ == '__main__':
     main()
