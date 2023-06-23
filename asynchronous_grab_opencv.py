@@ -70,6 +70,7 @@ def parse_args() -> Dict:
     parser.add_argument("-d", "--detector", choices=detectors.get_detectors_dict(), help="detection method")
     parser.add_argument("-p", "--pcap", type=bool, help="whether to save pcap dump", default=False)
     parser.add_argument("-ad", "--adaptive", type=bool, help="whether to save adaptive parameters", default=False)
+    parser.add_argument("-save", "--save_frames", type=bool, help="whether to save collected frames", default=False)
 
     # parser.add_argument("-h", "--help")
     
@@ -138,12 +139,12 @@ def setup_camera(cam: Camera):
 
 
 class Handler:
-    def __init__(self, detector_name: str, output_parameters_path:Path=None):
+    def __init__(self, detector_name: str, output_parameters_path:Path=None, svaed_frames_dir:Path=None):
         self.shutdown_event = threading.Event()
         self.detector = detectors.get_detector(detector_name)
         self.downfactor = 4
         self.output_parameters_path = output_parameters_path
-
+        self.svaed_frames_dir = svaed_frames_dir
 
 
     def __call__(self, cam: Camera, frame: Frame):
@@ -176,11 +177,17 @@ class Handler:
                 
             conversion_started = time.time()
             pixel_format = frame.get_pixel_format()
+
             if pixel_format in CV2_CONVERSIONS.keys():
                 img = cv2.cvtColor(img, CV2_CONVERSIONS[pixel_format])
             conversion_finished = time.time()
             conversion_time = conversion_finished - conversion_started
 
+
+            if self.svaed_frames_dir is not None:
+                output_img_path = self.svaed_frames_dir / f'frame_{frame.get_id()}.png'
+                cv2.imwrite(output_img_path.as_posix(), img)
+            
             resizing_started = time.time()
             
             width = int(img.shape[1] / self.downfactor)
@@ -214,6 +221,7 @@ def main():
     detector = args.detector
     save_pcap = args.pcap
     save_adaptive = args.adaptive
+    save_frames = args.save_frames
 
     # Get the current time
     current_time = datetime.now()
@@ -235,12 +243,16 @@ def main():
         # Start the subprocess
         process = subprocess.Popen(tshark_command)
 
+    svaed_frames_dir = None
+    if save_frames:
+        svaed_frames_dir = Path(rf'./OUTPUT/recording_{time_string}_images')
+        svaed_frames_dir.mkdir()
     with Vimba.get_instance():
         with get_camera(cam_id) as cam:
 
             # Start Streaming, wait for five seconds, stop streaming
             setup_camera(cam)
-            handler = Handler(detector, output_parameters_path)
+            handler = Handler(detector, output_parameters_path, svaed_frames_dir)
 
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
