@@ -249,6 +249,27 @@ def main():
         svaed_frames_dir.mkdir()
     with Vimba.get_instance():
         with get_camera(cam_id) as cam:
+            
+            cam.get_feature_by_name('DSPSubregionTop').set(0)
+            cam.get_feature_by_name('DSPSubregionBottom').set(1216)
+            cam.get_feature_by_name('DSPSubregionLeft').set(0)
+            cam.get_feature_by_name('DSPSubregionRight').set(1936)
+
+            dsp_subregion = {'top': 400,
+                            'bottom': 410,
+                            'left': 950,
+                            'right':960}
+            
+            if save_adaptive:
+                output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+                with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+                    file.write(json.dumps(dsp_subregion, indent=2))
+
+            cam.get_feature_by_name('DSPSubregionTop').set(dsp_subregion['top'])
+            cam.get_feature_by_name('DSPSubregionBottom').set(dsp_subregion['bottom'])
+            cam.get_feature_by_name('DSPSubregionLeft').set(dsp_subregion['left'])
+            cam.get_feature_by_name('DSPSubregionRight').set(dsp_subregion['right'])
+            
 
             # Start Streaming, wait for five seconds, stop streaming
             setup_camera(cam)
