@@ -68,21 +68,13 @@ def parse_args() -> Dict:
     parser = argparse.ArgumentParser()
     parser.add_argument("-id", "--camera_id", help="camera ID for direct access")
     parser.add_argument("-d", "--detector", choices=detectors.get_detectors_dict(), help="detection method")
+    parser.add_argument("-p", "--pcap", type=bool, help="whether to save pcap dump", default=False)
+    parser.add_argument("-ad", "--adaptive", type=bool, help="whether to save adaptive parameters", default=False)
+    parser.add_argument("-save", "--save_frames", type=bool, help="whether to save collected frames", default=False)
 
     # parser.add_argument("-h", "--help")
     
     args = parser.parse_args()
-    """
-    for arg in args:
-        if arg in ('/h', '-h'):
-            print_usage()
-            sys.exit(0)
-
-    if argc > 1:
-        abort(reason="Invalid number of arguments. Abort.", return_code=2, usage=True)
-
-    return None if argc == 0 else args[0]
-    """
     return args
 
 def get_camera(camera_id: Optional[str]) -> Camera:
@@ -147,11 +139,12 @@ def setup_camera(cam: Camera):
 
 
 class Handler:
-    def __init__(self, detector_name: str, output_parameters_path:Path):
+    def __init__(self, detector_name: str, output_parameters_path:Path=None, svaed_frames_dir:Path=None):
         self.shutdown_event = threading.Event()
         self.detector = detectors.get_detector(detector_name)
         self.downfactor = 4
         self.output_parameters_path = output_parameters_path
+        self.svaed_frames_dir = svaed_frames_dir
 
 
     def __call__(self, cam: Camera, frame: Frame):
@@ -169,25 +162,32 @@ class Handler:
             img = frame.as_opencv_image()
 
             # get values of exposure and gain
-            try:
-                frame_data = {}
-                frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
-                frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
-                json_data = {f'frame_{frame.get_id()}': frame_data}
-                with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
-                    file.write(',\n')
-                    file.write(json.dumps(json_data, indent=2))
-            except:
-                print('WARNING: cant query parameters')
-                 
+            if self.output_parameters_path:
+                try:
+                    frame_data = {}
+                    frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
+                    frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
+                    json_data = {f'frame_{frame.get_id()}': frame_data}
+                    with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
+                        file.write(',\n')
+                        file.write(json.dumps(json_data, indent=2))
+                except:
+                    print('WARNING: cant query parameters')
+                    
                 
             conversion_started = time.time()
             pixel_format = frame.get_pixel_format()
+
             if pixel_format in CV2_CONVERSIONS.keys():
                 img = cv2.cvtColor(img, CV2_CONVERSIONS[pixel_format])
             conversion_finished = time.time()
             conversion_time = conversion_finished - conversion_started
 
+
+            if self.svaed_frames_dir is not None:
+                output_img_path = self.svaed_frames_dir / f'frame_{frame.get_id()}.png'
+                cv2.imwrite(output_img_path.as_posix(), img)
+            
             resizing_started = time.time()
             
             width = int(img.shape[1] / self.downfactor)
@@ -219,29 +219,61 @@ def main():
     args = parse_args()
     cam_id = args.camera_id
     detector = args.detector
+    save_pcap = args.pcap
+    save_adaptive = args.adaptive
+    save_frames = args.save_frames
 
     # Get the current time
     current_time = datetime.now()
     # Format the current time as a string
     time_string = current_time.strftime("%H_%M_%S")
 
-    output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
-    with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-        file.write(json.dumps({'recording time': time_string}, indent=2))
 
-    # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
-    pcap_file = Path(rf'./OUTPUT/recording_{time_string}.pcap')
-    tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_file.absolute().as_posix(), "((src host 192.168.10.150) and (dst host 192.168.1.100)) or ((dst host 192.168.10.150) and (src host 192.168.1.100))"]
-    
-    # Start the subprocess
-    process = subprocess.Popen(tshark_command)
+    output_parameters_path = None
+    if save_adaptive:
+        output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+        with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+            file.write(json.dumps({'recording time': time_string}, indent=2))
 
+    if save_pcap:
+        # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
+        pcap_file = Path(rf'./OUTPUT/recording_{time_string}.pcap')
+        tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_file.absolute().as_posix(), "((src host 192.168.10.150) and (dst host 192.168.1.100)) or ((dst host 192.168.10.150) and (src host 192.168.1.100))"]
+        
+        # Start the subprocess
+        process = subprocess.Popen(tshark_command)
+
+    svaed_frames_dir = None
+    if save_frames:
+        svaed_frames_dir = Path(rf'./OUTPUT/recording_{time_string}_images')
+        svaed_frames_dir.mkdir()
     with Vimba.get_instance():
         with get_camera(cam_id) as cam:
+            
+            cam.get_feature_by_name('DSPSubregionTop').set(0)
+            cam.get_feature_by_name('DSPSubregionBottom').set(1216)
+            cam.get_feature_by_name('DSPSubregionLeft').set(0)
+            cam.get_feature_by_name('DSPSubregionRight').set(1936)
+
+            dsp_subregion = {'top': 400,
+                            'bottom': 410,
+                            'left': 950,
+                            'right':960}
+            
+            if save_adaptive:
+                output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+                with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+                    file.write(json.dumps(dsp_subregion, indent=2))
+
+            cam.get_feature_by_name('DSPSubregionTop').set(dsp_subregion['top'])
+            cam.get_feature_by_name('DSPSubregionBottom').set(dsp_subregion['bottom'])
+            cam.get_feature_by_name('DSPSubregionLeft').set(dsp_subregion['left'])
+            cam.get_feature_by_name('DSPSubregionRight').set(dsp_subregion['right'])
+            
 
             # Start Streaming, wait for five seconds, stop streaming
             setup_camera(cam)
-            handler = Handler(detector, output_parameters_path)
+            handler = Handler(detector, output_parameters_path, svaed_frames_dir)
 
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
@@ -250,19 +282,16 @@ def main():
 
             finally:
                 cam.stop_streaming()
-    process.terminate()
-    # fix json file
-    with open(output_parameters_path.absolute().as_posix(), 'r') as file:
-        json_data = file.read()
-    fixed_json = re.sub(r'\n},?\n{', ',',json_data)
-    with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-        file.write(fixed_json)
+    if save_pcap:
+        process.terminate()
     
-    
-
-    
-
-
-
+    if save_adaptive:
+        # fix json file
+        with open(output_parameters_path.absolute().as_posix(), 'r') as file:
+            json_data = file.read()
+        fixed_json = re.sub(r'\n},?\n{', ',',json_data)
+        with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+            file.write(fixed_json)
+        
 if __name__ == '__main__':
     main()
