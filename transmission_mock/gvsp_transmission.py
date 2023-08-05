@@ -9,32 +9,40 @@ class MockGvspTransmission():
     def __init__(self, gvsp_pcap_path: Path):
         self.pcap_reader = PcapReader(gvsp_pcap_path.as_posix())
         self.iteration_stopped = False
+        self.last_packet = None
+    
+    def _get_next_packet(self):
+        if self.last_packet:
+            return self.last_packet
+        return next(self.pcap_reader)
         
     def _next(self) -> MockFrame or None:
         frame_id = None
         while(frame_id is None):
             try:
-                pkt = next(self.pcap_reader)
-                if pkt.haslayer(GVSP_LEADER_LAYER):
+                pkt = self._get_next_packet()
+                if pkt.haslayer(Gvsp):
                     frame_id = pkt.BlockID
+                    if frame_id == 0:
+                        frame_id = None
+                    
             except StopIteration:
                 self.iteration_stopped = True
                 return None
             
         frame_packets = []
-        is_gvsp_packet = pkt.haslayer(GVSP_LAYER)
-        while(not is_gvsp_packet or pkt.BlockID == frame_id):
-            if is_gvsp_packet:
+        while(not pkt.haslayer(GVSP_LAYER) or pkt.BlockID == frame_id):
+            if pkt.haslayer(GVSP_LAYER):
                 frame_packets.append(pkt)
-                if pkt.haslayer(GVSP_TRAILER_LAYER):
-                    return MockFrame(PacketList(frame_packets))
             try:
                 pkt = next(self.pcap_reader)
-                is_gvsp_packet = pkt.haslayer(GVSP_LAYER)
+                if not pkt.haslayer(GVSP_LAYER):
+                    continue
             except StopIteration:
                 self.iteration_stopped = True
                 break
-        return None
+        self.last_packet = pkt
+        return MockFrame(PacketList(frame_packets))
         
     @property
     def frames(self):

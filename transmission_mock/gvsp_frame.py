@@ -4,10 +4,17 @@ from scapy.all import PacketList
 from vimba import PixelFormat
 from .constansts import *
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
-
+from dataclasses import dataclass
 
 class MissingLeaderError(Exception):
     pass
+
+@dataclass
+class DefaultLeader:
+    SizeY = 1216
+    SizeX = 1936
+    PixelFormat = 0x1080009
+    Timestamp = None
 
 class MockFrame:
     """This class mocks GVSP frame for testing.
@@ -15,11 +22,22 @@ class MockFrame:
 
     def __init__(self, gvsp_frame_packets: PacketList):
         # check that starts with leader and ends with trailer
-        if not gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER):
-            raise MissingLeaderError
-        self.leader = gvsp_frame_packets[0]
+        if gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER):
+            # raise MissingLeaderError
+            self.leader = gvsp_frame_packets[0]
+            payload_first_ind = 1
+        else:
+            self.leader = DefaultLeader()
+            payload_first_ind = 0
 
-        raw_pixels, success_status = self.payload_packets_to_raw_image(gvsp_frame_packets[1:-1])        
+        if gvsp_frame_packets[-1].haslayer(GVSP_TRAILER_LAYER):
+            payload_last_ind = len(gvsp_frame_packets) - 1 
+        else:
+            payload_last_ind = len(gvsp_frame_packets)
+        
+        self.first_packet = gvsp_frame_packets[0]
+
+        raw_pixels, success_status = self.payload_packets_to_raw_image(gvsp_frame_packets[payload_first_ind:payload_last_ind])
         self._success_status = success_status
         self._img = self.adjust_raw_image(raw_pixels) #TODO: account for pixel format
     
@@ -38,7 +56,7 @@ class MockFrame:
         for packet in payload_packets:
             current_id = packet.PacketID
             pkt_bytes = bytes(packet[GVSP_LAYER].payload)
-            rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id,payload_size_bytes=len(pkt_bytes),
+            rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id, payload_size_bytes=len(pkt_bytes),
                                                                         max_payload_size_bytes=max_payload_size_bytes)
             raw_pixels[rows_indices, cols_indices] = np.frombuffer(pkt_bytes, dtype=np.uint8)
             assigned_pixels[rows_indices, cols_indices] = True
@@ -59,14 +77,18 @@ class MockFrame:
     
     @property
     def width(self):
-        return self.leader.SizeX
+        if self.leader:
+            return self.leader.SizeX
+        return None
 
     def get_width(self):
         return self.width
 
     @property
     def height(self):
-        return self.leader.SizeY
+        if self.leader:
+            return self.leader.SizeY
+        return None
 
     def get_height(self):
         return self.height
@@ -77,21 +99,25 @@ class MockFrame:
 
     @property
     def pixel_format(self):
-        return INT_TO_PIXEL_FORMAT[self.leader.PixelFormat]
+        if self.leader:
+            return INT_TO_PIXEL_FORMAT[self.leader.PixelFormat]
+        return None
 
     def get_pixel_format(self):
         return self.pixel_format
 
     @property
     def id(self):
-        return self.leader.BlockID
-    
+        return self.first_packet.BlockID
+        
     def get_id(self):
         return self.id
 
     @property
     def timestamp(self):
-        return self.leader.Timestamp
+        if self.leader:
+            return self.leader.Timestamp
+        return None
 
     def get_timestamp(self):
         return self.timestamp
