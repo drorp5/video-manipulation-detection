@@ -58,40 +58,11 @@ class FiniteFramesBuffer():
 
 
 class ExposureIntensityChangeValidator():
-    # max_offset = 20
-    # min_offset = 5
-
-    # low_intensity_ratio = 0.05
-    # low_intensity_ratio_err = 0.005
-    
-    # medium_intensity_ratio_err = 0.015
-
-    # high_intensity_ratio = 0.0067
-    # high_intensity_ratio_err = 0.0017
-    
-    # low_intensity = 110
-    # high_intensity = 200
     def __init__(self, max_offset: int) -> None:
         df_path = r'./INPUT/exposure_intensity_ratio.csv'
         self.ratio_df = pd.read_csv(df_path)
         self.max_offset = max_offset
         self.min_offset = 5
-
-
-
-    # def get_exposure_diff_ratio(self, intensity: float) -> Tuple[float, float]:
-    #     if intensity < self.low_intensity:
-    #         ratio = self.low_intensity_ratio
-    #         ratio_err = self.low_intensity_ratio_err
-    #     elif intensity > self.high_intensity:
-    #         ratio = self.high_intensity_ratio
-    #         ratio_err = self.high_intensity_ratio_err
-    #     else:
-    #         ratio = (self.high_intensity_ratio - self.low_intensity_ratio)/(self.high_intensity - self.low_intensity) * (intensity - self.low_intensity) + self.low_intensity_ratio
-    #         ratio_err = self.medium_intensity_ratio_err
-
-    #     return ratio, ratio_err    
-
 
     def get_exposure_diff_ratio(self, exposure: float) -> Tuple[float, float]:
         ind = np.argmin(abs(self.ratio_df['exposure'] - exposure))
@@ -99,7 +70,6 @@ class ExposureIntensityChangeValidator():
         if exposure < 2500:
             err = max(err, 0.01)
         return self.ratio_df['ratio'][ind], err
-
 
     def validate(self, exposure_change_frame: ExposureChangeFrame, cur_frame: Frame, prev_frame: Frame):
         if cur_frame.id - prev_frame.id != 1:
@@ -117,7 +87,6 @@ class ExposureIntensityChangeValidator():
         if np.isnan(intensity_diff):
             return False
         exposure_change_frame.checked_intensities_offsets.add(offset)
-        # ratio, ratio_err = self.get_exposure_diff_ratio(prev_frame.intensity)
         ratio, ratio_err = self.get_exposure_diff_ratio(exposure_change_frame.prev_exposure)
         expected_intensity_diff = ratio * exposure_change_frame.exposure_difference
         expected_intensity_diff_err = abs(ratio_err * exposure_change_frame.exposure_difference)
