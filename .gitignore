@@ -131,6 +131,6 @@ dmypy.json
 
 settings.json
 INPUT/*.pcapng
-INPUT/*.json
+INPUT/**/*.json
 OUTPUT/
 TODO
