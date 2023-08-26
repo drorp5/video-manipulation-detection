@@ -75,11 +75,25 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         return not np.isnan(intensity_diff)
              
     def is_intensity_diff_matches_estimation(self, intensity_diff) -> bool:
-        ratio, ratio_err = self.estimate_intensity_diff_to_exposure_diff_ratio(self.exposure_change.prev_frame.exposure)
-        expected_intensity_diff = ratio * self.exposure_change.exposure_difference
-        expected_intensity_diff_err = abs(ratio_err * self.exposure_change.exposure_difference)
-        abs_diff = abs(expected_intensity_diff - intensity_diff) 
-        return abs_diff <= expected_intensity_diff_err
+        abs_diff = abs(self.expected_intensity_diff - intensity_diff) 
+        return abs_diff <= self.expected_intensity_diff_err
+
+    @property
+    def ratio(self):
+        return self.estimate_intensity_diff_to_exposure_diff_ratio(self.exposure_change.prev_frame.exposure)[0]
+    
+    @property
+    def ratio_err(self):
+        return self.estimate_intensity_diff_to_exposure_diff_ratio(self.exposure_change.prev_frame.exposure)[1]
+    
+    @property
+    def expected_intensity_diff(self):
+        return self.ratio * self.exposure_change.exposure_difference
+    
+    @property
+    def expected_intensity_diff_err(self):
+        return abs(self.ratio_err * self.exposure_change.exposure_difference)
+    
 
     def validate(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
         if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
@@ -211,6 +225,4 @@ if __name__ == "__main__":
         detection_result = detector.feed_frame(frame_id, frame_data['exposure'], frame_data['intensity'])
         if detection_result is not None and detection_result.status != ExposureValidationStatus.EVALUATION:
             changes_detected[detection_result.change.id] = detection_result
-        
-        
     print('finished')
