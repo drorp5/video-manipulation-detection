@@ -3,203 +3,177 @@ from dataclasses import dataclass, field
 import json
 import re
 from typing import List, Tuple
-
 import numpy as np
 import pandas as pd
+from enum import Enum
 
 @dataclass
-class Frame:
-    """Simplified frame object with id, expoure time and intensity"""
+class IntensityExposureFrame:
+    """Simplified frame object with id, exposure time and intensity"""
     id: int
     exposure: float
     intensity: float
-
-    def get_exposure_diff(self, prev_frame:Frame):
-        if self.id - prev_frame.id == 1:
-           return self.exposure - prev_frame.exposure
-        return np.nan
+    
 
 @dataclass
-class ExposureChangeFrame:
+class ExposureChange:
     """Stores data of frame in which there was an exposure time change"""
-    frame: Frame
-    exposure_difference: float
-    prev_exposure: float
-    checked_offsets: set = field(default_factory=set) 
-    checked_intensities_offsets: set = field(default_factory=set) 
-
+    cur_frame: IntensityExposureFrame
+    prev_frame: IntensityExposureFrame
+    
     @property
-    def frame_id(self):
-        return self.frame.id
+    def id(self):
+        return self.cur_frame.id
+    
+    @property
+    def exposure_difference(self):
+        return self.cur_frame.exposure - self.prev_frame.exposure
+    
+    @property
+    def prev_exposure(self):
+        return self.prev_frame.exposure
+    
+
+class ExposureValidationStatus(Enum):
+    EVALUATION = 0
+    SUCCESS = 1
+    FAIL = 2
+    INCOMPLETE = 3
     
 
 @dataclass
-class FiniteFramesBuffer():
-    """Stores limited number of frames"""
-    size: int
-    frames_buffer: list = field(default_factory=list) 
-
-    def insert_frame(self, frame: Frame):
-        if len(self.frames_buffer) == self.size:
-            self.frames_buffer.pop(0)
-        self.frames_buffer.append(frame)
-    
-    @property
-    def num_frames(self) -> int:
-        return len(self.frames_buffer)
-    
-    def get_last(self) -> Frame:
-        if self.num_frames == 0:
-            return None
-        return self.frames_buffer[-1]
-    
-    def remove_till_index(self, ind: int) -> None:
-        self.frames_buffer = self.frames_buffer[ind+1:]
+class ExposureChangeDetectionResult:
+    change: ExposureChange
+    status: ExposureValidationStatus
+    matching: IntensityExposureFrame = None
 
 
-class ExposureIntensityChangeValidator():
-    def __init__(self, max_offset: int) -> None:
-        df_path = r'./INPUT/exposure_intensity_ratio.csv'
-        self.ratio_df = pd.read_csv(df_path)
+class ExposureChangeValidator(): #TODO: consider split to two Validator and Validation(Validator, ExposureFrame)
+    def __init__(self, exposure_change: ExposureChange, max_offset: int, min_offset: int=5) -> None:
+        self.exposure_change = exposure_change
+        self.ratio_df = pd.read_csv(r'./INPUT/exposure_intensity_ratio.csv') #TODO: change this to estimated function
         self.max_offset = max_offset
-        self.min_offset = 5
+        self.min_offset = min_offset
+        self.checked_offsets = set()
+        self.max_missing_intensity_frames = 0
+        self._are_all_options_exhausted = False
 
-    def get_exposure_diff_ratio(self, exposure: float) -> Tuple[float, float]:
+    def estimate_intensity_diff_to_exposure_diff_ratio(self, exposure: float) -> Tuple[float, float]:
         ind = np.argmin(abs(self.ratio_df['exposure'] - exposure))
         err =  self.ratio_df['ratio_std'][ind]
-        if exposure < 2500:
+        if exposure < 2500: #TODO: change this according to the estimated function
             err = max(err, 0.01)
         return self.ratio_df['ratio'][ind], err
 
-    def validate(self, exposure_change_frame: ExposureChangeFrame, cur_frame: Frame, prev_frame: Frame):
-        if cur_frame.id - prev_frame.id != 1:
-            return False
-        offset = cur_frame.id - exposure_change_frame.frame_id 
-        if offset < self.min_offset:
-            return False
-        if offset > self.max_offset:
-            return False
-        if offset in exposure_change_frame.checked_offsets:
-            return False
-        exposure_change_frame.checked_offsets.add(offset)
-        # match intensity diff
-        intensity_diff = cur_frame.intensity - prev_frame.intensity
-        if np.isnan(intensity_diff):
-            return False
-        exposure_change_frame.checked_intensities_offsets.add(offset)
-        ratio, ratio_err = self.get_exposure_diff_ratio(exposure_change_frame.prev_exposure)
-        expected_intensity_diff = ratio * exposure_change_frame.exposure_difference
-        expected_intensity_diff_err = abs(ratio_err * exposure_change_frame.exposure_difference)
+    def are_valid_intensity_frames(self, cur_frame_id: int, prev_frame_id) -> bool:
+        return 0 < cur_frame_id - prev_frame_id <= self.max_missing_intensity_frames + 1
+
+    def is_valid_offset(self, offset: int) -> bool:
+        return self.min_offset <= offset <= self.max_offset
+    
+    def is_valid_intensity_diff(self, intensity_diff):
+        return not np.isnan(intensity_diff)
+             
+    def is_intensity_diff_matches_estimation(self, intensity_diff) -> bool:
+        ratio, ratio_err = self.estimate_intensity_diff_to_exposure_diff_ratio(self.exposure_change.prev_frame.exposure)
+        expected_intensity_diff = ratio * self.exposure_change.exposure_difference
+        expected_intensity_diff_err = abs(ratio_err * self.exposure_change.exposure_difference)
         abs_diff = abs(expected_intensity_diff - intensity_diff) 
-        is_diff_match = abs_diff < expected_intensity_diff_err
-        return is_diff_match
+        return abs_diff <= expected_intensity_diff_err
+
+    def validate(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
+        if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
+            return False
+        offset = cur_frame.id - self.exposure_change.id 
+        self.update_are_all_options_exhausted(offset)
+        if not self.is_valid_offset(offset):
+            return False
+        if offset in self.checked_offsets:
+            return False
+        self.checked_offsets.add(offset)
+        intensity_diff = cur_frame.intensity - prev_frame.intensity
+        return self.is_intensity_diff_matches_estimation(intensity_diff)
         
-    def all_options_exhausted(self, exposure_change_frame: ExposureChangeFrame, frames_buffer: FiniteFramesBuffer):
-        return frames_buffer.get_last().id - exposure_change_frame.frame_id > self.max_offset
-
-    def all_options_tested(self, exposure_change_frame:ExposureChangeFrame):
-        return len(exposure_change_frame.checked_intensities_offsets) == self.max_offset - self.min_offset + 1
-
-class FrameDataBuffer:
-    def __init__(self):
-        self.max_offset = 20
-        self.frames_buffer = FiniteFramesBuffer(self.max_offset)
-        self.changes_buffer = []
-        self.exposure_change_validator = ExposureIntensityChangeValidator(self.max_offset)
-
-    def add_frame_data(self, frame_id: int, exposure: float, intensity: float):
-        cur_frame = Frame(frame_id, exposure, intensity)
-        prev_frame = self.frames_buffer.get_last()
-        
-        if prev_frame is not None:
-            exposure_difference = cur_frame.get_exposure_diff(prev_frame)
-            if not np.isnan(exposure_difference) and exposure_difference != 0:                
-                self.changes_buffer.append(ExposureChangeFrame(frame=cur_frame, exposure_difference=exposure_difference, prev_exposure=prev_frame.exposure))
-
-        self.frames_buffer.insert_frame(cur_frame)
+    @property
+    def are_all_options_exhausted(self) -> bool:
+        return self._are_all_options_exhausted
     
-    def check_changes(self) -> Tuple[ExposureChangeFrame, Frame]:
-        matching_frame = None
-        if len(self.changes_buffer) > 0 and self.frames_buffer.num_frames > 1:
-            change = self.changes_buffer[0]
-            for frame_ind, (prev_frame, cur_frame) in enumerate(zip(self.frames_buffer.frames_buffer[:-1], self.frames_buffer.frames_buffer[1:])):
-                matching = self.exposure_change_validator.validate(change, cur_frame, prev_frame)
-                if matching:
-                    matching_frame = cur_frame
-                    break
-            if matching:
-                self.frames_buffer.remove_till_index(frame_ind)
-                self.changes_buffer.pop(0)
-                return change, matching_frame
-            elif self.exposure_change_validator.all_options_exhausted(change, self.frames_buffer):
-                self.changes_buffer.pop(0)
-                if self.exposure_change_validator.all_options_tested(change):
-                    return change, None
-            return None
-       
+    @are_all_options_exhausted.setter
+    def are_all_options_exhausted(self, value):
+        self._are_all_options_exhausted = value
     
+    def update_are_all_options_exhausted(self, offset:int):
+        if not self.are_all_options_exhausted:
+            self.are_all_options_exhausted = offset >= self.max_offset
+    
+    @property
+    def are_all_options_tested(self):
+        return len(self.checked_offsets) == self.max_offset - self.min_offset + 1
+
+class ExposureTimeChangeDetector: 
+    def __init__(self, max_offset: int = 20):
+        self.max_offset = max_offset
+        self.cur_frame = None
+        self.last_intensity_frame = None
+        self.last_exposure_frame = None
+        self.changes_validations_buffer = []
+        self.max_missing_exposure_frames = 1
+
+    def is_valid_exposure_diff(self) -> bool:
+        if self.last_exposure_frame is None:
+            return False
+        return self.cur_frame.id - self.last_exposure_frame.id <= self.max_missing_exposure_frames + 1
+
+    def calc_exposure_diff(self) -> np.float:
+        if self.is_valid_exposure_diff():
+           return self.cur_frame.exposure - self.last_exposure_frame.exposure
+        return np.nan
+
+    def add_exposure_change(self) -> None:
+        if self.is_valid_exposure_diff():
+            exposure_difference = self.calc_exposure_diff()
+            if not np.isnan(exposure_difference) and exposure_difference != 0:
+                exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
+                exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset)
+                self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
+
+    def update_last_exposure_frame(self) -> None:
+        if not np.isnan(self.cur_frame.exposure):
+            self.last_exposure_frame = self.cur_frame
+    
+    def update_last_intensity_frame(self) -> None:
+        if not np.isnan(self.cur_frame.intensity):
+            self.last_intensity_frame = self.cur_frame
+
+    def validate_change(self) -> ExposureChangeDetectionResult:
+        if len(self.changes_validations_buffer) > 0:
+            exposure_change, exposure_change_validation = self.changes_validations_buffer[0]
+            is_matching = exposure_change_validation.validate(self.cur_frame, self.last_intensity_frame) 
+            if is_matching:
+                self.changes_validations_buffer.pop(0)
+                return ExposureChangeDetectionResult(change=exposure_change, 
+                                                      status=ExposureValidationStatus.SUCCESS,
+                                                      matching=self.cur_frame)
+            if exposure_change_validation.are_all_options_exhausted:
+                self.changes_validations_buffer.pop(0)
+                if exposure_change_validation.are_all_options_tested:
+                     return ExposureChangeDetectionResult(change=exposure_change, 
+                                                      status=ExposureValidationStatus.FAIL,)
+                return ExposureChangeDetectionResult(change=exposure_change, 
+                                                      status=ExposureValidationStatus.INCOMPLETE)
+            return ExposureChangeDetectionResult(change=exposure_change, 
+                                                status=ExposureValidationStatus.EVALUATION)
+            
+    def feed_frame(self, frame_id: int, exposure: float, intensity: float) -> ExposureChangeDetectionResult:
+        self.cur_frame = IntensityExposureFrame(frame_id, exposure, intensity)
+        self.add_exposure_change()
+        detection_result = self.validate_change()
+        self.update_last_exposure_frame()
+        self.update_last_intensity_frame()
+        return detection_result
 
 if __name__ == "__main__":
-    # with open (r"./INPUT/adaptive_parameters_15_31_45.json", 'r') as f:
-    #     data = json.load(f)
-    # frames_exposure_id = []
-    # frames_exposure_time = []
-    # for frame_id, frame_data in data.items():
-    #     try:
-    #         frames_exposure_id.append(int(frame_id.split('_')[1]))
-    #         frames_exposure_time.append(frame_data["exposure_us"])
-    #     except:
-    #         continue
-
-    # frames_exposure_id = np.array(frames_exposure_id)
-    # frames_exposure_time = np.array(frames_exposure_time)
-
-    # with open(r"./OUTPUT/recording_15_31_45_images/averaged_intensities.txt", 'r') as f:
-    #     intensities_txt = f.read()
-    # result = re.findall(r"frame (\d+): (\d+\.\d+)", intensities_txt)
-
-    # frames_id = []
-    # frames_intensity = []
-    # for frame_id, intensity in result:
-    #     frames_id.append(int(frame_id))
-    #     frames_intensity.append(float(intensity))
-
-    # frames_id = np.array(frames_id)
-    # frames_intensity = np.array(frames_intensity)
-    # interpolated_values = np.interp(frames_id, frames_exposure_id, frames_exposure_time)
-
-    # intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_id)
-    # exposure_df = pd.DataFrame({'exposure': frames_exposure_time}, index=frames_exposure_id)
-    # df = pd.merge(exposure_df, intensity_df, how="outer", left_index=True, right_index=True)
-    
-
-    # buffer = FrameDataBuffer()
-    # changes_detected = {}
-    # for frame_id, frame_data in df[3:].iterrows():
-    #     buffer.add_frame_data(frame_id, frame_data['exposure'], frame_data['intensity'])
-    #     res = buffer.check_changes()
-    #     while res is not None:
-    #         exposure_change, matching_frame = res
-    #         if matching_frame is not None:
-    #             changes_detected[exposure_change.frame_id] = matching_frame.id
-    #         else:
-    #             changes_detected[exposure_change.frame_id] = None
-    #         res = buffer.check_changes()
-    
-    # df2 = pd.read_csv(r".\OUTPUT\recording_15_31_45_images\adaptive_parameters_15_31_45_exposure_intensity_matches.txt")
-    # # set(df2['exposure_frame'])
-    # detected = []
-    # not_detected = []
-    # for k,v in changes_detected.items():
-    #     if k > 3000:
-    #         break
-    #     if v is None:
-    #         not_detected.append(k)
-    #     else:
-    #         detected.append(k)
-
-    
-    with open ("INPUT/adaptive_parameters_09_44_53.json", 'r') as f:
+    with open ("INPUT/8_8_23/adaptive_parameters_10_08_18.json", 'r') as f:
         data = json.load(f)
     frames_exposure_id = []
     frames_exposure_time = []
@@ -213,7 +187,7 @@ if __name__ == "__main__":
     frames_exposure_id = np.array(frames_exposure_id)
     frames_exposure_time = np.array(frames_exposure_time)
 
-    with open(r"./OUTPUT/recording_09_44_53_images/averaged_intensities.txt", 'r') as f:
+    with open(r"./OUTPUT/8_8_23/recording_10_08_18_images/averaged_intensities.txt", 'r') as f:
         intensities_txt = f.read()
     result = re.findall(r"frame (\d+): (\d+\.\d+)", intensities_txt)
 
@@ -229,22 +203,14 @@ if __name__ == "__main__":
 
     intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_id)
     exposure_df = pd.DataFrame({'exposure': frames_exposure_time}, index=frames_exposure_id)
-    df2 = pd.merge(exposure_df, intensity_df, how="outer", left_index=True, right_index=True)
-    # df = df.fillna(method='ffill')
+    exposure_intensity_df = pd.merge(exposure_df, intensity_df, how="outer", left_index=True, right_index=True)
 
-    buffer = FrameDataBuffer()
+    detector = ExposureTimeChangeDetector()
     changes_detected = {}
-    for frame_id, frame_data in df2[3:].iterrows():
-        buffer.add_frame_data(frame_id, frame_data['exposure'], frame_data['intensity'])
-
-        res = buffer.check_changes()
-        while res is not None:
-            exposure_change, matching_frame = res
-            if matching_frame is not None:
-                changes_detected[exposure_change.frame_id] = matching_frame.id
-            else:
-                changes_detected[exposure_change.frame_id] = None
-            res = buffer.check_changes()
-
+    for frame_id, frame_data in exposure_intensity_df[3:].iterrows():
+        detection_result = detector.feed_frame(frame_id, frame_data['exposure'], frame_data['intensity'])
+        if detection_result is not None and detection_result.status != ExposureValidationStatus.EVALUATION:
+            changes_detected[detection_result.change.id] = detection_result
+        
         
     print('finished')
