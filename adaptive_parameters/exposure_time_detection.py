@@ -96,6 +96,8 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
     
 
     def validate(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
+        if cur_frame is None or prev_frame is None:
+            return False
         if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
             return False
         offset = cur_frame.id - self.exposure_change.id 
