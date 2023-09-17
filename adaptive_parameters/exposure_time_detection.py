@@ -55,7 +55,7 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         self.min_offset = min_offset
         self.checked_offsets = set()
         self.max_missing_intensity_frames = 0
-        self._are_all_options_exhausted = False
+        self._are_all_offsets_exhausted = False
 
         self.ratio_function_parameters = np.array([6.34566360e+04, 1.69825909e-02])
 
@@ -109,7 +109,7 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
             return False
         offset = cur_frame.id - self.exposure_change.id 
-        self.update_are_all_options_exhausted(offset)
+        self.update_are_all_offsets_exhausted(offset)
         if not self.is_valid_offset(offset):
             return False
         if offset in self.checked_offsets:
@@ -119,19 +119,15 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         return self.is_intensity_diff_matches_estimation(intensity_diff)
         
     @property
-    def are_all_options_exhausted(self) -> bool:
-        return self._are_all_options_exhausted
+    def are_all_offsets_exhausted(self) -> bool:
+        return self._are_all_offsets_exhausted
     
-    @are_all_options_exhausted.setter
-    def are_all_options_exhausted(self, value):
-        self._are_all_options_exhausted = value
-    
-    def update_are_all_options_exhausted(self, offset:int):
-        if not self.are_all_options_exhausted:
-            self.are_all_options_exhausted = offset >= self.max_offset
+    def update_are_all_offsets_exhausted(self, offset:int):
+        if not self._are_all_offsets_exhausted:
+            self._are_all_offsets_exhausted = offset >= self.max_offset
     
     @property
-    def are_all_options_tested(self):
+    def are_all_offsets_tested(self):
         return len(self.checked_offsets) == self.max_offset - self.min_offset + 1
 
 class ExposureTimeChangeDetector: 
@@ -178,9 +174,9 @@ class ExposureTimeChangeDetector:
                 return ExposureChangeDetectionResult(change=exposure_change, 
                                                       status=ExposureValidationStatus.SUCCESS,
                                                       matching=self.cur_frame)
-            if exposure_change_validation.are_all_options_exhausted:
+            if exposure_change_validation.are_all_offsets_exhausted:
                 self.changes_validations_buffer.pop(0)
-                if exposure_change_validation.are_all_options_tested:
+                if exposure_change_validation.are_all_offsets_tested:
                      return ExposureChangeDetectionResult(change=exposure_change, 
                                                       status=ExposureValidationStatus.FAIL)
                 return ExposureChangeDetectionResult(change=exposure_change, 
