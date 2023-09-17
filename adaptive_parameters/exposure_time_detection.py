@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import numpy as np
 import pandas as pd
 from enum import Enum
@@ -45,7 +45,7 @@ class ExposureValidationStatus(Enum):
 class ExposureChangeDetectionResult:
     change: ExposureChange
     status: ExposureValidationStatus
-    matching: IntensityExposureFrame = None
+    matching: Optional[IntensityExposureFrame] = None
 
 
 class ExposureChangeValidator(): #TODO: consider split to two Validator and Validation(Validator, ExposureFrame)
@@ -144,18 +144,17 @@ class ExposureTimeChangeDetector:
             return False
         return self.cur_frame.id - self.last_exposure_frame.id <= self.max_missing_exposure_frames + 1
 
-    def calc_exposure_diff(self) -> np.float:
+    def calc_exposure_diff(self) -> float:
         if self.is_valid_exposure_diff():
            return self.cur_frame.exposure - self.last_exposure_frame.exposure
         return np.nan
 
     def add_exposure_change(self) -> None:
-        if self.is_valid_exposure_diff():
-            exposure_difference = self.calc_exposure_diff()
-            if not np.isnan(exposure_difference) and exposure_difference != 0:
-                exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
-                exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset)
-                self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
+        exposure_difference = self.calc_exposure_diff() 
+        if not np.isnan(exposure_difference) and exposure_difference != 0:
+            exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
+            exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset)
+            self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
 
     def update_last_exposure_frame(self) -> None:
         if not np.isnan(self.cur_frame.exposure):
@@ -165,7 +164,7 @@ class ExposureTimeChangeDetector:
         if not np.isnan(self.cur_frame.intensity):
             self.last_intensity_frame = self.cur_frame
 
-    def validate_change(self) -> ExposureChangeDetectionResult:
+    def validate_change(self) -> Optional[ExposureChangeDetectionResult]:
         if len(self.changes_validations_buffer) > 0:
             exposure_change, exposure_change_validation = self.changes_validations_buffer[0]
             is_matching = exposure_change_validation.validate(self.cur_frame, self.last_intensity_frame) 
