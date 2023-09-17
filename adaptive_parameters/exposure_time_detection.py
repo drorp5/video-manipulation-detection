@@ -35,10 +35,10 @@ class ExposureChange:
     
 
 class ExposureValidationStatus(Enum):
-    EVALUATION = 0
-    SUCCESS = 1
-    FAIL = 2
-    INCOMPLETE = 3
+    EVALUATION = 0  # detection still possible
+    SUCCESS = 1     # detection succeeded 
+    FAIL = 2        # detection failed
+    INCOMPLETE = 3  # detection failed - not all options observed
     
 
 @dataclass
