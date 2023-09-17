@@ -74,13 +74,12 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         self.max_offset = max_offset
         self.min_offset = min_offset
         self.checked_offsets = set()
-        self.max_missing_intensity_frames = 0
         self._are_all_offsets_exhausted = False
         self.ratio = IntensityDiffToExposureDiffRatio.init_of_exposure(self.exposure_change.prev_frame.exposure)
     
     def are_valid_intensity_frames(self, cur_frame_id: int, prev_frame_id: int) -> bool:
-        return 0 < cur_frame_id - prev_frame_id <= self.max_missing_intensity_frames + 1
-
+        return 0 < cur_frame_id - prev_frame_id
+    
     def is_valid_offset(self, offset: int) -> bool:
         return self.min_offset <= offset <= self.max_offset
              
@@ -102,7 +101,7 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         if offset in self.checked_offsets:
             return False
         self.checked_offsets.add(offset)
-        intensity_diff = cur_frame.intensity - prev_frame.intensity
+        intensity_diff = (cur_frame.intensity - prev_frame.intensity) / (cur_frame.id - prev_frame.id)
         return self.is_intensity_diff_matches_estimation(intensity_diff)
         
     @property
