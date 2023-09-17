@@ -149,21 +149,6 @@ class ExposureTimeChangeDetector:
            return self.cur_frame.exposure - self.last_exposure_frame.exposure
         return np.nan
 
-    def add_exposure_change(self) -> None:
-        exposure_difference = self.calc_exposure_diff() 
-        if not np.isnan(exposure_difference) and exposure_difference != 0:
-            exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
-            exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset)
-            self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
-
-    def update_last_exposure_frame(self) -> None:
-        if not np.isnan(self.cur_frame.exposure):
-            self.last_exposure_frame = self.cur_frame
-    
-    def update_last_intensity_frame(self) -> None:
-        if not np.isnan(self.cur_frame.intensity):
-            self.last_intensity_frame = self.cur_frame
-
     def validate_change(self) -> Optional[ExposureChangeDetectionResult]:
         if len(self.changes_validations_buffer) > 0:
             exposure_change, exposure_change_validation = self.changes_validations_buffer[0]
@@ -184,12 +169,30 @@ class ExposureTimeChangeDetector:
                                                 status=ExposureValidationStatus.EVALUATION)
             
     def feed_frame(self, frame_id: int, exposure: float, intensity: float) -> ExposureChangeDetectionResult:
-        self.cur_frame = IntensityExposureFrame(frame_id, exposure, intensity)
-        self.add_exposure_change()
+        self.pre_process(frame_id, exposure, intensity)
         detection_result = self.validate_change()
+        self.post_process()
+        return detection_result
+
+    def pre_process(self, frame_id: int, exposure: float, intensity: float) -> None:
+        self.cur_frame = IntensityExposureFrame(frame_id, exposure, intensity)
+        exposure_difference = self.calc_exposure_diff()
+        if not np.isnan(exposure_difference) and exposure_difference != 0:
+            exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
+            exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset)
+            self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
+
+    def update_last_exposure_frame(self) -> None:
+        if not np.isnan(self.cur_frame.exposure):
+            self.last_exposure_frame = self.cur_frame
+    
+    def update_last_intensity_frame(self) -> None:
+        if not np.isnan(self.cur_frame.intensity):
+            self.last_intensity_frame = self.cur_frame
+    
+    def post_process(self) -> None:
         self.update_last_exposure_frame()
         self.update_last_intensity_frame()
-        return detection_result
 
 if __name__ == "__main__":
     import adaptive_parameters.utils as utils
