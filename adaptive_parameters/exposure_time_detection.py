@@ -69,13 +69,13 @@ class IntensityDiffToExposureDiffRatio:
 
 
 class ExposureChangeValidator(): #TODO: consider split to two Validator and Validation(Validator, ExposureFrame)
-    def __init__(self, exposure_change: ExposureChange, max_offset: int, min_offset: int=5) -> None:
+    def __init__(self, exposure_change: ExposureChange, max_offset: int, min_offset: int=5, ratio_err: float = 0.015) -> None:
         self.exposure_change = exposure_change
         self.max_offset = max_offset
         self.min_offset = min_offset
         self.checked_offsets = set()
         self._are_all_offsets_exhausted = False
-        self.ratio = IntensityDiffToExposureDiffRatio.init_of_exposure(self.exposure_change.prev_frame.exposure)
+        self.ratio = IntensityDiffToExposureDiffRatio.init_of_exposure(self.exposure_change.prev_frame.exposure, err=ratio_err)
     
     def are_valid_intensity_frames(self, cur_frame_id: int, prev_frame_id: int) -> bool:
         return 0 < cur_frame_id - prev_frame_id
@@ -117,13 +117,14 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         return len(self.checked_offsets) == self.max_offset - self.min_offset + 1
 
 class ExposureTimeChangeDetector: 
-    def __init__(self, max_offset: int = 20):
+    def __init__(self, max_offset: int = 20, ratio_err: float = 0.015):
         self.max_offset = max_offset
         self.cur_frame = None
         self.last_intensity_frame = None
         self.last_exposure_frame = None
         self.changes_validations_buffer = []
         self.max_missing_exposure_frames = 1
+        self.ratio_err = ratio_err
 
     def is_valid_exposure_diff(self) -> bool:
         if self.last_exposure_frame is None:
@@ -165,7 +166,7 @@ class ExposureTimeChangeDetector:
         exposure_difference = self.calc_exposure_diff()
         if not np.isnan(exposure_difference) and exposure_difference != 0:
             exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
-            exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset)
+            exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset, ratio_err=self.ratio_err)
             self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
 
     def update_last_exposure_frame(self) -> None:
@@ -184,8 +185,8 @@ if __name__ == "__main__":
     import adaptive_parameters.utils as utils
     from pathlib import Path
     
-    adaptive_parameters_path = Path('INPUT\\10_8_23\\adaptive_parameters_2023_08_10_15_35_12.json')
-    frames_dir = Path('OUTPUT\\10_8_23\\recording_2023_08_10_15_35_12_images')
+    adaptive_parameters_path = Path('INPUT\\10_8_23\\adaptive_parameters_2023_08_10_15_31_21.json')
+    frames_dir = Path('OUTPUT\\10_8_23\\recording_2023_08_10_15_31_21_images')
     
     frames_exposure_id, frames_exposure_time = utils.read_exposure_data(adaptive_parameters_path)
     exposure_df = pd.DataFrame({'exposure': frames_exposure_time}, index=frames_exposure_id)
@@ -193,7 +194,9 @@ if __name__ == "__main__":
     intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_intensity_id)
     exposure_intensity_df = pd.merge(exposure_df, intensity_df, how="outer", left_index=True, right_index=True)
     
-    detector = ExposureTimeChangeDetector()
+    ratio_err = 0.015
+
+    detector = ExposureTimeChangeDetector(ratio_err=ratio_err)
     changes_detected = {}
     for frame_id, frame_data in exposure_intensity_df[3:].iterrows():
         detection_result = detector.feed_frame(frame_id, frame_data['exposure'], frame_data['intensity'])
