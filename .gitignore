@@ -134,3 +134,4 @@ INPUT/*.pcapng
 INPUT/**/*.json
 OUTPUT/
 TODO
+*.ipynb
