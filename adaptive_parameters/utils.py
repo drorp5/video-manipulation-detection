@@ -44,8 +44,8 @@ def read_matches_data(matches_path: Path, exposure_df: pd.DataFrame, intensity_d
     frames_intensity_id = intensity_df.index.to_numpy()
     frames_intensity_value = intensity_df['intensity'].to_numpy()
 
-    manual_exposure_time_change_frames_inds =  np.searchsorted(frames_exposure_id, df['exposure_frame'])
-    df['exposure_diff'] = frames_exposure_time[manual_exposure_time_change_frames_inds] - frames_exposure_time[manual_exposure_time_change_frames_inds-1]
+    # manual_exposure_time_change_frames_inds =  np.searchsorted(frames_exposure_id, df['exposure_frame'])
+    # df['exposure_diff'] = frames_exposure_time[manual_exposure_time_change_frames_inds] - frames_exposure_time[manual_exposure_time_change_frames_inds-1]
 
     non_nan_indices = np.argwhere(~np.isnan(df['intensity_frame']))[:,0]
     manual_intensity_change_frames_id_filtered = df['intensity_frame'][non_nan_indices]
@@ -77,4 +77,14 @@ def set_detection_matches(manual_matches_df, changes_detected):
     manual_changes_1_df = manual_matches_df.copy()
     manual_changes_1_df['abs_exposure_diff'] = abs(manual_changes_1_df['exposure_diff'])
     manual_changes_1_df['detected'] = [changes_detected[k].status.name if k in changes_detected else 'NOT OBSERVED' for k in manual_changes_1_df['exposure_frame']]
-    return manual_changes_1_df
+    matching_frame = []
+    for k in manual_changes_1_df['exposure_frame']:
+        if k not in changes_detected:
+            matching_frame.append(None)
+        elif changes_detected[k].status == ExposureValidationStatus.SUCCESS:
+            matching_frame.append(changes_detected[k].matching.id)
+        else:
+            matching_frame.append(None)
+    manual_changes_1_df['matching_frame'] = matching_frame
+    manual_changes_1_df['matching_diff'] = manual_changes_1_df['matching_frame'] - manual_changes_1_df['intensity_frame']
+    return manual_changes_1_df 

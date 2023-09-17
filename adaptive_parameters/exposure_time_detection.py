@@ -51,19 +51,27 @@ class ExposureChangeDetectionResult:
 class ExposureChangeValidator(): #TODO: consider split to two Validator and Validation(Validator, ExposureFrame)
     def __init__(self, exposure_change: ExposureChange, max_offset: int, min_offset: int=5) -> None:
         self.exposure_change = exposure_change
-        self.ratio_df = pd.read_csv(r'./INPUT/exposure_intensity_ratio.csv') #TODO: change this to estimated function
         self.max_offset = max_offset
         self.min_offset = min_offset
         self.checked_offsets = set()
         self.max_missing_intensity_frames = 0
         self._are_all_options_exhausted = False
 
+        self.ratio_function_parameters = np.array([6.34566360e+04, 1.69825909e-02])
+
+    def ratio_function(self, x):
+        # self.ratio_function_parameters = np.array([6.34566360e+04, 1.69825909e-02])
+        # return self.ratio_function_parameters[0] / x**2 + self.ratio_function_parameters[1]
+        
+        # a = 98254.92004913
+        # return np.where(x<2000, a / x**2, (2000)**(0.5-2) *a / x**0.5)
+        a,b = -9.21015457e-05,  1.74208437e-01
+        return np.where(x<1500, a*x+b,  (a*1500+b) * (1500/x)**0.5)
+    
     def estimate_intensity_diff_to_exposure_diff_ratio(self, exposure: float) -> Tuple[float, float]:
-        ind = np.argmin(abs(self.ratio_df['exposure'] - exposure))
-        err =  self.ratio_df['ratio_std'][ind]
-        if exposure < 2500: #TODO: change this according to the estimated function
-            err = max(err, 0.01)
-        return self.ratio_df['ratio'][ind], err
+        ratio = self.ratio_function(exposure)
+        err = 0.015
+        return ratio, err
 
     def are_valid_intensity_frames(self, cur_frame_id: int, prev_frame_id) -> bool:
         return 0 < cur_frame_id - prev_frame_id <= self.max_missing_intensity_frames + 1
@@ -174,7 +182,7 @@ class ExposureTimeChangeDetector:
                 self.changes_validations_buffer.pop(0)
                 if exposure_change_validation.are_all_options_tested:
                      return ExposureChangeDetectionResult(change=exposure_change, 
-                                                      status=ExposureValidationStatus.FAIL,)
+                                                      status=ExposureValidationStatus.FAIL)
                 return ExposureChangeDetectionResult(change=exposure_change, 
                                                       status=ExposureValidationStatus.INCOMPLETE)
             return ExposureChangeDetectionResult(change=exposure_change, 
@@ -189,42 +197,27 @@ class ExposureTimeChangeDetector:
         return detection_result
 
 if __name__ == "__main__":
-    with open ("INPUT/8_8_23/adaptive_parameters_10_08_18.json", 'r') as f:
-        data = json.load(f)
-    frames_exposure_id = []
-    frames_exposure_time = []
-    for frame_id, frame_data in data.items():
-        try:
-            frames_exposure_id.append(int(frame_id.split('_')[1]))
-            frames_exposure_time.append(frame_data["exposure_us"])
-        except:
-            continue
-
-    frames_exposure_id = np.array(frames_exposure_id)
-    frames_exposure_time = np.array(frames_exposure_time)
-
-    with open(r"./OUTPUT/8_8_23/recording_10_08_18_images/averaged_intensities.txt", 'r') as f:
-        intensities_txt = f.read()
-    result = re.findall(r"frame (\d+): (\d+\.\d+)", intensities_txt)
-
-    frames_id = []
-    frames_intensity = []
-    for frame_id, intensity in result:
-        frames_id.append(int(frame_id))
-        frames_intensity.append(float(intensity))
-
-    frames_id = np.array(frames_id)
-    frames_intensity = np.array(frames_intensity)
-    interpolated_values = np.interp(frames_id, frames_exposure_id, frames_exposure_time)
-
-    intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_id)
+    import adaptive_parameters.utils as utils
+    from pathlib import Path
+    
+    adaptive_parameters_path = Path('INPUT\\10_8_23\\adaptive_parameters_2023_08_10_15_35_12.json')
+    frames_dir = Path('OUTPUT\\10_8_23\\recording_2023_08_10_15_35_12_images')
+    
+    frames_exposure_id, frames_exposure_time = utils.read_exposure_data(adaptive_parameters_path)
     exposure_df = pd.DataFrame({'exposure': frames_exposure_time}, index=frames_exposure_id)
+    frames_intensity_id, frames_intensity = utils.read_intensity_data(frames_dir)
+    intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_intensity_id)
     exposure_intensity_df = pd.merge(exposure_df, intensity_df, how="outer", left_index=True, right_index=True)
-
+    
     detector = ExposureTimeChangeDetector()
     changes_detected = {}
     for frame_id, frame_data in exposure_intensity_df[3:].iterrows():
         detection_result = detector.feed_frame(frame_id, frame_data['exposure'], frame_data['intensity'])
         if detection_result is not None and detection_result.status != ExposureValidationStatus.EVALUATION:
             changes_detected[detection_result.change.id] = detection_result
+    
+    print(f'# detected = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.SUCCESS])}')
+    print(f'# not detected = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.FAIL])}')
+    print(f'# not completed = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.INCOMPLETE])}')
+
     print('finished')
