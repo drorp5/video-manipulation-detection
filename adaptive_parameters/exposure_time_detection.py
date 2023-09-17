@@ -6,6 +6,7 @@ from typing import List, Tuple, Optional
 import numpy as np
 import pandas as pd
 from enum import Enum
+from numpy.typing import ArrayLike
 
 @dataclass
 class IntensityExposureFrame:
@@ -47,6 +48,25 @@ class ExposureChangeDetectionResult:
     status: ExposureValidationStatus
     matching: Optional[IntensityExposureFrame] = None
 
+@dataclass
+class IntensityDiffToExposureDiffRatio:
+    value: ArrayLike
+    error: float = 0.015
+
+    @staticmethod
+    def init_of_exposure(exposure: ArrayLike, err: Optional[float] = None) -> IntensityDiffToExposureDiffRatio:
+        a,b = -9.21015457e-05,  1.74208437e-01
+
+        threshold_exposure = 1500
+        lower_ratio_function = lambda  x: a*x+b
+        upper_ratio_function = lambda x:  lower_ratio_function(threshold_exposure) * (threshold_exposure/x)**0.5
+
+        ratio =  np.where(exposure<threshold_exposure, lower_ratio_function(exposure),  upper_ratio_function(exposure))
+
+        if err is not None:
+            return IntensityDiffToExposureDiffRatio(ratio, err)
+        return IntensityDiffToExposureDiffRatio(ratio)    
+
 
 class ExposureChangeValidator(): #TODO: consider split to two Validator and Validation(Validator, ExposureFrame)
     def __init__(self, exposure_change: ExposureChange, max_offset: int, min_offset: int=5) -> None:
@@ -56,59 +76,26 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         self.checked_offsets = set()
         self.max_missing_intensity_frames = 0
         self._are_all_offsets_exhausted = False
-
-        self.ratio_function_parameters = np.array([6.34566360e+04, 1.69825909e-02])
-
-    def ratio_function(self, x):
-        # self.ratio_function_parameters = np.array([6.34566360e+04, 1.69825909e-02])
-        # return self.ratio_function_parameters[0] / x**2 + self.ratio_function_parameters[1]
-        
-        # a = 98254.92004913
-        # return np.where(x<2000, a / x**2, (2000)**(0.5-2) *a / x**0.5)
-        a,b = -9.21015457e-05,  1.74208437e-01
-        return np.where(x<1500, a*x+b,  (a*1500+b) * (1500/x)**0.5)
+        self.ratio = IntensityDiffToExposureDiffRatio.init_of_exposure(self.exposure_change.prev_frame.exposure)
     
-    def estimate_intensity_diff_to_exposure_diff_ratio(self, exposure: float) -> Tuple[float, float]:
-        ratio = self.ratio_function(exposure)
-        err = 0.015
-        return ratio, err
-
-    def are_valid_intensity_frames(self, cur_frame_id: int, prev_frame_id) -> bool:
+    def are_valid_intensity_frames(self, cur_frame_id: int, prev_frame_id: int) -> bool:
         return 0 < cur_frame_id - prev_frame_id <= self.max_missing_intensity_frames + 1
 
     def is_valid_offset(self, offset: int) -> bool:
         return self.min_offset <= offset <= self.max_offset
-    
-    def is_valid_intensity_diff(self, intensity_diff):
-        return not np.isnan(intensity_diff)
              
     def is_intensity_diff_matches_estimation(self, intensity_diff) -> bool:
-        abs_diff = abs(self.expected_intensity_diff - intensity_diff) 
-        return abs_diff <= self.expected_intensity_diff_err
-
-    @property
-    def ratio(self):
-        return self.estimate_intensity_diff_to_exposure_diff_ratio(self.exposure_change.prev_frame.exposure)[0]
-    
-    @property
-    def ratio_err(self):
-        return self.estimate_intensity_diff_to_exposure_diff_ratio(self.exposure_change.prev_frame.exposure)[1]
-    
-    @property
-    def expected_intensity_diff(self):
-        return self.ratio * self.exposure_change.exposure_difference
-    
-    @property
-    def expected_intensity_diff_err(self):
-        return abs(self.ratio_err * self.exposure_change.exposure_difference)
-    
+        expected_intensity_diff = self.ratio.value * self.exposure_change.exposure_difference
+        expected_intensity_diff_err =  abs(self.ratio.error * self.exposure_change.exposure_difference)
+        abs_diff = abs(expected_intensity_diff - intensity_diff) 
+        return abs_diff <= expected_intensity_diff_err
 
     def validate(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
         if cur_frame is None or prev_frame is None:
             return False
         if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
             return False
-        offset = cur_frame.id - self.exposure_change.id 
+        offset = cur_frame.id - self.exposure_change.id
         self.update_are_all_offsets_exhausted(offset)
         if not self.is_valid_offset(offset):
             return False
