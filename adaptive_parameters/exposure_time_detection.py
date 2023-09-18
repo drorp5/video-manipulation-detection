@@ -89,10 +89,8 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         abs_diff = abs(expected_intensity_diff - intensity_diff) 
         return abs_diff <= expected_intensity_diff_err
 
-    def validate(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
+    def validate_offset(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
         if cur_frame is None or prev_frame is None:
-            return False
-        if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
             return False
         offset = cur_frame.id - self.exposure_change.id
         self.update_are_all_offsets_exhausted(offset)
@@ -101,6 +99,12 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         if offset in self.checked_offsets:
             return False
         self.checked_offsets.add(offset)
+        return True
+        
+
+    def validate_intensity(self, cur_frame: IntensityExposureFrame, prev_frame: IntensityExposureFrame) -> bool:
+        if not self.are_valid_intensity_frames(cur_frame.id, prev_frame.id):
+            return False
         intensity_diff = (cur_frame.intensity - prev_frame.intensity) / (cur_frame.id - prev_frame.id)
         return self.is_intensity_diff_matches_estimation(intensity_diff)
         
@@ -137,21 +141,26 @@ class ExposureTimeChangeDetector:
         return np.nan
 
     def validate_change(self) -> Optional[ExposureChangeDetectionResult]:
+        if len(self.changes_validations_buffer) > 1:
+            for exposure_change, exposure_change_validation in self.changes_validations_buffer[1:]:
+                is_valid_offset = exposure_change_validation.validate_offset(self.cur_frame, self.last_intensity_frame) 
         if len(self.changes_validations_buffer) > 0:
             exposure_change, exposure_change_validation = self.changes_validations_buffer[0]
-            is_matching = exposure_change_validation.validate(self.cur_frame, self.last_intensity_frame) 
+            is_valid_offset = exposure_change_validation.validate_offset(self.cur_frame, self.last_intensity_frame) 
+            is_valid_intensity = exposure_change_validation.validate_intensity(self.cur_frame, self.last_intensity_frame) 
+            is_matching = is_valid_offset and is_valid_intensity
             if is_matching:
                 self.changes_validations_buffer.pop(0)
                 return ExposureChangeDetectionResult(change=exposure_change, 
-                                                      status=ExposureValidationStatus.SUCCESS,
-                                                      matching=self.cur_frame)
+                                                    status=ExposureValidationStatus.SUCCESS,
+                                                    matching=self.cur_frame)
             if exposure_change_validation.are_all_offsets_exhausted:
                 self.changes_validations_buffer.pop(0)
                 if exposure_change_validation.are_all_offsets_tested:
-                     return ExposureChangeDetectionResult(change=exposure_change, 
-                                                      status=ExposureValidationStatus.FAIL)
+                    return ExposureChangeDetectionResult(change=exposure_change, 
+                                                    status=ExposureValidationStatus.FAIL)
                 return ExposureChangeDetectionResult(change=exposure_change, 
-                                                      status=ExposureValidationStatus.INCOMPLETE)
+                                                    status=ExposureValidationStatus.INCOMPLETE)
             return ExposureChangeDetectionResult(change=exposure_change, 
                                                 status=ExposureValidationStatus.EVALUATION)
             
@@ -206,5 +215,10 @@ if __name__ == "__main__":
     print(f'# detected = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.SUCCESS])}')
     print(f'# not detected = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.FAIL])}')
     print(f'# not completed = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.INCOMPLETE])}')
-
+    print('---------------------------------------------')
+    print(f'# detected = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.SUCCESS])}')
+    print(f'# not detected + # not completed = {len([k for k,v in changes_detected.items() if v.status==ExposureValidationStatus.FAIL or v.status==ExposureValidationStatus.INCOMPLETE])}')
+    print('---------------------------------------------')
+    print(f'# total = {len(list(changes_detected.items()))}')
+    
     print('finished')
