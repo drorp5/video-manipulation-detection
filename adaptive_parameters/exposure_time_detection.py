@@ -121,8 +121,9 @@ class ExposureChangeValidator(): #TODO: consider split to two Validator and Vali
         return len(self.checked_offsets) == self.max_offset - self.min_offset + 1
 
 class ExposureTimeChangeDetector: 
-    def __init__(self, max_offset: int = 20, ratio_err: float = 0.015):
+    def __init__(self, min_offset=5, max_offset: int = 20, ratio_err: float = 0.015):
         self.max_offset = max_offset
+        self.min_offset = min_offset
         self.cur_frame = None
         self.last_intensity_frame = None
         self.last_exposure_frame = None
@@ -175,7 +176,7 @@ class ExposureTimeChangeDetector:
         exposure_difference = self.calc_exposure_diff()
         if not np.isnan(exposure_difference) and exposure_difference != 0:
             exposure_change = ExposureChange(cur_frame=self.cur_frame,prev_frame=self.last_exposure_frame)
-            exposure_change_validator = ExposureChangeValidator(exposure_change, self.max_offset, ratio_err=self.ratio_err)
+            exposure_change_validator = ExposureChangeValidator(exposure_change, max_offset=self.max_offset,min_offset=self.min_offset, ratio_err=self.ratio_err)
             self.changes_validations_buffer.append((exposure_change, exposure_change_validator))
 
     def update_last_exposure_frame(self) -> None:
