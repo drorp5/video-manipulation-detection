@@ -4,6 +4,7 @@ import re
 import numpy as np
 import pandas as pd
 from .exposure_time_detection import ExposureTimeChangeDetector, ExposureChangeDetectionResult, ExposureValidationStatus
+import random
 
 def read_exposure_data(adaptive_parameters_path: Path):
     with open (adaptive_parameters_path, 'r') as f:
@@ -36,7 +37,6 @@ def read_intensity_data(frames_dir: Path):
     frames_intensity = np.array(frames_intensity)
     return frames_intensity_id, frames_intensity
 
-
 def read_matches_data(matches_path: Path, exposure_df: pd.DataFrame, intensity_df: pd.DataFrame) ->pd.DataFrame:
     df = pd.read_csv(matches_path.as_posix())
     frames_exposure_id = exposure_df.index.to_numpy()
@@ -64,10 +64,9 @@ def read_matches_data(matches_path: Path, exposure_df: pd.DataFrame, intensity_d
     df['exposure'] = frames_exposure_time[np.searchsorted(frames_exposure_id, df['exposure_frame'])-1]
     return df
 
-def detect_changes(exposure_intensity_df):
-    detector = ExposureTimeChangeDetector()
+def detect_changes(exposure_intensity_df, detector: ExposureTimeChangeDetector):
     changes_detected = {}
-    for frame_id, frame_data in exposure_intensity_df[3:].iterrows():
+    for frame_id, frame_data in exposure_intensity_df.iterrows():
         detection_result = detector.feed_frame(frame_id, frame_data['exposure'], frame_data['intensity'])
         if detection_result is not None and detection_result.status != ExposureValidationStatus.EVALUATION:
             changes_detected[detection_result.change.id] = detection_result
@@ -88,3 +87,19 @@ def set_detection_matches(manual_matches_df, changes_detected):
     manual_changes_1_df['matching_frame'] = matching_frame
     manual_changes_1_df['matching_diff'] = manual_changes_1_df['matching_frame'] - manual_changes_1_df['intensity_frame']
     return manual_changes_1_df 
+
+def fill_first_nan_value(series: pd.Series) -> pd.Series:
+    # Fill only the first NaN value within consecutive NaN values
+    series_copy = series.copy()
+    for change_index in range(1, len(series_copy)):
+        if pd.isna(series_copy.iloc[change_index]):
+            if series_copy.index[change_index] - series_copy.index[change_index-1] == 1:
+                series_copy.iloc[change_index] = series.iloc[change_index-1]
+    return series_copy
+
+def get_not_nan_change_indices(series:pd.Series) -> pd.Index:
+    ids_mask = np.diff(series.index) == 1
+    ids_mask = np.insert(ids_mask, 0, True)
+    values_mask = series.ne(series.shift()) & ~series.isna() & ~series.shift().isna()
+    mask = ids_mask & values_mask
+    return series.index[mask]
