@@ -255,10 +255,10 @@ def main():
             cam.get_feature_by_name('DSPSubregionLeft').set(0)
             cam.get_feature_by_name('DSPSubregionRight').set(1936)
 
-            dsp_subregion = {'top': 400,
-                            'bottom': 410,
-                            'left': 950,
-                            'right':960}
+            dsp_subregion = {'top': 0,
+                            'bottom': 1216,
+                            'left': 0,
+                            'right':1936}
             
             if save_adaptive:
                 output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
