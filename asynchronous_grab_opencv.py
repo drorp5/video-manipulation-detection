@@ -226,8 +226,7 @@ def main():
     # Get the current time
     current_time = datetime.now()
     # Format the current time as a string
-    time_string = current_time.strftime("%H_%M_%S")
-
+    time_string = current_time.strftime("%Y_%m_%d_%H_%M_%S")
 
     output_parameters_path = None
     if save_adaptive:
