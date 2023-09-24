@@ -275,9 +275,15 @@ def main():
             setup_camera(cam)
             handler = Handler(detector, output_parameters_path, svaed_frames_dir)
 
+            buffer_count = 10
+            if save_adaptive:
+                output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+                with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+                    file.write(json.dumps({"buffer_count": buffer_count}, indent=2))
+
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
-                cam.start_streaming(handler=handler, buffer_count=10)
+                cam.start_streaming(handler=handler, buffer_count=buffer_count)
                 handler.shutdown_event.wait()
 
             finally:
