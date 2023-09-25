@@ -66,11 +66,12 @@ def abort(reason: str, return_code: int = 1, usage: bool = False):
 
 def parse_args() -> Dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-id", "--camera_id", help="camera ID for direct access")
-    parser.add_argument("-d", "--detector", choices=detectors.get_detectors_dict(), help="detection method")
-    parser.add_argument("-p", "--pcap", type=bool, help="whether to save pcap dump", default=False)
-    parser.add_argument("-ad", "--adaptive", type=bool, help="whether to save adaptive parameters", default=False)
-    parser.add_argument("-save", "--save_frames", type=bool, help="whether to save collected frames", default=False)
+    parser.add_argument( "--camera_id", help="camera ID for direct access")
+    parser.add_argument("--detector", choices=detectors.get_detectors_dict(), help="detection method")
+    parser.add_argument("--pcap", help="save pcap dump", action="store_true")
+    parser.add_argument("--adaptive", help="query and save adaptive parameters", action="store_true")
+    parser.add_argument( "--save_frames", help="save collected frames", action="store_true")
+    parser.add_argument( "--debug", help="debug mode", action="store_true")
 
     # parser.add_argument("-h", "--help")
     
