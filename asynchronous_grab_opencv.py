@@ -152,6 +152,27 @@ def setup_camera(cam: Camera):
             else:
                 abort('Camera does not support a OpenCV compatible format natively. Abort.')
 
+def setup_camera_dsp_subregion(cam: Camera, top:int=0, bottom:int=1216, left:int=0, right:int=1936):
+    # set dsp region to full scale before changing
+    full_scale_top = 0
+    full_scale_bottom = 1216
+    full_scale_left = 0
+    full_scale_right = 1936
+
+    cam.get_feature_by_name('DSPSubregionTop').set(full_scale_top)
+    cam.get_feature_by_name('DSPSubregionBottom').set(full_scale_bottom)
+    cam.get_feature_by_name('DSPSubregionLeft').set(full_scale_left)
+    cam.get_feature_by_name('DSPSubregionRight').set(full_scale_right)
+
+    if top != full_scale_top:
+        cam.get_feature_by_name('DSPSubregionTop').set(top)
+    if bottom != full_scale_bottom:
+        cam.get_feature_by_name('DSPSubregionBottom').set(bottom)
+    if left != full_scale_left:
+        cam.get_feature_by_name('DSPSubregionLeft').set(left)
+    if right != full_scale_right:
+        cam.get_feature_by_name('DSPSubregionRight').set(right)
+
 class Handler:
     def __init__(self, detector_name: str, output_parameters_path:Path=None, svaed_frames_dir:Path=None, debug:bool=True):
         self.shutdown_event = threading.Event()
@@ -267,22 +288,13 @@ def main():
     
     with Vimba.get_instance():
         with get_camera(args.camera_id) as cam:
-            # set dsp region to full scale before changing
-            cam.get_feature_by_name('DSPSubregionTop').set(0)
-            cam.get_feature_by_name('DSPSubregionBottom').set(1216)
-            cam.get_feature_by_name('DSPSubregionLeft').set(0)
-            cam.get_feature_by_name('DSPSubregionRight').set(1936)
-
-            # change dsp region to new values
+            #  set dsp region
             dsp_subregion = {'top': 0,
                             'bottom': 1216,
                             'left': 0,
-                            'right':1936}
+                            'right': 1936}
+            setup_camera_dsp_subregion(cam, dsp_subregion['top'], dsp_subregion['bottom'], dsp_subregion['left'], dsp_subregion['right'])
 
-            cam.get_feature_by_name('DSPSubregionTop').set(dsp_subregion['top'])
-            cam.get_feature_by_name('DSPSubregionBottom').set(dsp_subregion['bottom'])
-            cam.get_feature_by_name('DSPSubregionLeft').set(dsp_subregion['left'])
-            cam.get_feature_by_name('DSPSubregionRight').set(dsp_subregion['right'])
             
             if args.adaptive:
                 output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
