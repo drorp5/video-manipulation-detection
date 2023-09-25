@@ -293,20 +293,17 @@ def main():
                             'right': 1936}
             setup_camera_dsp_subregion(cam, dsp_subregion['top'], dsp_subregion['bottom'], dsp_subregion['left'], dsp_subregion['right'])
 
-            
-            if args.adaptive:
-                output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
-                with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-                    file.write(json.dumps(dsp_subregion, indent=2))
-
             setup_camera(cam)
             handler = Handler(args.detector, output_parameters_path, svaed_frames_dir,args.debug)
-
+            
             buffer_count = 10
             if args.adaptive:
+                adaptive_metadata = {}
+                adaptive_metadata["dsp_subregion"] = dsp_subregion
+                adaptive_metadata["buffer_count"] = buffer_count
                 output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
-                with open(output_parameters_path.absolute().as_posix(), 'a') as file:
-                    file.write(json.dumps({"buffer_count": buffer_count}, indent=2))
+                with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+                    file.write(json.dumps(adaptive_metadata, indent=2))
 
             try:
                 # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
