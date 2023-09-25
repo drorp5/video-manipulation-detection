@@ -45,7 +45,6 @@ def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
         debug = kwargs.get('debug', False)
-        print(f'timeit {debug}')
         if debug:
             start_time = time.perf_counter()
         result = func(*args, **kwargs)
@@ -90,7 +89,6 @@ def parse_args() -> Dict:
     # parser.add_argument("-h", "--help")
     
     args = parser.parse_args()
-    print(args)
     return args
 
 def get_camera(camera_id: Optional[str]) -> Camera:
