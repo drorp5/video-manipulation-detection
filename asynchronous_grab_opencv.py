@@ -305,7 +305,7 @@ def main():
             buffer_count = 10
             if args.adaptive:
                 output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
-                with open(output_parameters_path.absolute().as_posix(), 'w') as file:
+                with open(output_parameters_path.absolute().as_posix(), 'a') as file:
                     file.write(json.dumps({"buffer_count": buffer_count}, indent=2))
 
             try:
