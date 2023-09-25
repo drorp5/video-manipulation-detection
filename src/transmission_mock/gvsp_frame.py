@@ -3,7 +3,9 @@ import numpy as np
 from scapy.all import PacketList
 from vimba import PixelFormat
 from .constansts import *
-from src.manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
+import sys
+sys.path.append('src')
+from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from dataclasses import dataclass
 
 class MissingLeaderError(Exception):

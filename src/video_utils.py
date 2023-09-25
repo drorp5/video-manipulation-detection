@@ -7,7 +7,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 
-def gvsp_pcap_to_raw_images(pcap_path: str, dst_dir: str,  max_frames=None):
+def gvsp_pcap_to_raw_images(pcap_path: str, dst_dir: str,  max_frames=None, intensities_only=False):
     pcap_path = Path(pcap_path)
     if not pcap_path.exists():
         raise FileNotFoundError
@@ -17,7 +17,7 @@ def gvsp_pcap_to_raw_images(pcap_path: str, dst_dir: str,  max_frames=None):
     if max_frames is None:
         max_frames = 10000000 #inf
 
-    intensities_path = dst_dir_path / 'intensities.txt'
+    intensities_path = dst_dir_path / 'averaged_intensities.txt'
     intensities = {}
     gvsp_transmission = MockGvspTransmission(pcap_path)
     for frame in tqdm(gvsp_transmission.frames, total=max_frames):
@@ -25,7 +25,8 @@ def gvsp_pcap_to_raw_images(pcap_path: str, dst_dir: str,  max_frames=None):
             img = cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
             frame_id = frame.get_id()
             output_path = dst_dir_path / f'frame_{frame_id}.jpg'
-            cv2.imwrite(output_path.as_posix(), img)
+            if not intensities_only:
+                cv2.imwrite(output_path.as_posix(), img)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float)
             intensities[frame_id] = np.mean(gray)
             with open(intensities_path, 'a') as f:
@@ -47,7 +48,6 @@ def gvsp_pcap_to_video(pcap_path: str, dst_dir: str,  max_frames=None):
     frame_pre_processing = lambda frame: cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
     fps = 30
     create_video_from_frames_iterator(gvsp_transmission.frames, dst_path, fps, frame_validator, frame_pre_processing,  max_frames=max_frames)
-
 
 def create_video_from_frames_iterator(iterator, output_path: Path, fps=30, frame_validator=lambda frame: frame is not None,
                                                                     frame_pre_processing=lambda frame: frame, 

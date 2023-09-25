@@ -1,7 +1,7 @@
 from scapy.all import PacketList, PcapReader
 from .gvsp_frame import MockFrame, MissingLeaderError
 from .constansts import *
-from src.manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
+from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from pathlib import Path
 
 

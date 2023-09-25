@@ -2,7 +2,9 @@ import cv2
 from vimba import Frame, PixelFormat
 import matplotlib.pyplot as plt
 import numpy as np
-from src.config import CV2_CONVERSIONS
+import sys
+sys.path.append('src')
+from config import CV2_CONVERSIONS
 
 def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: int =  CV2_CONVERSIONS[PixelFormat.BayerRG8]):
     """Extract RGB image from gvsp frame object"""

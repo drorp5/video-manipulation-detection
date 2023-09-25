@@ -78,17 +78,27 @@ def abort(reason: str, return_code: int = 1, usage: bool = False):
     sys.exit(return_code)
 
 def parse_args() -> Dict:
+    # Get the current time and formant it as a string
+    current_time = datetime.now()
+    time_string = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+
     parser = argparse.ArgumentParser()
     parser.add_argument( "--camera_id", help="camera ID for direct access")
     parser.add_argument("--detector", choices=detectors.get_detectors_dict(), help="detection method")
     parser.add_argument("--pcap", help="save pcap dump", action="store_true")
+    parser.add_argument( "--pcap_name", help="otuput pcap file name", type=str, default=f'recording_{time_string}')
     parser.add_argument("--adaptive", help="query and save adaptive parameters", action="store_true")
+    parser.add_argument( "--adaptive_name", help="adaptive parameters file name", type=str, default=f'adaptive_parameters_{time_string}')
     parser.add_argument( "--save_frames", help="save collected frames", action="store_true")
+    parser.add_argument( "--frames_dir", help="output frames directory", type=str, default= f'recording_{time_string}_images')
     parser.add_argument( "--debug", help="debug mode", action="store_true")
+    parser.add_argument( "--output_dir", help="base output directory", type=Path, default=Path('./OUTPUT'))
+    parser.add_argument( "--plot", help="plot live stream of camera", action="store_true")
+    parser.add_argument( "--duration", help="duration of streaming", type=float, default=-1)
+    parser.add_argument( "--buffer_count", help="streaming buffer", type=int, default=10)
 
-    # parser.add_argument("-h", "--help")
-    
     args = parser.parse_args()
+    args.time_string = time_string
     return args
 
 def get_camera(camera_id: Optional[str]) -> Camera:
@@ -172,13 +182,14 @@ def setup_camera_dsp_subregion(cam: Camera, top:int=0, bottom:int=1216, left:int
         cam.get_feature_by_name('DSPSubregionRight').set(right)
 
 class Handler:
-    def __init__(self, detector_name: str, output_parameters_path:Path=None, svaed_frames_dir:Path=None, debug:bool=True):
+    def __init__(self, plot:bool, detector_name: str, output_parameters_path:Path=None, saved_frames_dir:Path=None, debug:bool=True):
         self.shutdown_event = threading.Event()
         self.detector = detectors.get_detector(detector_name)
         self.downfactor = 4
         self.output_parameters_path = output_parameters_path
-        self.saved_frames_dir = svaed_frames_dir
+        self.saved_frames_dir = saved_frames_dir
         self.debug = debug
+        self.plot = plot
 
     @timeit
     def convert_image(self, img: np.array, pixel_format: PixelFormat, debug=False) -> np.array:
@@ -202,13 +213,13 @@ class Handler:
 
     def __call__(self, cam: Camera, frame: Frame):
         ENTER_KEY_CODE = 13
+        if self.plot:
+            key = cv2.waitKey(1)
+            if key == ENTER_KEY_CODE:
+                self.shutdown_event.set()
+                return
 
-        key = cv2.waitKey(1)
-        if key == ENTER_KEY_CODE:
-            self.shutdown_event.set()
-            return
-
-        elif frame.get_status() == FrameStatus.Complete:
+        if frame.get_status() == FrameStatus.Complete:
             if self.debug:
                 print('{} acquired {}'.format(cam, frame), flush=True)
 
@@ -230,7 +241,7 @@ class Handler:
                     file.write(',\n')
                     file.write(json.dumps(json_data, indent=2))
 
-            # conver image to BGR format 
+            # convert image to BGR format 
             pixel_format = frame.get_pixel_format()
             img, conversion_time = self.convert_image(img, pixel_format, debug=self.debug)
             
@@ -238,11 +249,11 @@ class Handler:
                 output_img_path = self.saved_frames_dir / f'frame_{frame.get_id()}.png'
                 cv2.imwrite(output_img_path.as_posix(), img)
             
-            processed_img, resizing_time = self.resize_image(img, debug=self.debug)
-            processed_img, detection_time = self.detect_objects_in_image(processed_img, debug=self.debug)
-            
-            window_name = msg.format(cam.get_name())           
-            cv2.imshow(window_name, processed_img)
+            if self.plot:
+                processed_img, resizing_time = self.resize_image(img, debug=self.debug)
+                processed_img, detection_time = self.detect_objects_in_image(processed_img, debug=self.debug)
+                window_name = msg.format(cam.get_name())           
+                cv2.imshow(window_name, processed_img)
             
             if self.debug:
                 print(f'conversion time = {conversion_time}')
@@ -251,38 +262,21 @@ class Handler:
                 print(f'total processing time = {conversion_time + resizing_time + detection_time}')
         cam.queue_frame(frame)
 
-def main():
+
+def main_script():
     print_preamble()
     args = parse_args()
-    
-    # output names
-    output_base_dir = Path(r'./OUTPUT')
-    adaptive_parameters_base_name = 'adaptive_parameters'
-    recording_base_name = 'recording'
-    output_parameters_path = None
-    svaed_frames_dir = None
-    # Get the current time and formant it as a string
-    current_time = datetime.now()
-    time_string = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+    return start_async_grab(args)
 
-    if args.adaptive:
-        output_parameters_path = output_base_dir / f'{adaptive_parameters_base_name}_{time_string}.json'
-        with open(output_parameters_path.absolute().as_posix(), 'w') as file:
-            file.write(json.dumps({'recording time': time_string}, indent=2))
-
-    if args.pcap:
-        # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
-        pcap_path = output_base_dir / f'{recording_base_name}_{time_string}.pcap'
-        cp_ip = '192.168.1.100'
-        camera_ip = '192.168.10.150'
-        gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
-        tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_path.absolute().as_posix(), gvsp_gvcp_filter]
-        # Start the subprocess
-        process = subprocess.Popen(tshark_command)
-
+def start_async_grab(args):
+    assert args.plot or args.duration>0, 'if the stream is not plotted, duration must be specified'
+    if not args.output_dir.exists():
+        args.output_dir.mkdir(parents=True)
     if args.save_frames:
-        svaed_frames_dir = output_base_dir / f'{recording_base_name}_{time_string}_images'
-        svaed_frames_dir.mkdir()
+        saved_frames_dir = args.output_dir / args.frames_dir
+        saved_frames_dir.mkdir()
+    else:
+        saved_frames_dir = None
     
     with Vimba.get_instance():
         with get_camera(args.camera_id) as cam:
@@ -293,22 +287,37 @@ def main():
                             'right': 1936}
             setup_camera_dsp_subregion(cam, dsp_subregion['top'], dsp_subregion['bottom'], dsp_subregion['left'], dsp_subregion['right'])
 
-            setup_camera(cam)
-            handler = Handler(args.detector, output_parameters_path, svaed_frames_dir,args.debug)
-            
-            buffer_count = 10
             if args.adaptive:
                 adaptive_metadata = {}
+                adaptive_metadata['time'] = args.time_string
                 adaptive_metadata["dsp_subregion"] = dsp_subregion
-                adaptive_metadata["buffer_count"] = buffer_count
-                output_parameters_path = Path(rf'./OUTPUT/adaptive_parameters_{time_string}.json')
+                adaptive_metadata["buffer_count"] = args.buffer_count
+                output_parameters_path = args.output_dir / f'{args.adaptive_name}.json'
                 with open(output_parameters_path.absolute().as_posix(), 'w') as file:
                     file.write(json.dumps(adaptive_metadata, indent=2))
+            else:
+                output_parameters_path = None
+            
+            setup_camera(cam)
+            handler = Handler(args.plot, args.detector, output_parameters_path, saved_frames_dir,args.debug)
+
+            if args.pcap:
+                # Command to start tshark with pcap writer and filter for GVSP or GVCP packets
+                pcap_path = args.output_dir / f'{args.pcap_name}.pcap'
+                cp_ip = '192.168.1.100'
+                camera_ip = '192.168.10.150'
+                gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
+                tshark_command = ["tshark", "-i", "Ethernet 6", "-w", pcap_path.absolute().as_posix(), gvsp_gvcp_filter]
+                # Start the subprocess
+                process = subprocess.Popen(tshark_command)
 
             try:
-                # Start Streaming with a custom a buffer of 10 Frames (defaults to 5)
-                cam.start_streaming(handler=handler, buffer_count=buffer_count)
-                handler.shutdown_event.wait()
+                # Start Streaming with a custom frames buffer
+                cam.start_streaming(handler=handler, buffer_count=args.buffer_count)
+                if args.duration>0:
+                    handler.shutdown_event.wait(args.duration)
+                else:
+                    handler.shutdown_event.wait()
 
             finally:
                 cam.stop_streaming()
@@ -323,4 +332,4 @@ def main():
                         file.write(fixed_json)
         
 if __name__ == '__main__':
-    main()
+    main_script()
