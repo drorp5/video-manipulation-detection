@@ -114,9 +114,11 @@ def update_display():
     
     # Create a text widget to display the results
     text_widget = tk.Text(root, height=3, width=30)
-    output_text = f'Total {len(df)} frames collected\n'
+    total_num_frames = df.index[-1] - df.index[0] + 1
+    output_text = f'Total {total_num_frames} frames collected\n'
     for column_name, column_values in df.iteritems():
-        output_text += f'Missing {column_values.isna().sum()} {column_name} values\n'
+        num_missing_frames = total_num_frames - len(column_values[~column_values.isna()])
+        output_text += f'Missing {num_missing_frames} {column_name} values\n'
     text_widget.insert(tk.END, output_text)
     text_widget.pack()
 
