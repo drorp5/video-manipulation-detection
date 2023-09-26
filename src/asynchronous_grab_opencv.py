@@ -77,29 +77,6 @@ def abort(reason: str, return_code: int = 1, usage: bool = False):
 
     sys.exit(return_code)
 
-def parse_args() -> Dict:
-    # Get the current time and formant it as a string
-    current_time = datetime.now()
-    time_string = current_time.strftime("%Y_%m_%d_%H_%M_%S")
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument( "--camera_id", help="camera ID for direct access")
-    parser.add_argument("--detector", choices=detectors.get_detectors_dict(), help="detection method")
-    parser.add_argument("--pcap", help="save pcap dump", action="store_true")
-    parser.add_argument( "--pcap_name", help="otuput pcap file name", type=str, default=f'recording_{time_string}')
-    parser.add_argument("--adaptive", help="query and save adaptive parameters", action="store_true")
-    parser.add_argument( "--adaptive_name", help="adaptive parameters file name", type=str, default=f'adaptive_parameters_{time_string}')
-    parser.add_argument( "--save_frames", help="save collected frames", action="store_true")
-    parser.add_argument( "--frames_dir", help="output frames directory", type=str, default= f'recording_{time_string}_images')
-    parser.add_argument( "--debug", help="debug mode", action="store_true")
-    parser.add_argument( "--output_dir", help="base output directory", type=Path, default=Path('./OUTPUT'))
-    parser.add_argument( "--plot", help="plot live stream of camera", action="store_true")
-    parser.add_argument( "--duration", help="duration of streaming", type=float, default=-1)
-    parser.add_argument( "--buffer_count", help="streaming buffer", type=int, default=10)
-
-    args = parser.parse_args()
-    args.time_string = time_string
-    return args
 
 def get_camera(camera_id: Optional[str]) -> Camera:
     with Vimba.get_instance() as vimba:
@@ -117,14 +94,22 @@ def get_camera(camera_id: Optional[str]) -> Camera:
 
             return cams[0]
 
-def setup_camera(cam: Camera):
+def setup_camera(cam: Camera, auto_exposure: bool = True, exposure_val: int = -1):
     with cam:
         # Enable auto exposure time setting if camera supports it
-        try:
-            cam.ExposureAuto.set('Continuous')
+        if auto_exposure:
+            try:
+                cam.ExposureAuto.set('Continuous')
 
-        except (AttributeError, VimbaFeatureError):
-            pass
+            except (AttributeError, VimbaFeatureError):
+                pass
+        else:
+            assert exposure_val > 0, 'In Manual Exposure Mode The Value Must Be Specified'
+            try:
+                cam.ExposureAuto.set('Off')
+                cam.ExposureTimeAbs.set(exposure_val)
+            except (AttributeError, VimbaFeatureError):
+                pass
 
         # Enable white balancing if camera supports it
         try:
@@ -180,6 +165,11 @@ def setup_camera_dsp_subregion(cam: Camera, top:int=0, bottom:int=1216, left:int
         cam.get_feature_by_name('DSPSubregionLeft').set(left)
     if right != full_scale_right:
         cam.get_feature_by_name('DSPSubregionRight').set(right)
+
+def change_exposure_time(cam: Camera, exposure_diff: int):
+    with cam:
+       prev = cam.ExposureTimeAbs.get()
+       cam.ExposureTimeAbs.set(prev + exposure_diff) 
 
 class Handler:
     def __init__(self, plot:bool, detector_name: str, output_parameters_path:Path=None, saved_frames_dir:Path=None, debug:bool=True):
@@ -262,14 +252,46 @@ class Handler:
                 print(f'total processing time = {conversion_time + resizing_time + detection_time}')
         cam.queue_frame(frame)
 
+def parse_args() -> Dict:
+    # Get the current time and formant it as a string
+    current_time = datetime.now()
+    time_string = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--camera_id", help="camera ID for direct access")
+    parser.add_argument("--detector", choices=detectors.get_detectors_dict(), help="detection method")
+    parser.add_argument("--pcap", help="save pcap dump", action="store_true")
+    parser.add_argument("--pcap_name", help="otuput pcap file name", type=str, default=f'recording_{time_string}')
+    parser.add_argument("--adaptive", help="query and save adaptive parameters", action="store_true")
+    parser.add_argument("--adaptive_name", help="adaptive parameters file name", type=str, default=f'adaptive_parameters_{time_string}')
+    parser.add_argument("--save_frames", help="save collected frames", action="store_true")
+    parser.add_argument("--frames_dir", help="output frames directory", type=str, default= f'recording_{time_string}_images')
+    parser.add_argument("--debug", help="debug mode", action="store_true")
+    parser.add_argument("--output_dir", help="base output directory", type=Path, default=Path('./OUTPUT'))
+    parser.add_argument("--plot", help="plot live stream of camera", action="store_true")
+    parser.add_argument("--duration", help="duration of streaming [seconds]. -1 infinite", type=float, default=-1)
+    parser.add_argument("--buffer_count", help="streaming buffer", type=int, default=10)
+    parser.add_argument("--exposure", help="exposure time value in manual mode [microseconds]", type=int, default=-1)
+    parser.add_argument("--exposure_diff", help="exposure time change during stream [microseconds]", type=int, default=0)
+    parser.add_argument("--exposure_change_timing", help="duration till exposure time change during stream [seconds]", type=float, default=0)
+    args = parser.parse_args()
+    args.time_string = time_string
+    if args.duration < 0:
+        args.duration = None
+    return args
 
 def main_script():
     print_preamble()
     args = parse_args()
     return start_async_grab(args)
 
-def start_async_grab(args):
+def assert_args(args):
     assert args.plot or args.duration>0, 'if the stream is not plotted, duration must be specified'
+    assert not(args.exposure_diff!=0 and args.exposure_change_timing==0), 'exposure diff value must be specified with timing'
+    assert args.duration is None or (args.duration > args.exposure_change_timing) 
+    
+def start_async_grab(args):
+    assert_args(args)
     if not args.output_dir.exists():
         args.output_dir.mkdir(parents=True)
     if args.save_frames:
@@ -292,13 +314,18 @@ def start_async_grab(args):
                 adaptive_metadata['time'] = args.time_string
                 adaptive_metadata["dsp_subregion"] = dsp_subregion
                 adaptive_metadata["buffer_count"] = args.buffer_count
+                if args.exposure > 0:
+                    adaptive_metadata["initial exposure"] = args.exposure
                 output_parameters_path = args.output_dir / f'{args.adaptive_name}.json'
                 with open(output_parameters_path.absolute().as_posix(), 'w') as file:
                     file.write(json.dumps(adaptive_metadata, indent=2))
             else:
                 output_parameters_path = None
             
-            setup_camera(cam)
+            if args.exposure > 0:
+                setup_camera(cam, auto_exposure=False, exposure_val=args.exposure)
+            else:
+                setup_camera(cam)
             handler = Handler(args.plot, args.detector, output_parameters_path, saved_frames_dir,args.debug)
 
             if args.pcap:
@@ -314,10 +341,12 @@ def start_async_grab(args):
             try:
                 # Start Streaming with a custom frames buffer
                 cam.start_streaming(handler=handler, buffer_count=args.buffer_count)
-                if args.duration>0:
-                    handler.shutdown_event.wait(args.duration)
-                else:
-                    handler.shutdown_event.wait()
+                if args.exposure_change_timing > 0:
+                    exposure_change_timer = threading.Timer(args.exposure_change_timing, change_exposure_time, args=(cam, args.exposure_diff))
+                    exposure_change_timer.start()
+                handler.shutdown_event.wait(args.duration)
+                if args.exposure_change_timing > 0:
+                    exposure_change_timer.join()
 
             finally:
                 cam.stop_streaming()

@@ -33,6 +33,9 @@ frames_filename_var = tk.StringVar()
 # Initialize numeric variables
 duration_var = tk.DoubleVar(value=-1)
 buffer_count_var = tk.IntVar(value=10)
+initial_exposure_var = tk.IntVar(value=-1)
+exposure_diff_var = tk.IntVar(value=0)
+exposure_change_timing_var = tk.DoubleVar(value=0)
 
 def toggle_entry(entry: tk.Entry, default: str):
     if entry["state"]=="disabled":
@@ -48,6 +51,9 @@ def run_experiment():
     args = asynchronous_grab_opencv.parse_args()
     args.output_dir = Path(output_dir_var.get())
     args.buffer_count = buffer_count_var.get()
+    args.exposure = initial_exposure_var.get()
+    args.exposure_diff = exposure_diff_var.get()
+    args.exposure_change_timing = exposure_change_timing_var.get()
     args.pcap = save_pcap_var.get()
     if args.pcap:
         args.pcap_name = pcap_filename_var.get()
@@ -137,10 +143,25 @@ output_dir_entry.insert(0,'OUTPUT')
 output_dir_label.pack()
 output_dir_entry.pack()
 
-buffer_count_label = tk.Label(root, text="Streaming Buffer Count ")
+buffer_count_label = tk.Label(root, text="Streaming Buffer Count:")
 buffer_count_entry = tk.Entry(root, textvariable=buffer_count_var)
 buffer_count_label.pack()
 buffer_count_entry.pack()
+
+initial_exposure_label = tk.Label(root, text="Initial Exposure Time microseconds (-1 auto):")
+initial_exposure_entry = tk.Entry(root, textvariable=initial_exposure_var)
+initial_exposure_label.pack()
+initial_exposure_entry.pack()
+
+exposure_diff_label = tk.Label(root, text="Exposure Time Diff microseconds:")
+exposure_diff_entry = tk.Entry(root, textvariable=exposure_diff_var)
+exposure_diff_label.pack()
+exposure_diff_entry.pack()
+
+exposure_change_timing_var_label = tk.Label(root, text="Exposure Change Timing seconds:")
+exposure_change_timing_var_entry = tk.Entry(root, textvariable=exposure_change_timing_var)
+exposure_change_timing_var_label.pack()
+exposure_change_timing_var_entry.pack()
 
 pcap_entry_label = tk.Label(root, text="PCAP File Name:")
 pcap_entry = tk.Entry(root, textvariable=pcap_filename_var, width=50, state='disabled' )
