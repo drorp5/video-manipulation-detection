@@ -36,6 +36,7 @@ buffer_count_var = tk.IntVar(value=10)
 initial_exposure_var = tk.IntVar(value=-1)
 exposure_diff_var = tk.IntVar(value=0)
 exposure_change_timing_var = tk.DoubleVar(value=0)
+fps_var = tk.IntVar(value=30)
 
 def toggle_entry(entry: tk.Entry, default: str):
     if entry["state"]=="disabled":
@@ -54,6 +55,7 @@ def run_experiment():
     args.exposure = initial_exposure_var.get()
     args.exposure_diff = exposure_diff_var.get()
     args.exposure_change_timing = exposure_change_timing_var.get()
+    args.fps = fps_var.get()
     args.pcap = save_pcap_var.get()
     if args.pcap:
         args.pcap_name = pcap_filename_var.get()
@@ -147,6 +149,11 @@ buffer_count_label = tk.Label(root, text="Streaming Buffer Count:")
 buffer_count_entry = tk.Entry(root, textvariable=buffer_count_var)
 buffer_count_label.pack()
 buffer_count_entry.pack()
+
+fps_label = tk.Label(root, text="Frames Per Second:")
+fps_entry = tk.Entry(root, textvariable=fps_var)
+fps_label.pack()
+fps_entry.pack()
 
 initial_exposure_label = tk.Label(root, text="Initial Exposure Time microseconds (-1 auto):")
 initial_exposure_entry = tk.Entry(root, textvariable=initial_exposure_var)

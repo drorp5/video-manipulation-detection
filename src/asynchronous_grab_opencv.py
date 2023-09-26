@@ -94,17 +94,16 @@ def get_camera(camera_id: Optional[str]) -> Camera:
 
             return cams[0]
 
-def setup_camera(cam: Camera, auto_exposure: bool = True, exposure_val: int = -1):
+def setup_camera(cam: Camera, exposure_val: Optional[int], fps_val: Optional[int]):
     with cam:
         # Enable auto exposure time setting if camera supports it
-        if auto_exposure:
+        if exposure_val is None:
             try:
                 cam.ExposureAuto.set('Continuous')
 
             except (AttributeError, VimbaFeatureError):
                 pass
         else:
-            assert exposure_val > 0, 'In Manual Exposure Mode The Value Must Be Specified'
             try:
                 cam.ExposureAuto.set('Off')
                 cam.ExposureTimeAbs.set(exposure_val)
@@ -127,6 +126,14 @@ def setup_camera(cam: Camera, auto_exposure: bool = True, exposure_val: int = -1
 
         except (AttributeError, VimbaFeatureError):
             pass
+
+        # Set constant frame rate if specified
+        if fps_val is not None:
+            try:
+                cam.TriggerMode.set("Off")
+                cam.AcquisitionFrameRateAbs.set(fps_val)
+            except (AttributeError, VimbaFeatureError):
+                pass
 
         # Query available, open_cv compatible pixel formats
         # prefer color formats over monochrome formats
@@ -274,10 +281,16 @@ def parse_args() -> Dict:
     parser.add_argument("--exposure", help="exposure time value in manual mode [microseconds]", type=int, default=-1)
     parser.add_argument("--exposure_diff", help="exposure time change during stream [microseconds]", type=int, default=0)
     parser.add_argument("--exposure_change_timing", help="duration till exposure time change during stream [seconds]", type=float, default=0)
+    parser.add_argument("--fps", help="frame rate [frames per second]", type=int, default=-1)
+    
     args = parser.parse_args()
     args.time_string = time_string
     if args.duration < 0:
         args.duration = None
+    if args.exposure < 0:
+        args.exposure = None
+    if args.fps < 0:
+        args.fps = None
     return args
 
 def main_script():
@@ -286,7 +299,7 @@ def main_script():
     return start_async_grab(args)
 
 def assert_args(args):
-    assert args.plot or args.duration>0, 'if the stream is not plotted, duration must be specified'
+    assert args.plot or args.duration is not None, 'if the stream is not plotted, duration must be specified'
     assert not(args.exposure_diff!=0 and args.exposure_change_timing==0), 'exposure diff value must be specified with timing'
     assert args.duration is None or (args.duration > args.exposure_change_timing) 
     
@@ -314,18 +327,21 @@ def start_async_grab(args):
                 adaptive_metadata['time'] = args.time_string
                 adaptive_metadata["dsp_subregion"] = dsp_subregion
                 adaptive_metadata["buffer_count"] = args.buffer_count
-                if args.exposure > 0:
-                    adaptive_metadata["initial exposure"] = args.exposure
+                if args.fps is not None:
+                    adaptive_metadata["fps"] = args.fps
+                if args.exposure is not None:
+                    adaptive_metadata["initial_exposure"] = args.exposure
+                if args.exposure_diff != 0:
+                    adaptive_metadata["exposure_diff"] = args.exposure_diff
+                if args.exposure_change_timing != 0:
+                    adaptive_metadata["exposure_change_timing"] = args.exposure_change_timing
                 output_parameters_path = args.output_dir / f'{args.adaptive_name}.json'
                 with open(output_parameters_path.absolute().as_posix(), 'w') as file:
                     file.write(json.dumps(adaptive_metadata, indent=2))
             else:
                 output_parameters_path = None
             
-            if args.exposure > 0:
-                setup_camera(cam, auto_exposure=False, exposure_val=args.exposure)
-            else:
-                setup_camera(cam)
+            setup_camera(cam, exposure_val=args.exposure, fps_val=args.fps)
             handler = Handler(args.plot, args.detector, output_parameters_path, saved_frames_dir,args.debug)
 
             if args.pcap:
