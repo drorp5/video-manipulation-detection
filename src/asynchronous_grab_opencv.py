@@ -214,48 +214,49 @@ class Handler:
             if key == ENTER_KEY_CODE:
                 self.shutdown_event.set()
                 return
+        
+        with cam:
+            if frame.get_status() == FrameStatus.Complete:
+                if self.debug:
+                    print('{} acquired {}'.format(cam, frame), flush=True)
 
-        if frame.get_status() == FrameStatus.Complete:
-            if self.debug:
-                print('{} acquired {}'.format(cam, frame), flush=True)
+                msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
+                img = frame.as_opencv_image()
 
-            msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
-            img = frame.as_opencv_image()
-
-            # convert image to BGR format 
-            pixel_format = frame.get_pixel_format()
-            img, conversion_time = self.convert_image(img, pixel_format, debug=self.debug)
-            
-            # get values of exposure and gain
-            if self.output_parameters_path:
-                try:
-                    frame_data = {}
-                    frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
-                    # frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
-                    frame_data["live_intensity"] =  cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float).mean()
-                    json_data = {f'frame_{frame.get_id()}': frame_data}
-                    with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
-                        file.write(',\n')
-                        file.write(json.dumps(json_data, indent=2))
-                except:
-                    print('WARNING: cant query parameters')
+                # convert image to BGR format 
+                pixel_format = frame.get_pixel_format()
+                img, conversion_time = self.convert_image(img, pixel_format, debug=self.debug)
                 
-            if self.saved_frames_dir is not None:
-                output_img_path = self.saved_frames_dir / f'frame_{frame.get_id()}.png'
-                cv2.imwrite(output_img_path.as_posix(), img)
-            
-            if self.plot:
-                processed_img, resizing_time = self.resize_image(img, debug=self.debug)
-                processed_img, detection_time = self.detect_objects_in_image(processed_img, debug=self.debug)
-                window_name = msg.format(cam.get_name())           
-                cv2.imshow(window_name, processed_img)
-            
-            if self.debug:
-                print(f'conversion time = {conversion_time}')
-                print(f'resizing time = {resizing_time}')
-                print(f'detection time = {detection_time}')
-                print(f'total processing time = {conversion_time + resizing_time + detection_time}')
-        cam.queue_frame(frame)
+                # get values of exposure and gain
+                if self.output_parameters_path:
+                    try:
+                        frame_data = {}
+                        frame_data["exposure_us"] = cam.ExposureTimeAbs.get()
+                        # frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
+                        frame_data["live_intensity"] = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float).mean()
+                        json_data = {f'frame_{frame.get_id()}': frame_data}
+                        with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
+                            file.write(',\n')
+                            file.write(json.dumps(json_data, indent=2))
+                    except:
+                        print('WARNING: cant query parameters')
+                    
+                if self.saved_frames_dir is not None:
+                    output_img_path = self.saved_frames_dir / f'frame_{frame.get_id()}.png'
+                    cv2.imwrite(output_img_path.as_posix(), img)
+                
+                if self.plot:
+                    processed_img, resizing_time = self.resize_image(img, debug=self.debug)
+                    processed_img, detection_time = self.detect_objects_in_image(processed_img, debug=self.debug)
+                    window_name = msg.format(cam.get_name())           
+                    cv2.imshow(window_name, processed_img)
+                
+                if self.debug:
+                    print(f'conversion time = {conversion_time}')
+                    print(f'resizing time = {resizing_time}')
+                    print(f'detection time = {detection_time}')
+                    print(f'total processing time = {conversion_time + resizing_time + detection_time}')
+            cam.queue_frame(frame)
 
 def parse_args() -> Dict:
     # Get the current time and formant it as a string
