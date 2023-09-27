@@ -55,15 +55,23 @@ def run_experiment():
     args.exposure = initial_exposure_var.get()
     args.exposure_diff = exposure_diff_var.get()
     args.exposure_change_timing = exposure_change_timing_var.get()
+
+    postfix = ''
+    if args.exposure > 0 and args.exposure_diff > 0:
+        postfix = f'_exp_{args.exposure}_diff_{args.exposure_diff}'
+
     args.fps = fps_var.get()
     args.pcap = save_pcap_var.get()
     if args.pcap:
+        pcap_entry.insert(tk.END, postfix)
         args.pcap_name = pcap_filename_var.get()
     args.adaptive = save_adaptive_var.get()
     if args.adaptive:
+        adaptive_entry.insert(tk.END, postfix)
         args.adaptive_name = adaptive_filename_var.get()
     args.save_frames = save_frames_var.get()
     if args.save_frames:
+        frames_dir_entry.insert(tk.END, postfix)
         args.frames_dir = frames_filename_var.get()
     args.plot = plot_var.get()
     if duration_var.get() > 0:
@@ -120,7 +128,7 @@ def update_display():
     tree.pack()
     
     # Create a text widget to display the results
-    text_widget = tk.Text(root, height=3, width=30)
+    text_widget = tk.Text(root, height=6, width=40)
     total_num_frames = df.index[-1] - df.index[0] + 1
     output_text = f'Total {total_num_frames} frames collected\n'
     for column_name, column_values in df.iteritems():
