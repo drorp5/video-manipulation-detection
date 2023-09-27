@@ -21,6 +21,15 @@ def read_exposure_data(adaptive_parameters_path: Path):
     frames_exposure_time = np.array(frames_exposure_time)
     return frames_exposure_id, frames_exposure_time
 
+def read_adaptive_data(adaptive_parameters_path: Path) ->pd.DataFrame:
+    with open (adaptive_parameters_path, 'r') as f:
+        data = json.load(f)
+    frames_data = {}
+    for frame_id, frame_data in data.items():
+        if frame_id.startswith('frame_'):
+            frames_data[int(frame_id.split('_')[1])] = frame_data
+    return pd.DataFrame(frames_data).T
+
 def read_intensity_data(frames_dir: Path):
     frame_intensity_path = frames_dir / f"averaged_intensities.txt"
     with open(frame_intensity_path, 'r') as f:

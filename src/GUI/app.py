@@ -31,12 +31,12 @@ adaptive_filename_var = tk.StringVar()
 frames_filename_var = tk.StringVar()
 
 # Initialize numeric variables
-duration_var = tk.DoubleVar(value=-1)
-buffer_count_var = tk.IntVar(value=10)
+duration_var = tk.DoubleVar(value=5) #-1
+buffer_count_var = tk.IntVar(value=1) #10
 initial_exposure_var = tk.IntVar(value=-1)
 exposure_diff_var = tk.IntVar(value=0)
 exposure_change_timing_var = tk.DoubleVar(value=0)
-fps_var = tk.IntVar(value=30)
+fps_var = tk.IntVar(value=20)
 
 def toggle_entry(entry: tk.Entry, default: str):
     if entry["state"]=="disabled":
@@ -75,8 +75,7 @@ def run_experiment():
 def get_exposure_dataframe() -> Optional[pd.DataFrame]:
     if save_adaptive_var.get():
         adaptive_parameters_path = Path(output_dir_var.get()) /  f'{adaptive_filename_var.get()}.json'
-        frames_exposure_id, frames_exposure_time = adaptive_parameters.utils.read_exposure_data(adaptive_parameters_path=adaptive_parameters_path)
-        df = pd.DataFrame({'exposure': frames_exposure_time}, index=frames_exposure_id)
+        df = adaptive_parameters.utils.read_adaptive_data(adaptive_parameters_path)
         return df
     
 def get_intensity_dataframe() -> Optional[pd.DataFrame]:
@@ -141,7 +140,7 @@ duration_entry.pack()
 
 output_dir_label = tk.Label(root, text="Output Base Dir:")
 output_dir_entry = tk.Entry(root, textvariable=output_dir_var)
-output_dir_entry.insert(0,'OUTPUT')
+output_dir_entry.insert(0,r'OUTPUT/tmp')
 output_dir_label.pack()
 output_dir_entry.pack()
 

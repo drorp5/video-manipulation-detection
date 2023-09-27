@@ -77,7 +77,6 @@ def abort(reason: str, return_code: int = 1, usage: bool = False):
 
     sys.exit(return_code)
 
-
 def get_camera(camera_id: Optional[str]) -> Camera:
     with Vimba.get_instance() as vimba:
         if camera_id:
@@ -223,25 +222,24 @@ class Handler:
             msg = 'Stream from \'{}\'. Press <Enter> to stop stream.'
             img = frame.as_opencv_image()
 
+            # convert image to BGR format 
+            pixel_format = frame.get_pixel_format()
+            img, conversion_time = self.convert_image(img, pixel_format, debug=self.debug)
+            
             # get values of exposure and gain
             if self.output_parameters_path:
                 try:
                     frame_data = {}
                     frame_data["exposure_us"] = cam.get_feature_by_name('ExposureTimeAbs').get()
                     # frame_data["gain_db"] = cam.get_feature_by_name('Gain').get()
-                    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float)
-                    # frame_data["intensity"] =  np.mean(gray)
+                    frame_data["live_intensity"] =  cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float).mean()
                     json_data = {f'frame_{frame.get_id()}': frame_data}
+                    with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
+                        file.write(',\n')
+                        file.write(json.dumps(json_data, indent=2))
                 except:
                     print('WARNING: cant query parameters')
-                with open(self.output_parameters_path.absolute().as_posix(), 'a+') as file:
-                    file.write(',\n')
-                    file.write(json.dumps(json_data, indent=2))
-
-            # convert image to BGR format 
-            pixel_format = frame.get_pixel_format()
-            img, conversion_time = self.convert_image(img, pixel_format, debug=self.debug)
-            
+                
             if self.saved_frames_dir is not None:
                 output_img_path = self.saved_frames_dir / f'frame_{frame.get_id()}.png'
                 cv2.imwrite(output_img_path.as_posix(), img)
