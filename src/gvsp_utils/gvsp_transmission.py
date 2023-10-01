@@ -71,10 +71,11 @@ class GvspPcapExtractor():
                 frame = self._next()
                 if self.completed_only and not frame.success_status:
                     frame = None
-            img =  cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
-            frame_id = frame.get_id()
-            frame = None
-            yield img, frame_id
+            if frame is not None:
+                img =  cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
+                frame_id = frame.get_id()
+                frame = None
+                yield img, frame_id
 
     def save_images(self, dst_dir: Path):
         dst_dir_path = Path(dst_dir)
