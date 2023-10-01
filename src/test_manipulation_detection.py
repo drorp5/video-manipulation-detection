@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from icecream import ic
 import traceback
-from gvsp_utils.gvsp_transmission import MockGvspTransmission
+from gvsp_utils.gvsp_transmission import GvspPcapExtractor
 from manipulation_detectors.abstract_detector import *
 from manipulation_detectors.metadata import *
 from manipulation_detectors.image_processing import *
@@ -15,7 +15,7 @@ from sign_detectors.stop_sign_detectors import StopSignDetector, HaarDetector, M
 from sign_detectors.stop_sign_detectors import draw_bounding_boxes, get_detector
 
 
-def detect_in_gvsp_transmission(gvsp_transmission: MockGvspTransmission,
+def detect_in_gvsp_transmission(gvsp_transmission: GvspPcapExtractor,
                                 combined_detector: CombinedDetector,
                                 vehicle_detector: StopSignDetector,
                                 print_every: int = 1,
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     
     gvsp_path = Path(gvsp_path)
     
-    gvsp_transmission = MockGvspTransmission(gvsp_pcap_path=gvsp_path)
+    gvsp_transmission = GvspPcapExtractor(gvsp_pcap_path=gvsp_path)
     
     constant_metadata_detector = ConstantMetadataDetector()
     frame_id_detector = FrameIDDetector()

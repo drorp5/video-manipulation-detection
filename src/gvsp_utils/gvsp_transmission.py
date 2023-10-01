@@ -5,7 +5,7 @@ from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change loca
 from pathlib import Path
 
 
-class MockGvspTransmission():
+class GvspPcapExtractor():
     def __init__(self, gvsp_pcap_path: Path):
         self.pcap_reader = PcapReader(gvsp_pcap_path.as_posix())
         self.iteration_stopped = False

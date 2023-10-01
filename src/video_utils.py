@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from gvsp_utils.gvsp_transmission import MockGvspTransmission
+from gvsp_utils.gvsp_transmission import GvspPcapExtractor
 from manipulation_detectors.utils import gvsp_frame_to_rgb
 from pathlib import Path
 from tqdm import tqdm
@@ -19,7 +19,7 @@ def gvsp_pcap_to_raw_images(pcap_path: str, dst_dir: str,  max_frames=None, inte
 
     intensities_path = dst_dir_path / 'averaged_intensities.txt'
     intensities = {}
-    gvsp_transmission = MockGvspTransmission(pcap_path)
+    gvsp_transmission = GvspPcapExtractor(pcap_path)
     for frame in tqdm(gvsp_transmission.frames, total=max_frames):
         if frame is not None and frame.success_status:
             img = cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
@@ -42,7 +42,7 @@ def gvsp_pcap_to_video(pcap_path: str, dst_dir: str,  max_frames=None):
         dst_dir_path.mkdir(exist_ok=True)
     dst_path = dst_dir_path / filename
 
-    gvsp_transmission = MockGvspTransmission(pcap_path)
+    gvsp_transmission = GvspPcapExtractor(pcap_path)
 
     frame_validator = lambda frame: frame is not None and frame.success_status
     frame_pre_processing = lambda frame: cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
