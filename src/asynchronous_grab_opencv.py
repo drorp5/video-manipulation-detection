@@ -258,6 +258,31 @@ class Handler:
                     print(f'total processing time = {conversion_time + resizing_time + detection_time}')
             cam.queue_frame(frame)
 
+
+def get_default_args() -> argparse.Namespace:
+    current_time = datetime.now()
+    args = {}
+    time_string = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+    args["time_string"] = time_string
+    args["camera_id"] = None
+    args["detector"] = None
+    args["pcap"] = False
+    args["pcap_name"] = f'recording_{time_string}'
+    args["adaptive"] = False
+    args["adaptive_name"] = f'adaptive_parameters_{time_string}'
+    args["save_frames"] = False
+    args["frames_dir"] = f'recording_{time_string}_images'
+    args["debug"] = False
+    args["output_dir"] = Path('./OUTPUT')
+    args["plot"] = False
+    args["duration"] = -1
+    args["buffer_count"] = 10
+    args["exposure"] = -1
+    args["exposure_diff"] = 0 
+    args["exposure_change_timing"] = 0
+    args["fps"] = -1 
+    return argparse.Namespace(**args)
+
 def parse_args() -> Dict:
     # Get the current time and formant it as a string
     current_time = datetime.now()
