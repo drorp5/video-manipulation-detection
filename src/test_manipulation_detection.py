@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from icecream import ic
 import traceback
-from transmission_mock.gvsp_transmission import MockGvspTransmission
+from gvsp_utils.gvsp_transmission import MockGvspTransmission
 from manipulation_detectors.abstract_detector import *
 from manipulation_detectors.metadata import *
 from manipulation_detectors.image_processing import *

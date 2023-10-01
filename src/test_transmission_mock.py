@@ -1,7 +1,7 @@
 import cv2
 from matplotlib import pyplot as plt
 from icecream import ic
-from transmission_mock.gvsp_transmission import MockGvspTransmission
+from gvsp_utils.gvsp_transmission import MockGvspTransmission
 from manipulation_detectors.utils import gvsp_frame_to_rgb
 from pathlib import Path
 
