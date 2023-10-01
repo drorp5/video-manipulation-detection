@@ -8,7 +8,7 @@ import sys
 sys.path.append('./src')
 import asynchronous_grab_opencv
 import adaptive_parameters.utils
-from video_utils import gvsp_pcap_to_raw_images
+from gvsp_utils.gvsp_transmission import GvspPcapExtractor
 
 # Create the main application window
 root = tk.Tk()
@@ -93,9 +93,10 @@ def get_exposure_dataframe() -> Optional[pd.DataFrame]:
 def get_intensity_dataframe() -> Optional[pd.DataFrame]:
     if save_pcap_var.get():
         pcap_path = Path(output_dir_var.get()) / f'{pcap_filename_var.get()}.pcap'
-        intenities_dst_dir = Path(output_dir_var.get()) / pcap_filename_var.get()
-        gvsp_pcap_to_raw_images(pcap_path=pcap_path.as_posix(), dst_dir=intenities_dst_dir.as_posix(), intensities_only=True)
-        frames_intensity_id, frames_intensity = adaptive_parameters.utils.read_intensity_data(intenities_dst_dir)
+        intensities_path = Path(output_dir_var.get()) / f'{pcap_filename_var.get()}_intensities.txt' 
+        pcap_extractor = GvspPcapExtractor(gvsp_pcap_path=pcap_path)
+        pcap_extractor.save_intensities(dst_path=intensities_path)
+        frames_intensity_id, frames_intensity = adaptive_parameters.utils.read_intensity_data(intensities_path)
         intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_intensity_id)
         return intensity_df
 

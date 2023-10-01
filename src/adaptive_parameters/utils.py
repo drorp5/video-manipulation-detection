@@ -30,9 +30,8 @@ def read_adaptive_data(adaptive_parameters_path: Path) ->pd.DataFrame:
             frames_data[int(frame_id.split('_')[1])] = frame_data
     return pd.DataFrame(frames_data).T
 
-def read_intensity_data(frames_dir: Path):
-    frame_intensity_path = frames_dir / f"averaged_intensities.txt"
-    with open(frame_intensity_path, 'r') as f:
+def read_intensity_data(intensities_path: Path):
+    with open(intensities_path, 'r') as f:
         intensities_txt = f.read()
     result = re.findall(r"frame (\d+): (\d+\.\d+)", intensities_txt)
 
