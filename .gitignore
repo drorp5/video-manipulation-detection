@@ -132,7 +132,7 @@ dmypy.json
 settings.json
 INPUT/*.pcapng
 INPUT/**/*.json
+INPUT/**/*.txt
 OUTPUT/
 TODO
 *.ipynb
-INPUT/*/experiments_log.txt
