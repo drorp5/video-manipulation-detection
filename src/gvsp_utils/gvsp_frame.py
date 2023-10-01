@@ -1,3 +1,5 @@
+import cv2
+from vimba import Frame, PixelFormat
 from typing import Tuple
 import numpy as np
 from scapy.all import PacketList
@@ -7,6 +9,7 @@ import sys
 sys.path.append('src')
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from dataclasses import dataclass
+import constansts
 
 class MissingLeaderError(Exception):
     pass
@@ -135,3 +138,9 @@ class MockFrame:
     def success_status(self):
         return self._success_status
 
+
+def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: int =  constansts.CV2_CONVERSIONS[PixelFormat.BayerRG8]) -> np.array:
+    """Extract RGB image from gvsp frame object"""
+    img = frame.as_opencv_image()
+    rgb_img = cv2.cvtColor(img, cv2_transformation_code)
+    return rgb_img
