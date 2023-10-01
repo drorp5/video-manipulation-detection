@@ -31,11 +31,11 @@ adaptive_filename_var = tk.StringVar()
 frames_filename_var = tk.StringVar()
 
 # Initialize numeric variables
-duration_var = tk.DoubleVar(value=5) #-1
+duration_var = tk.DoubleVar(value=10) #-1
 buffer_count_var = tk.IntVar(value=1) #10
 initial_exposure_var = tk.IntVar(value=-1)
 exposure_diff_var = tk.IntVar(value=0)
-exposure_change_timing_var = tk.DoubleVar(value=0)
+exposure_change_timing_var = tk.DoubleVar(value=5)
 fps_var = tk.IntVar(value=20)
 
 def toggle_entry(entry: tk.Entry, default: str):
@@ -49,28 +49,32 @@ def toggle_entry(entry: tk.Entry, default: str):
 # Define the function that performs the experiment
 def run_experiment():
     # get default arguments
-    args = asynchronous_grab_opencv.parse_args()
+    args = asynchronous_grab_opencv.get_default_args()
     args.output_dir = Path(output_dir_var.get())
     args.buffer_count = buffer_count_var.get()
     args.exposure = initial_exposure_var.get()
     args.exposure_diff = exposure_diff_var.get()
     args.exposure_change_timing = exposure_change_timing_var.get()
 
+    prefix = ''
     postfix = ''
     if args.exposure > 0 and args.exposure_diff > 0:
-        postfix = f'_exp_{args.exposure}_diff_{args.exposure_diff}'
+        postfix = f'_static_exp_{args.exposure}_diff_{args.exposure_diff}'
 
     args.fps = fps_var.get()
     args.pcap = save_pcap_var.get()
     if args.pcap:
+        adaptive_entry.insert(0, prefix)
         pcap_entry.insert(tk.END, postfix)
         args.pcap_name = pcap_filename_var.get()
     args.adaptive = save_adaptive_var.get()
     if args.adaptive:
+        adaptive_entry.insert(0, prefix)
         adaptive_entry.insert(tk.END, postfix)
         args.adaptive_name = adaptive_filename_var.get()
     args.save_frames = save_frames_var.get()
     if args.save_frames:
+        adaptive_entry.insert(0, prefix)
         frames_dir_entry.insert(tk.END, postfix)
         args.frames_dir = frames_filename_var.get()
     args.plot = plot_var.get()
@@ -148,7 +152,7 @@ duration_entry.pack()
 
 output_dir_label = tk.Label(root, text="Output Base Dir:")
 output_dir_entry = tk.Entry(root, textvariable=output_dir_var)
-output_dir_entry.insert(0,r'OUTPUT/tmp')
+output_dir_entry.insert(0,r'OUTPUT/recordings_bank')
 output_dir_label.pack()
 output_dir_entry.pack()
 
