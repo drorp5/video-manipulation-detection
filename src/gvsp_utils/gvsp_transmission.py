@@ -10,10 +10,13 @@ from typing import Dict, Optional
 
 
 class GvspPcapExtractor():
-    def __init__(self, gvsp_pcap_path: Path):
+    def __init__(self, gvsp_pcap_path: Path, max_frames:Optional[int]=None, completed_only:bool=True):
         assert gvsp_pcap_path.exists(), 'pcap not found'
         self.name = gvsp_pcap_path.stem
+        self.base_dir = gvsp_pcap_path.parent
         self.pcap_reader = PcapReader(gvsp_pcap_path.as_posix())
+        self.max_frames = max_frames
+        self.completed_only=completed_only
         self.iteration_stopped = False
         self.last_packet = None
     
@@ -61,46 +64,46 @@ class GvspPcapExtractor():
                 frame = None
     
     @property
-    def images(self, completed_only=True):
+    def images(self):
         frame = None
         while not self.iteration_stopped:
             while not self.iteration_stopped and frame is None:
-                try:
-                    frame = self._next()
-                except MissingLeaderError as e:
-                    frame = None
-                if completed_only and not frame.success_status:
+                frame = self._next()
+                if self.completed_only and not frame.success_status:
                     frame = None
             img =  cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
             frame_id = frame.get_id()
+            frame = None
             yield img, frame_id
 
-    def save_images(self, dst_dir: Path, completed_only=True, max_frames=None):
+    def save_images(self, dst_dir: Path):
         dst_dir_path = Path(dst_dir)
         if not dst_dir_path.exists():
             dst_dir_path.mkdir(exist_ok=True)
         frames_counter = 0
-        for img, frame_id in tqdm(self.frames(completed_only)):
+        for img, frame_id in tqdm(self.images):
             output_path = dst_dir_path / f'frame_{frame_id}.jpg'
             cv2.imwrite(output_path.as_posix(), img)
             frames_counter += 1
-            if frames_counter >= max_frames:
+            if self.max_frames is not None and frames_counter >= self.max_frames:
                 break
 
-    def save_intensities(self, dst_path: Path, max_frames=None) -> Dict:
+    def save_intensities(self, dst_path: Optional[Path]=None) -> Dict:
+        if dst_path is None:
+            dst_path = self.base_dir / f'{self.name}_intensities.txt'
         intensities = {}
         frames_counter = 0
-        for img, frame_id in tqdm(self.frames(completed_only=True)):
+        for img, frame_id in tqdm(self.images):
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float)
             intensities[frame_id] = np.mean(gray)
             with open(dst_path, 'a') as f:
                 f.write(f'frame {frame_id}: {intensities[frame_id]}\n')
             frames_counter += 1
-            if frames_counter >= max_frames:
+            if self.max_frames is not None and frames_counter >= self.max_frames:
                 break
         return intensities
 
-    def save_images_and_intensities(self, dst_dir: Path, max_frames=None) -> Dict:
+    def save_images_and_intensities(self, dst_dir: Path) -> Dict:
         dst_dir_path = Path(dst_dir)
         if not dst_dir_path.exists():
             dst_dir_path.mkdir(exist_ok=True)
@@ -115,22 +118,21 @@ class GvspPcapExtractor():
             with open(dst_path, 'a') as f:
                 f.write(f'frame {frame_id}: {intensities[frame_id]}\n')
             frames_counter += 1
-            if frames_counter >= max_frames:
+            if self.max_frames is not None and frames_counter >= self.max_frames:
                 break
 
-    def save_video(self, dst_dir: str, completed_only=True, max_frames=None, fps=30):
+    def save_video(self, dst_dir: Path, fps=30):
         filename = f'{self.name}.mp4'
-        dst_dir_path = Path(dst_dir)
-        if not dst_dir_path.exists():
-            dst_dir_path.mkdir(exist_ok=True)
-        dst_path = dst_dir_path / filename
+        if not dst_dir.exists():
+            dst_dir.mkdir(exist_ok=True)
+        dst_path = dst_dir / filename
         height = None
         width = None
         prev_id = None
         prev_img = None
         frames_counter = 0
         first_img = True
-        for img, frame_id in self.images(completed_only):
+        for img, frame_id in self.images:
             if first_img:
                 height, width = img.shape
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -143,7 +145,7 @@ class GvspPcapExtractor():
             prev_img = img
             prev_id = frame_id
             frames_counter += 1
-            if frames_counter >= max_frames:
+            if self.max_frames is not None and frames_counter >= self.max_frames:
                 break
         video_writer.release()
             
