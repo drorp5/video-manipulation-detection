@@ -111,7 +111,7 @@ class GvspPcapExtractor():
         intensities = {}
         dst_path = dst_dir / f'{self.name}_intensities.txt'
         frames_counter = 0
-        for img, frame_id in tqdm(self.frames(completed_only=True)):
+        for img, frame_id in tqdm(self.images):
             output_path = dst_dir_path / f'frame_{frame_id}.jpg'
             cv2.imwrite(output_path.as_posix(), img)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float)
