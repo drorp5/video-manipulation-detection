@@ -12,9 +12,9 @@ from typing import Dict, Optional
 class GvspPcapExtractor():
     def __init__(self, gvsp_pcap_path: Path, max_frames:Optional[int]=None, completed_only:bool=True):
         assert gvsp_pcap_path.exists(), 'pcap not found'
+        self.pcap_path = gvsp_pcap_path
         self.name = gvsp_pcap_path.stem
         self.base_dir = gvsp_pcap_path.parent
-        self.pcap_reader = PcapReader(gvsp_pcap_path.as_posix())
         self.max_frames = max_frames
         self.completed_only=completed_only
         self.iteration_stopped = False
@@ -55,6 +55,7 @@ class GvspPcapExtractor():
         
     @property
     def frames(self):
+        self.pcap_reader = PcapReader(self.pcap_path.as_posix())
         frame = self._next()
         while not self.iteration_stopped:
             yield frame
@@ -65,6 +66,7 @@ class GvspPcapExtractor():
     
     @property
     def images(self):
+        self.pcap_reader = PcapReader(self.pcap_path.as_posix())
         frame = None
         while not self.iteration_stopped:
             while not self.iteration_stopped and frame is None:
