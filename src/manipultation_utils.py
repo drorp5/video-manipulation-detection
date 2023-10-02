@@ -14,10 +14,7 @@ import time
 from enum import IntEnum, Enum
 import argparse
 from pathlib import Path
-
-class GigERegisters(IntEnum):
-    ACQUISITION = 0x000130f4
-    CCP = 0x0a00
+from gvsp_utils.gige_registers import GigERegisters
 
 class Method(Enum):
     WINDOWS_VIMBA = 1
