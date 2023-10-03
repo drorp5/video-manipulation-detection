@@ -15,6 +15,7 @@ from enum import IntEnum, Enum
 import argparse
 from pathlib import Path
 from src.gige.gige_constants import GigERegisters
+from src.gige.constansts import Layers
 
 class Method(Enum):
     WINDOWS_VIMBA = 1
@@ -28,10 +29,6 @@ GVSP_SRC_PORT = 10010
 GVCP_DST_PORT = 3956
 BYTES_PER_PIXEL = 1
 BYTE = 8
-IP_LAYER = 'IP'
-UDP_LAYER = 'UDP'
-GVSP_LAYER = 'Gvsp'
-GVCP_LAYER = 'GvcpCmd'
 
 # PARAMETERS
 method = Method.WINDOWS_VIMBA
@@ -71,7 +68,7 @@ gvcp_excluded_ports = [58732]
 
 
 class GvcpCmd(Packet):
-    name = "GVCP_CMD"
+    name = Layers.GVCP.value
     fields_desc=[XBitField("MessageKeyCode",0x42,BYTE),
                  XBitField("Flags",0x01,BYTE),
                  XShortEnumField("Command",None,{0x0080:"READREG_CMD",0x0081:"READREG_ACK",0x0082:"WRITEREG_CMD"}),
@@ -83,7 +80,7 @@ class GvcpCmd(Packet):
 bind_layers(UDP,GvcpCmd,dport=GVCP_DST_PORT)
 
 class GvspLeader(Packet):
-    name = "GVSP_LEADER"
+    name = Layers.GVSP_LEADER.value
     fields_desc = [ShortField("FieldInfo",0),
                     ShortField("PayloadType",0x0001),
                     XBitField("Timestamp",1,8*BYTE),
@@ -97,14 +94,14 @@ class GvspLeader(Packet):
                   ]
     
 class GvspTrailer(Packet):
-    name = "GVSP_TRAILER"
+    name = Layers.GVSP_TRAILER.value
     fields_desc = [ShortField("FieldInfo",0),
                     ShortField("PayloadType",0x0001),
                     IntField("SizeY",img_height)]
                     # ShortField("UnknownPadding", 0x5555)] #TODO check why originally there is padding 5555 for the UDP
 
 class Gvsp(Packet):
-    name = "GVSP"
+    name = Layers.GVSP.value
     fields_desc=[XBitField("Status",0x0000,2*BYTE),
                  ShortField("BlockID",0),
                  XByteEnumField("Format",None,{0x01:"LEADER",0x02:"TRAILER",0x03:"PAYLOAD"}),
@@ -163,13 +160,13 @@ class GigELink():
             gvsp_port_found = self.gvsp_dst_port != -1
             gvcp_port_found = self.gvcp_src_port != -1    
 
-            if not gvsp_port_found and pkt.haslayer(GVSP_LAYER) and pkt[IP_LAYER].src==self.camera_ip:
-                gvsp_dst_port = pkt[UDP_LAYER].dport
+            if not gvsp_port_found and pkt.haslayer(Layers.GVSP.value) and pkt[Layers.IP.value].src==self.camera_ip:
+                gvsp_dst_port = pkt[Layers.UDP.value].dport
                 self.set_gvsp_dst_port(gvsp_dst_port)
                 print(f'Found GVSP port {gvsp_dst_port}')
-            elif not gvcp_port_found and pkt.haslayer(GVCP_LAYER) and pkt[GVCP_LAYER].Command==0x0080 and pkt[GVCP_LAYER].RegisterAddress==GigERegisters.CCP: #TODO change command 
-                if pkt[UDP_LAYER].sport not in gvcp_excluded_ports:
-                    gvcp_src_port = pkt[UDP_LAYER].sport
+            elif not gvcp_port_found and pkt.haslayer(Layers.GVCP.value) and pkt[Layers.GVCP.value].Command==0x0080 and pkt[Layers.GVCP.value].RegisterAddress==GigERegisters.CCP: #TODO change command 
+                if pkt[Layers.UDP.value].sport not in gvcp_excluded_ports:
+                    gvcp_src_port = pkt[Layers.UDP.value].sport
                     self.set_gvcp_src_port(gvcp_src_port)
                     print(f'Found GVCP port {gvcp_src_port}')
             
@@ -182,14 +179,14 @@ class GigELink():
         self.print_link()
 
     def sniffing_for_trailer_filter(self, pkt):
-            if pkt.haslayer(GVSP_LAYER):
-                if pkt[GVSP_LAYER].Format=="TRAILER":
+            if pkt.haslayer(Layers.GVSP.value):
+                if pkt[Layers.GVSP.value].Format=="TRAILER":
                     return True
             return False
     
     def callback_update_block_id(self,pkt):
-         if pkt.haslayer(GVSP_LAYER) and pkt[IP_LAYER].src==self.camera_ip:
-            self.last_block_id = pkt[GVSP_LAYER].BlockID
+         if pkt.haslayer(Layers.GVSP.value) and pkt[Layers.IP.value].src==self.camera_ip:
+            self.last_block_id = pkt[Layers.GVSP.value].BlockID
 
     def stop_and_replace_with_pcap(self, frame_pcap_path, timeout=2):
         print("Stopping acquisition")
@@ -199,11 +196,11 @@ class GigELink():
         print("Aliasing")
         gvsp_packets = rdpcap(frame_pcap_path)
         for packet in gvsp_packets:
-            packet[UDP_LAYER].dport = self.gvsp_dst_port
+            packet[Layers.UDP.value].dport = self.gvsp_dst_port
             packet["IP"].src = self.camera_ip
             packet["IP"].dst = self.cp_ip
         sendp(gvsp_packets, iface=self.interface, verbose=False) 
-        self.last_block_id = gvsp_packets[0][GVSP_LAYER].BlockID
+        self.last_block_id = gvsp_packets[0][Layers.GVSP.value].BlockID
         
     def stop_and_replace_with_image(self, img_path, timeout=2):
         print("Stopping acquisition")
@@ -213,7 +210,7 @@ class GigELink():
         print("Aliasing")
         gvsp_packets = self.img_to_gvsp(img_path,block_id=self.last_block_id+1)
         sendp(gvsp_packets, iface=self.interface, verbose=False) 
-        self.last_block_id = gvsp_packets[0][GVSP_LAYER].BlockID
+        self.last_block_id = gvsp_packets[0][Layers.GVSP.value].BlockID
 
     def img_to_gvsp_using_ref(self, img_path: str, reference_gvsp_pacp: str) -> PacketList:
         img_bgr = cv2.imread(img_path) # BGR
@@ -226,13 +223,13 @@ class GigELink():
     def insert_payload_to_gvsp_pcap(self, payload: List[bytes], reference_gvsp_pacp: str, block_id: int=default_block_id) -> PacketList:
         gvsp_packets = rdpcap(reference_gvsp_pacp)
         for pkt,pkt_payload in zip(gvsp_packets[1:-1], payload):
-            pkt[GVSP_LAYER].load = pkt_payload
+            pkt[Layers.GVSP.value].load = pkt_payload
         for pkt in gvsp_packets:
-            pkt[UDP_LAYER].src = GVSP_SRC_PORT
-            pkt[UDP_LAYER].dst = self.gvsp_dst_port
-            pkt[IP_LAYER].src = self.camera_ip
-            pkt[IP_LAYER].dst = self.cp_ip
-            pkt[GVSP_LAYER].BlockID = block_id
+            pkt[Layers.UDP.value].src = GVSP_SRC_PORT
+            pkt[Layers.UDP.value].dst = self.gvsp_dst_port
+            pkt[Layers.IP.value].src = self.camera_ip
+            pkt[Layers.IP.value].dst = self.cp_ip
+            pkt[Layers.GVSP.value].BlockID = block_id
         return gvsp_packets
 
     def img_to_gvsp(self, img_path: str, save_pcap_debug=True, block_id: int=default_block_id) -> PacketList:
@@ -293,7 +290,7 @@ class GigELink():
         iterations_time = []
         for _ in range(num_frames):
             for pkt in gvsp_fake_packets:
-                pkt[GVSP_LAYER].BlockID = self.last_block_id + 1
+                pkt[Layers.GVSP.value].BlockID = self.last_block_id + 1
             itertation_started = time.time()
             sendp(gvsp_fake_packets, iface=self.interface, verbose=False) 
             iteration_ended = time.time()
