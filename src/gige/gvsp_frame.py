@@ -9,7 +9,7 @@ import sys
 sys.path.append('src')
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from dataclasses import dataclass
-import src.gvsp_utils.constansts as constansts
+import src.gige.constansts as constansts
 
 class MissingLeaderError(Exception):
     pass

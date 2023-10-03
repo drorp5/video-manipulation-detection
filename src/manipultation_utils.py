@@ -14,7 +14,7 @@ import time
 from enum import IntEnum, Enum
 import argparse
 from pathlib import Path
-from gvsp_utils.gige_registers import GigERegisters
+from src.gige.gige_constants import GigERegisters
 
 class Method(Enum):
     WINDOWS_VIMBA = 1
