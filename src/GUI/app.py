@@ -8,7 +8,7 @@ import sys
 sys.path.append('./src')
 import asynchronous_grab_opencv
 import adaptive_parameters.utils
-from gige.gvsp_transmission import GvspPcapExtractor
+from gige.gvsp_transmission import GvspPcapParser
 
 # Create the main application window
 root = tk.Tk()
@@ -94,7 +94,7 @@ def get_intensity_dataframe() -> Optional[pd.DataFrame]:
     if save_pcap_var.get():
         pcap_path = Path(output_dir_var.get()) / f'{pcap_filename_var.get()}.pcap'
         intensities_path = Path(output_dir_var.get()) / f'{pcap_filename_var.get()}_intensities.txt' 
-        pcap_extractor = GvspPcapExtractor(gvsp_pcap_path=pcap_path)
+        pcap_extractor = GvspPcapParser(gvsp_pcap_path=pcap_path)
         pcap_extractor.save_intensities(dst_path=intensities_path)
         frames_intensity_id, frames_intensity = adaptive_parameters.utils.read_intensity_data(intensities_path)
         intensity_df = pd.DataFrame({'intensity': frames_intensity}, index=frames_intensity_id)

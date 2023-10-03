@@ -8,8 +8,7 @@ from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change loca
 from pathlib import Path
 from typing import Dict, Optional
 
-
-class GvspPcapExtractor():
+class GvspPcapParser():
     def __init__(self, gvsp_pcap_path: Path, max_frames:Optional[int]=None, completed_only:bool=True):
         assert gvsp_pcap_path.exists(), 'pcap not found'
         self.pcap_path = gvsp_pcap_path
