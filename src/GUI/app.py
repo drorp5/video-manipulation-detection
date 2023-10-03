@@ -8,7 +8,7 @@ import sys
 sys.path.append('./src')
 import asynchronous_grab_opencv
 import adaptive_parameters.utils
-from gvsp_utils.gvsp_transmission import GvspPcapExtractor
+from gige.gvsp_transmission import GvspPcapExtractor
 
 # Create the main application window
 root = tk.Tk()
