@@ -1,7 +1,7 @@
 import cv2
 from matplotlib import pyplot as plt
 from icecream import ic
-from gvsp_utils.gvsp_transmission import GvspPcapExtractor
+from gige.gvsp_transmission import GvspPcapExtractor
 from manipulation_detectors.utils import gvsp_frame_to_rgb
 from pathlib import Path
 

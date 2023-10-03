@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from icecream import ic
 import traceback
-from gvsp_utils.gvsp_transmission import GvspPcapExtractor
+from gige.gvsp_transmission import GvspPcapExtractor
 from manipulation_detectors.abstract_detector import *
 from manipulation_detectors.metadata import *
 from manipulation_detectors.image_processing import *
