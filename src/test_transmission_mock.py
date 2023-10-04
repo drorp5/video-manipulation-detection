@@ -10,7 +10,7 @@ if __name__ == "__main__":
     gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\live_stream_defaults_part.pcapng"
     # gvsp_pcap_path = r"C:\Users\drorp\Desktop\University\Thesis\video-manipulation-detection\INPUT\driving_in_uni_1-001.pcapng"
 
-    gvsp_transmission = GvspPcapParser(gvsp_pcap_path=Path(gvsp_pcap_path))
+    gvsp_transmission = GvspPcapParser(pcap_path=Path(gvsp_pcap_path))
     
     num_frames = 0
     for frame in gvsp_transmission.frames:

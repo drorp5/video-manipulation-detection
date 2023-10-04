@@ -6,14 +6,13 @@ from .gvsp_frame import MockFrame, MissingLeaderError, gvsp_frame_to_rgb
 from .constansts import *
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
+from .pcap import PcapParser
 
-class GvspPcapParser():
-    def __init__(self, gvsp_pcap_path: Path, max_frames:Optional[int]=None, completed_only:bool=True):
-        assert gvsp_pcap_path.exists(), 'pcap not found'
-        self.pcap_path = gvsp_pcap_path
-        self.name = gvsp_pcap_path.stem
-        self.base_dir = gvsp_pcap_path.parent
+
+class GvspPcapParser(PcapParser):
+    def __init__(self, pcap_path: Path, max_frames:Optional[int]=None, completed_only:bool=True):
+        super().__init__(pcap_path)
         self.max_frames = max_frames
         self.completed_only=completed_only
         self.iteration_stopped = False

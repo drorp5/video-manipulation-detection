@@ -96,7 +96,7 @@ if __name__ == "__main__":
     
     gvsp_path = Path(gvsp_path)
     
-    gvsp_transmission = GvspPcapParser(gvsp_pcap_path=gvsp_path)
+    gvsp_transmission = GvspPcapParser(pcap_path=gvsp_path)
     
     constant_metadata_detector = ConstantMetadataDetector()
     frame_id_detector = FrameIDDetector()
