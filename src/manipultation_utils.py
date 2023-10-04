@@ -72,6 +72,7 @@ class GvcpCmd(Packet):
                  IntField("value",None)
                  ]
 bind_layers(UDP,GvcpCmd,dport=Ports.GVCP_DST.value)
+bind_layers(UDP,GvcpCmd,sport=Ports.GVCP_DST.value)
 
 class GvspLeader(Packet):
     name = Layers.GVSP_LEADER.value
