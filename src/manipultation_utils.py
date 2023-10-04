@@ -14,21 +14,14 @@ import time
 from enum import IntEnum, Enum
 import argparse
 from pathlib import Path
-from src.gige.gige_constants import GigERegisters
-from src.gige.constansts import Layers
+from src.gige.gige_constants import *
+from src.gige.constansts import *
 
 class Method(Enum):
     WINDOWS_VIMBA = 1
     WINDOWS_MATLAB_REC = 2
     WINDOWS_MATLAB_PREVIEW = 3
     LINUX_ROS = 4
-
-
-# CONSTANTS
-GVSP_SRC_PORT = 10010
-GVCP_DST_PORT = 3956
-BYTES_PER_PIXEL = 1
-BYTE = 8
 
 # PARAMETERS
 method = Method.WINDOWS_VIMBA
@@ -68,16 +61,17 @@ gvcp_excluded_ports = [58732]
 
 
 class GvcpCmd(Packet):
+    # TODO split to sub commands according to the command value
     name = Layers.GVCP.value
     fields_desc=[XBitField("MessageKeyCode",0x42,BYTE),
                  XBitField("Flags",0x01,BYTE),
-                 XShortEnumField("Command",None,{0x0080:"READREG_CMD",0x0081:"READREG_ACK",0x0082:"WRITEREG_CMD"}),
+                 XShortEnumField("Command",None,{v.value:k for k,v in GvcpCommands._member_map_.items()}),
                  ShortField("PayloadLength",0x0008),
                  ShortField("RequestID",1),
                  XBitField("RegisterAddress",0x000130f4,4*BYTE),
                  IntField("value",None)
                  ]
-bind_layers(UDP,GvcpCmd,dport=GVCP_DST_PORT)
+bind_layers(UDP,GvcpCmd,dport=Ports.GVCP_DST.value)
 
 class GvspLeader(Packet):
     name = Layers.GVSP_LEADER.value
@@ -107,7 +101,7 @@ class Gvsp(Packet):
                  XByteEnumField("Format",None,{0x01:"LEADER",0x02:"TRAILER",0x03:"PAYLOAD"}),
                  XBitField("PacketID",0x000000,3*BYTE),
                 ]
-bind_layers(UDP,Gvsp,sport=GVSP_SRC_PORT)
+bind_layers(UDP,Gvsp,sport=Ports.GVSP_SRC.value)
 bind_layers(Gvsp,GvspLeader,Format=1)
 bind_layers(Gvsp,GvspTrailer,Format=2)
 
@@ -132,18 +126,18 @@ class GigELink():
 
     def print_link(self):
         print('GVCP:')
-        print(f'CP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({GVCP_DST_PORT})')
+        print(f'CP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({Ports.GVCP_DST.value})')
         print('GVSP:')
-        print(f'Camera {self.camera_ip}({GVSP_SRC_PORT}) ---> CP {self.cp_ip}({self.gvsp_dst_port})')
+        print(f'Camera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})')
 
     def _get_aquisition_cmd(self, reg_val, ack_required = False):
         if ack_required:
             cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
-                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
+                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=Ports.GVCP_DST.value)/GvcpCmd(
                 Command="WRITEREG_CMD", Flags=0x01, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
         else:
             cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
-                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=GVCP_DST_PORT)/GvcpCmd(
+                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=Ports.GVCP_DST.value)/GvcpCmd(
                 Command="WRITEREG_CMD", Flags=0x00, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
         return cmd
 
@@ -225,7 +219,7 @@ class GigELink():
         for pkt,pkt_payload in zip(gvsp_packets[1:-1], payload):
             pkt[Layers.GVSP.value].load = pkt_payload
         for pkt in gvsp_packets:
-            pkt[Layers.UDP.value].src = GVSP_SRC_PORT
+            pkt[Layers.UDP.value].src = Ports.GVSP_SRC.value
             pkt[Layers.UDP.value].dst = self.gvsp_dst_port
             pkt[Layers.IP.value].src = self.camera_ip
             pkt[Layers.IP.value].dst = self.cp_ip
@@ -242,7 +236,7 @@ class GigELink():
         packet_id =  0
 
         leader_packet = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
-            sport=GVSP_SRC_PORT,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
+            sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
                 BlockID=block_id, Format="LEADER", PacketID=packet_id)/GvspLeader(
                     SizeX=self.img_width, SizeY=self.img_height)
         gvsp_packets.append(leader_packet)
@@ -250,13 +244,13 @@ class GigELink():
         
         for pkt_payload in payload:
             next_pkt = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
-            sport=GVSP_SRC_PORT,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
+            sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
                 BlockID=block_id, Format="PAYLOAD", PacketID=packet_id)/Raw(bytes(pkt_payload))
             gvsp_packets.append(next_pkt)
             packet_id += 1
 
         trailer_packet = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
-            sport=GVSP_SRC_PORT,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
+            sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
                 BlockID=block_id, Format="TRAILER", PacketID=packet_id)/GvspTrailer(SizeY=self.img_height)
         gvsp_packets.append(trailer_packet)
         packet_id += 1

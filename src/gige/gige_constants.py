@@ -9,4 +9,11 @@ class GvcpCommands(IntEnum):
     READREG_CMD = 0x0080
     READREG_ACK = 0x0081
     WRITEREG_CMD = 0x0082
-    WRITEREG_ACK = 0x0083    
+    WRITEREG_ACK = 0x0083
+
+class Ports(IntEnum):
+    GVSP_SRC = 10010
+    GVCP_DST = 3956
+
+
+BYTES_PER_PIXEL = 1    
