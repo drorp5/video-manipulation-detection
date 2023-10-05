@@ -8,6 +8,7 @@ from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change loca
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from .pcap import PcapParser
+from .constansts import Layers
 
 
 class GvspPcapParser(PcapParser):
@@ -28,7 +29,7 @@ class GvspPcapParser(PcapParser):
         while(frame_id is None):
             try:
                 pkt = self._get_next_packet()
-                if pkt.haslayer(Gvsp):
+                if pkt.haslayer(Layers.GVSP.value):
                     frame_id = pkt.BlockID
                     if frame_id == 0:
                         frame_id = None
@@ -38,12 +39,12 @@ class GvspPcapParser(PcapParser):
                 return None
             
         frame_packets = []
-        while(not pkt.haslayer(GVSP_LAYER) or pkt.BlockID == frame_id):
-            if pkt.haslayer(GVSP_LAYER):
+        while(not pkt.haslayer(Layers.GVSP.value) or pkt.BlockID == frame_id):
+            if pkt.haslayer(Layers.GVSP.value):
                 frame_packets.append(pkt)
             try:
                 pkt = next(self.pcap_reader)
-                if not pkt.haslayer(GVSP_LAYER):
+                if not pkt.haslayer(Layers.GVSP.value):
                     continue
             except StopIteration:
                 self.iteration_stopped = True

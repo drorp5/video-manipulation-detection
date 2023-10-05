@@ -4,12 +4,11 @@ from typing import Tuple
 import numpy as np
 from scapy.all import PacketList
 from vimba import PixelFormat
-from .constansts import *
 import sys
 sys.path.append('src')
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from dataclasses import dataclass
-import src.gige.constansts as constansts
+from src.gige.constansts import Layers, CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
 
 class MissingLeaderError(Exception):
     pass
@@ -27,7 +26,7 @@ class MockFrame:
 
     def __init__(self, gvsp_frame_packets: PacketList):
         # check that starts with leader and ends with trailer
-        if gvsp_frame_packets[0].haslayer(GVSP_LEADER_LAYER):
+        if gvsp_frame_packets[0].haslayer(Layers.GVSP_LEADER.value):
             # raise MissingLeaderError
             self.leader = gvsp_frame_packets[0]
             payload_first_ind = 1
@@ -35,7 +34,7 @@ class MockFrame:
             self.leader = DefaultLeader()
             payload_first_ind = 0
 
-        if gvsp_frame_packets[-1].haslayer(GVSP_TRAILER_LAYER):
+        if gvsp_frame_packets[-1].haslayer(Layers.GVSP_TRAILER.value):
             payload_last_ind = len(gvsp_frame_packets) - 1 
         else:
             payload_last_ind = len(gvsp_frame_packets)
@@ -57,10 +56,10 @@ class MockFrame:
         raw_pixels = np.zeros(self.shape, dtype=np.uint8)
         assigned_pixels = np.zeros(self.shape, dtype=bool)
         
-        max_payload_size_bytes = np.max([len(bytes(pkt[GVSP_LAYER].payload)) for pkt in payload_packets])
+        max_payload_size_bytes = np.max([len(bytes(pkt[Layers.GVSP.value].payload)) for pkt in payload_packets])
         for packet in payload_packets:
             current_id = packet.PacketID
-            pkt_bytes = bytes(packet[GVSP_LAYER].payload)
+            pkt_bytes = bytes(packet[Layers.GVSP.value].payload)
             rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id, payload_size_bytes=len(pkt_bytes),
                                                                         max_payload_size_bytes=max_payload_size_bytes)
             raw_pixels[rows_indices, cols_indices] = np.frombuffer(pkt_bytes, dtype=np.uint8)
@@ -139,7 +138,7 @@ class MockFrame:
         return self._success_status
 
 
-def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: int =  constansts.CV2_CONVERSIONS[PixelFormat.BayerRG8]) -> np.array:
+def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: int =  CV2_CONVERSIONS[PixelFormat.BayerRG8]) -> np.array:
     """Extract RGB image from gvsp frame object"""
     img = frame.as_opencv_image()
     rgb_img = cv2.cvtColor(img, cv2_transformation_code)
