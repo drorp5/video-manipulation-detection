@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from scapy.all import PacketList, PcapReader, RawPcapNgReader, Ether
+from scapy.all import PacketList, PcapReader, RawPcapNgReader, Ether, Packet
 from tqdm import tqdm
 from .gvsp_frame import MockFrame, MissingLeaderError, gvsp_frame_to_rgb
 from .constansts import Layers
@@ -8,9 +8,7 @@ from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change loca
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from .pcap import PcapParser
-from .constansts import Layers
-
-
+from .gige_constants import GvspFormat
 class GvspPcapParser(PcapParser):
     def __init__(self, pcap_path: Path, max_frames:Optional[int]=None, completed_only:bool=True):
         super().__init__(pcap_path)
@@ -151,7 +149,7 @@ class GvspPcapParser(PcapParser):
                 break
         video_writer.release()
             
-    def get_next_frame_id_and_packet_offset(self, packet_offset: int = 0) -> Optional[Tuple[int, int]]:
+    def find_packet_by_offset(self, packet_offset: int = 0, format: Optional[GvspFormat] = None) -> Optional[Tuple[Packet, int]]:
         raw_reader = RawPcapNgReader(self.pcap_path.as_posix())
         pkts_counter = 0
         gvsp_frame_found = False
@@ -159,29 +157,32 @@ class GvspPcapParser(PcapParser):
             if pkts_counter >= packet_offset:
                 # check if gvsp leader packet
                 pkt = Ether(packet_data)
-                if pkt.haslayer(Layers.GVSP_LEADER.value):
-                    gvsp_frame_found = True
-                    break 
+                if pkt.haslayer(Layers.GVSP.value):
+                    if not format or pkt.Format == format.value:
+                        gvsp_frame_found = True
+                        break 
             pkts_counter += 1
         raw_reader.close()
         if gvsp_frame_found:
-            return pkt[Layers.GVSP.value].BlockID, pkts_counter
+            return pkt, pkts_counter
         
-    def find_frame_id(self, target_frame_id: int) -> Optional[Tuple[int, int]]:
+    def find_packet_by_id(self, target_frame_id: int, format: Optional[GvspFormat] = None) -> Optional[Tuple[Packet, int]]:
         # implement binary search to find nearest frame to target
-        start_marker = 0
-        end_marker = self.length
-        nearest_frame_id = np.inf
-        nearest_packet_offset = None
+        est_packets_per_frame = 270
         frames_err = 10
         
+        start_marker = 0
+        end_marker = self.length
+        nearest_packet = None
+        nearest_packet_offset = None
         while start_marker < end_marker:
             try:
-                frame_id, packet_offset = self.get_next_frame_id_and_packet_offset(packet_offset=(start_marker + end_marker) // 2)
-            except:
+                gvsp_packet, packet_offset = self.find_packet_by_offset(packet_offset=(start_marker + end_marker) // 2, format=format)
+            except Exception as e:
                 # next frame not found
                 end_marker = np.floor((start_marker + end_marker) / 2)
                 continue
+            frame_id = gvsp_packet.BlockID
             if frame_id > target_frame_id:
                 # current offset too big
                 end_marker = np.floor((start_marker + end_marker) / 2)
@@ -191,14 +192,22 @@ class GvspPcapParser(PcapParser):
             else:
                 # frame found
                 return frame_id, packet_offset
-            if abs(frame_id - target_frame_id) < abs(nearest_frame_id - target_frame_id):
-                nearest_frame_id = frame_id
+            if not nearest_packet or abs(frame_id - target_frame_id) < abs(nearest_packet.BlockID - target_frame_id):
+                nearest_packet = gvsp_packet
                 nearest_packet_offset = packet_offset
-            if abs(nearest_frame_id - target_frame_id) < frames_err:
+            if abs(nearest_packet.BlockID - target_frame_id) < frames_err:
                 break
         
-        est_packets_per_frame = 270
-        if nearest_frame_id > target_frame_id:
-            nearest_packet_offset -= est_packets_per_frame * (nearest_frame_id - target_frame_id)
-            return self.get_next_frame_id_and_packet_offset(packet_offset=nearest_packet_offset)
-        return nearest_frame_id, nearest_packet_offset
+        if nearest_packet.BlockID > target_frame_id:
+            nearest_packet_offset -= est_packets_per_frame * (nearest_packet.BlockID - target_frame_id)
+            return self.find_packet_by_offset(packet_offset=nearest_packet_offset, format=format)
+        return nearest_packet, nearest_packet_offset
+    
+    def find_next_frame_by_offset(self, packet_offset: int = 0) -> Optional[int]:
+        try:
+            pkt, _ = self.find_packet_by_offset(packet_offset)
+        except:
+            return None
+        if pkt.Format == GvspFormat.LEADER:
+            return pkt.BlockID
+        return pkt.BlockID + 1
