@@ -99,12 +99,12 @@ class Gvsp(Packet):
     name = Layers.GVSP.value
     fields_desc=[XBitField("Status",0x0000,2*BYTE),
                  ShortField("BlockID",0),
-                 XByteEnumField("Format",None,{0x01:"LEADER",0x02:"TRAILER",0x03:"PAYLOAD"}),
+                 XByteEnumField("Format",None,{v.value:k for k,v in GvspFormat._member_map_.items()}),
                  XBitField("PacketID",0x000000,3*BYTE),
                 ]
 bind_layers(UDP,Gvsp,sport=Ports.GVSP_SRC.value)
-bind_layers(Gvsp,GvspLeader,Format=1)
-bind_layers(Gvsp,GvspTrailer,Format=2)
+bind_layers(Gvsp,GvspLeader,Format=GvspFormat.LEADER.value)
+bind_layers(Gvsp,GvspTrailer,Format=GvspFormat.TRAILER.value)
 
     
 class GigELink():
