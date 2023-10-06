@@ -14,8 +14,10 @@ import time
 from enum import IntEnum, Enum
 import argparse
 from pathlib import Path
-from src.gige.gige_constants import *
-from src.gige.constansts import *
+import sys
+sys.path.append('./src')
+from gige.gige_constants import *
+from gige.constansts import *
 
 class Method(Enum):
     WINDOWS_VIMBA = 1

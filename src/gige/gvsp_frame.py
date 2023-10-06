@@ -8,7 +8,7 @@ import sys
 sys.path.append('src')
 from manipultation_utils import Gvsp, GvspLeader, GvspTrailer #TODO: change location of modules
 from dataclasses import dataclass
-from src.gige.constansts import Layers, CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
+from gige.constansts import Layers, CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
 
 class MissingLeaderError(Exception):
     pass
