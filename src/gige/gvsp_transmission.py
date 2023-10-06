@@ -60,6 +60,7 @@ class GvspPcapParser(PcapParser):
                 frame = self._next()
             except MissingLeaderError as e:
                 frame = None
+        self.pcap_reader.close()
     
     @property
     def images(self):
@@ -75,6 +76,7 @@ class GvspPcapParser(PcapParser):
                 frame_id = frame.get_id()
                 frame = None
                 yield img, frame_id
+        self.pcap_reader.close()
 
     def save_images(self, dst_dir: Path):
         dst_dir_path = Path(dst_dir)
