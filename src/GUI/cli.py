@@ -9,7 +9,7 @@ import sys
 sys.path.append('./src')
 import asynchronous_grab_opencv
 import adaptive_parameters.utils
-from video_utils import gvsp_pcap_to_raw_images
+from gige.gvsp_transmission import GvspPcapParser
 import numpy as np
 from playsound import playsound
 import time
