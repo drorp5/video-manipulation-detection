@@ -136,3 +136,4 @@ INPUT/**/*.txt
 OUTPUT/
 TODO
 *.ipynb
+*.csv
