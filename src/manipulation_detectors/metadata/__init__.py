@@ -1,4 +1,4 @@
-from  .abstract_metadata_detector import MetadataDetector
+from .abstract_metadata_detector import MetadataDetector
 from .constant_metadata import FrameConstantMetadata, extract_constant_metadata
 from .constant_metadata_detector import ConstantMetadataDetector
 from .varying_metadata import FrameVaryingMetadata, extract_varying_metadata

@@ -1,5 +1,5 @@
-from .abstract_image_processing_detector import *
 from skimage import metrics
+from .abstract_image_processing_detector import *
 
 
 class MSEImageDetector(ImageProcessingDetector):
