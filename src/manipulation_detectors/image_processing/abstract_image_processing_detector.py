@@ -24,3 +24,10 @@ class ImageProcessingDetector(ManipulationDetector):
         self.prev_rgb_img = self.current_rgb_img
         self.current_rgb_img = None
 
+    def calc_score(self, frame_1: np.ndarray, frame_2:np.ndarray) -> float:
+        """calc anomaly detector score""" 
+        self.pre_process(rgb_img=frame_1)
+        self.post_process()
+        self.pre_process(rgb_img=frame_2)
+        res = self.validate()
+        return res.score
