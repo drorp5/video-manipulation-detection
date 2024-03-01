@@ -121,7 +121,7 @@ class MobileNetDetector(StopSignDetector):
         self.config_path = MODELS_DIR / 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
         self.weights_path = MODELS_DIR / 'ssd_mobilenet_v3_largefrozen_inference_graph.pb'
         self.detector = cv2.dnn_DetectionModel(self.weights_path.as_posix(), self.config_path.as_posix())
-        self.inference_shape = (320,320)
+        self.inference_shape = (480,480)
         self.detector.setInputSize(self.inference_shape[0], self.inference_shape[1]) #greater this value better the results tune it for best output
         self.detector.setInputScale(1.0/(MAX_PIXEL_VALUE/2))
         self.detector.setInputMean((MAX_PIXEL_VALUE/2, MAX_PIXEL_VALUE/2, MAX_PIXEL_VALUE/2))
