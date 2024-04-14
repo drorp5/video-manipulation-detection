@@ -3,7 +3,10 @@ from enum import IntEnum
 class GigERegisters(IntEnum):
     ACQUISITION = 0x000130f4
     CCP = 0x0a00
-    EXPOSURE_VALUE  = 0x00014110
+    EXPOSURE_VALUE = 0x00014110
+    WIDTH = 0x12124
+    HEIGHT = 0x12128
+    SCPC = 0xd04 # packet size
 
 
 class GvcpCommands(IntEnum):

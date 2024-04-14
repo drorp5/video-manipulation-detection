@@ -18,6 +18,7 @@ import sys
 sys.path.append('./src')
 from gige.gige_constants import *
 from gige.constansts import *
+import random
 
 class Method(Enum):
     WINDOWS_VIMBA = 1
@@ -133,16 +134,26 @@ class GigELink():
         print('GVSP:')
         print(f'Camera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})')
 
-    def _get_aquisition_cmd(self, reg_val, ack_required = False):
-        if ack_required:
-            cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
+    def _get_writereg_cmd(self, address: int, value: int, ack_required: bool = False):
+        flags = 0x01 if ack_required else 0x00
+        request_id = random.randint(a=1, b=0xffff)
+        # request_id = default_request_id
+        cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
                 src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=Ports.GVCP_DST.value)/GvcpCmd(
-                Command="WRITEREG_CMD", Flags=0x01, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
-        else:
-            cmd = Ether(src=cp_mac,dst=camera_mac)/IP(
-                src=self.cp_ip,dst=self.camera_ip)/UDP(sport= self.gvcp_src_port,dport=Ports.GVCP_DST.value)/GvcpCmd(
-                Command="WRITEREG_CMD", Flags=0x00, RegisterAddress=GigERegisters.ACQUISITION.value, value=reg_val, RequestID=default_request_id)
+                Command="WRITEREG_CMD", Flags=flags, RegisterAddress=address,
+                  value=value, RequestID=request_id)
         return cmd
+    
+    def _get_aquisition_cmd(self, reg_val, ack_required = False):
+        return self._get_writereg_cmd(address=GigERegisters.ACQUISITION.value, value=reg_val, ack_required=ack_required)
+
+    def send_set_height_command(self, height: int) -> None:
+        cmd = self._get_writereg_cmd(address=GigERegisters.HEIGHT.value, value=height, ack_required=True)
+        sendp(cmd, iface=self.interface, count=1, verbose=False) 
+
+    def send_set_width_command(self, width: int) -> None:
+        cmd = self._get_writereg_cmd(address=GigERegisters.WIDTH.value, value=width, ack_required=True)
+        sendp(cmd, iface=self.interface, count=1, verbose=False) 
 
     def send_stop_command(self, count=1, ack_required = False):
         cmd = self._get_aquisition_cmd(reg_val=0, ack_required=ack_required)
@@ -151,7 +162,6 @@ class GigELink():
     def send_start_command(self, count=1, ack_required = False):
         cmd = self._get_aquisition_cmd(reg_val=1, ack_required=ack_required)
         sendp(cmd, iface=self.interface, count=count, verbose=False)
-         
     def sniff_link_parameters(self):
         def pkt_callback(pkt):
             gvsp_port_found = self.gvsp_dst_port != -1
@@ -302,7 +312,6 @@ class GigELink():
         self.send_start_command(count=1)
 
         print(f'average iteration time = {np.average(np.array(iterations_time))}')
-        
         
     def bgr_to_bayer_rg(self, img_bgr):
         # note: in open cv I need to read the image as bayer BG to convert it correctly
