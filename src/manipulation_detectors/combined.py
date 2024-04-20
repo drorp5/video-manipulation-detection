@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from .abstract_detector import *
 from .metadata import *
 from .image_processing import *
-from .utils import *
+from gige.gvsp_frame import gvsp_frame_to_rgb
 
 class CombinedDetector(ManipulationDetector):
     """Comibe metadata detectors and image procssing detectors to detect fake frames."""

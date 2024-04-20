@@ -18,30 +18,23 @@ class DefaultLeader:
     SizeY = 1216
     SizeX = 1936
     PixelFormat = 0x1080009
-    Timestamp = None
+    Timestamp = None # this is the timestamp reported in the GVSP protocol
+    time = None # this is field of the timestamp of the sniffed packet
 
 class MockFrame:
     """This class mocks GVSP frame for testing.
-     Wraps image data and some metadata."""
+    Wraps image data and some metadata."""
 
     def __init__(self, gvsp_frame_packets: PacketList):
         # check that starts with leader and ends with trailer
         if gvsp_frame_packets[0].haslayer(Layers.GVSP_LEADER.value):
             # raise MissingLeaderError
             self.leader = gvsp_frame_packets[0]
-            payload_first_ind = 1
         else:
             self.leader = DefaultLeader()
-            payload_first_ind = 0
 
-        if gvsp_frame_packets[-1].haslayer(Layers.GVSP_TRAILER.value):
-            payload_last_ind = len(gvsp_frame_packets) - 1 
-        else:
-            payload_last_ind = len(gvsp_frame_packets)
-        
         self.first_packet = gvsp_frame_packets[0]
-
-        raw_pixels, success_status = self.payload_packets_to_raw_image(gvsp_frame_packets[payload_first_ind:payload_last_ind])
+        raw_pixels, success_status = self.packets_to_raw_image(gvsp_frame_packets)
         self._success_status = success_status
         self._img = self.adjust_raw_image(raw_pixels) #TODO: account for pixel format
     
@@ -52,16 +45,22 @@ class MockFrame:
         start_index_ravelled =  (packet_id - 1) * pixels_per_packet
         return np.unravel_index(np.arange(payload_size_pixels) + start_index_ravelled, self.shape)
     
-    def payload_packets_to_raw_image(self, payload_packets: PacketList) -> Tuple[np.ndarray, bool]:
+    def packets_to_raw_image(self, payload_packets: PacketList) -> Tuple[np.ndarray, bool]:
         raw_pixels = np.zeros(self.shape, dtype=np.uint8)
         assigned_pixels = np.zeros(self.shape, dtype=bool)
-        
+
         max_payload_size_bytes = np.max([len(bytes(pkt[Layers.GVSP.value].payload)) for pkt in payload_packets])
         for packet in payload_packets:
+            # if leader skip
+            if packet.haslayer(Layers.GVSP_LEADER.value):
+                continue
+            # if trailer skip
+            if packet.haslayer(Layers.GVSP_TRAILER.value):
+                continue
             current_id = packet.PacketID
             pkt_bytes = bytes(packet[Layers.GVSP.value].payload)
-            rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id, payload_size_bytes=len(pkt_bytes),
-                                                                        max_payload_size_bytes=max_payload_size_bytes)
+            rows_indices, cols_indices = self.packet_id_to_payload_indices(packet_id=current_id, payload_size_bytes=len(pkt_bytes), 
+            max_payload_size_bytes=max_payload_size_bytes)
             raw_pixels[rows_indices, cols_indices] = np.frombuffer(pkt_bytes, dtype=np.uint8)
             assigned_pixels[rows_indices, cols_indices] = True
         return raw_pixels, np.all(assigned_pixels)
@@ -137,6 +136,9 @@ class MockFrame:
     def success_status(self):
         return self._success_status
 
+    @property
+    def external_timestamp(self):
+        return self.leader.time
 
 def gvsp_frame_to_rgb(frame: Frame, cv2_transformation_code: int =  CV2_CONVERSIONS[PixelFormat.BayerRG8]) -> np.array:
     """Extract RGB image from gvsp frame object"""

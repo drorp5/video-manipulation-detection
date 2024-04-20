@@ -75,31 +75,20 @@ class TimestampDetector(VaryingMetadataDetector):
         return "Timestamp"
         
 class TimestampRateDetector(VaryingMetadataDetector):
-    """Detection using timestamp change rate vs reality """
-    def __init__(self, min_th, max_th):
-        self.prev_internal_timestamp = None
-        self.current_internal_timestamp = None
-        super().__init__(min_th=min_th, max_th=max_th)
-
+    """Detection using timestamp change rate vs reality"""
     @property
     def fake_status(self) -> FakeDetectionStatus:
         return FakeDetectionStatus.TIMESTAMP_RATE_FAILURE
     
     def pre_process(self, frame: Frame) -> None:
         self.current_metadata = extract_varying_metadata(frame)
-        self.current_internal_timestamp = datetime.now()
 
     def calc_score(self) -> float: 
-        external_timestamp_diff_seconds = self.current_metadata.timestamp_seconds - self.prev_metadata.timestamp_seconds
-        internal_timestamp_diff = self.current_internal_timestamp - self.prev_internal_timestamp
-        internal_timestamp_diff_seconds = internal_timestamp_diff.total_seconds()
-        error = internal_timestamp_diff_seconds - external_timestamp_diff_seconds
-        return abs(error)
+        camera_timestamp_diff_seconds = self.current_metadata.timestamp_seconds - self.prev_metadata.timestamp_seconds
+        external_timestamp_diff_seconds = self.current_metadata.external_timestamp_seconds - self.prev_metadata.external_timestamp_seconds
+        error = abs(camera_timestamp_diff_seconds - external_timestamp_diff_seconds)
+        return error
 
     @property
     def name(self) -> str:
         return "TimestampRate"
-
-    def post_process(self) -> None:
-        self.prev_internal_timestamp = self.current_internal_timestamp
-        super().post_process()

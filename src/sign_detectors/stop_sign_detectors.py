@@ -2,9 +2,12 @@ from abc import ABC, abstractmethod
 from typing import List
 import cv2 
 import numpy as np
+from pathlib import Path
 
 MAX_PIXEL_VALUE = 255
 NUM_CHANNELS = 3
+
+MODELS_DIR = Path('sign_detectors/')
 
 class StopSignDetector(ABC):
     @abstractmethod
@@ -40,7 +43,8 @@ def get_detector(detector_name: str) -> StopSignDetector:
 
 class HaarDetector(StopSignDetector):
     def __init__(self, grayscale=False, blur=False):
-        self.config_path = r"sign_detectors/stop_sign_classifier_2.xml"
+        self.config_path = MODELS_DIR / 'stop_sign_classifier_2.xml'
+        self.config_path = self.config_path.as_posix()
         self.detector = cv2.CascadeClassifier(self.config_path)
         self.grayscale = grayscale
         self.blur = blur
@@ -60,11 +64,13 @@ class HaarDetector(StopSignDetector):
 
 class YoloDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5, nms_th=0.4 ):
-        self.classes = open('sign_detectors/coco.names').read().strip().split('\n')
+        coco_names_path = MODELS_DIR / 'coco.names'
+        with open(coco_names_path.as_posix(), 'r') as f:
+            self.classes = f.read().strip().split('\n')
         self.target_class = [9, 11]
-        self.config_path = r'sign_detectors/yolov4-tiny.cfg'
-        self.weights_path = r'sign_detectors/yolov4-tiny.weights'
-        self.detector = cv2.dnn.readNetFromDarknet(self.config_path, self.weights_path)
+        self.config_path = MODELS_DIR / 'yolov4-tiny.cfg'
+        self.weights_path = MODELS_DIR / 'yolov4-tiny.weights'
+        self.detector = cv2.dnn.readNetFromDarknet(self.config_path.as_posix(), self.weights_path.as_posix())
         ln = self.detector.getLayerNames()
         self.ln = [ln[i - 1] for i in self.detector.getUnconnectedOutLayers()]
         self.inference_shape = (416,416)
@@ -96,8 +102,8 @@ class YoloDetector(StopSignDetector):
                         confidences.append(float(confidence))
         # boxes = np.array(boxes)
         indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_th, self.nms_th)
-        if len(indices) > 0:
-            indices = indices[:,0]
+        # if len(indices) > 0:
+        # indices = indices.squeeze()
         boxes = [boxes[i] for i in indices]
         return boxes
     
@@ -108,13 +114,15 @@ class YoloDetector(StopSignDetector):
 
 class MobileNetDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5):
-        self.classes = open('sign_detectors/coco.names').read().strip().split('\n')
+        coco_names_path = MODELS_DIR / 'coco.names'
+        with open(coco_names_path.as_posix(), 'r') as f:
+            self.classes = f.read().strip().split('\n')
         self.target_class = [10,11,13]
-        self.config_path = r'sign_detectors/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
-        self.weights_path = r'sign_detectors/ssd_mobilenet_v3_largefrozen_inference_graph.pb'
-        self.detector = cv2.dnn_DetectionModel(self.weights_path, self.config_path)
-        self.inference_shape = (320,320)
-        self.detector.setInputSize(self.inference_shape[0], self.inference_shape[1]) #greater this value better the reults tune it for best output
+        self.config_path = MODELS_DIR / 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
+        self.weights_path = MODELS_DIR / 'ssd_mobilenet_v3_largefrozen_inference_graph.pb'
+        self.detector = cv2.dnn_DetectionModel(self.weights_path.as_posix(), self.config_path.as_posix())
+        self.inference_shape = (480,480)
+        self.detector.setInputSize(self.inference_shape[0], self.inference_shape[1]) #greater this value better the results tune it for best output
         self.detector.setInputScale(1.0/(MAX_PIXEL_VALUE/2))
         self.detector.setInputMean((MAX_PIXEL_VALUE/2, MAX_PIXEL_VALUE/2, MAX_PIXEL_VALUE/2))
         self.detector.setInputSwapRB(True)
@@ -125,9 +133,9 @@ class MobileNetDetector(StopSignDetector):
         detections_class_index, detections_confidence, detections_bbox = self.detector.detect(img, confThreshold=self.confidence_th)
         if len(detections_class_index) == 0:
             return boxes
-        for class_ind, confidence, dedection_box in zip(detections_class_index.flatten(), detections_confidence.flatten(), detections_bbox):
+        for class_ind, confidence, detection_box in zip(detections_class_index.flatten(), detections_confidence.flatten(), detections_bbox):
             if class_ind in self.target_class and confidence >= self.confidence_th:
-                boxes.append(dedection_box)
+                boxes.append(detection_box)
         return boxes
         
     @property
