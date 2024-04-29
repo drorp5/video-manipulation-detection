@@ -1,1 +1,1 @@
-from viewer_handler import ViewerHandler
+from gige.handlers.viewer_handler import ViewerHandler

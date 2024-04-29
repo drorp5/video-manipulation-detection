@@ -10,6 +10,7 @@ ENTER_KEY_CODE = 13
 
 class ViewerHandler(GigeHandler):
     def __init__(self, downfactor: int = 4):
+        super().__init__()
         self.downfactor = downfactor
 
     def resize_image(self, img: np.ndarray) -> np.ndarray:
@@ -31,8 +32,7 @@ class ViewerHandler(GigeHandler):
         return False
 
     def __call__(self, cam: Camera, frame: Frame) -> None:
-        is_stop_key_selected = self.check_stop_key()
-        if is_stop_key_selected:
+        if self.is_stop_key_selected():
             return
 
         with cam:

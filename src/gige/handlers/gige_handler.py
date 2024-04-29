@@ -4,12 +4,16 @@ from tenacity import retry
 from vimba import Camera, Frame, FrameStatus
 import numpy as np
 import cv2
+import threading
 
 
 from gige.gvsp_frame import convert_image_to_rgb
 
 
 class GigeHandler(ABC):
+    def __init__(self) -> None:
+        self.shutdown_event = threading.Event()
+
     @abstractmethod
     def __call__(self, cam: Camera, frame: Frame) -> None:
         raise NotImplemented
