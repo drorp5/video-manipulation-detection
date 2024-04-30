@@ -4,7 +4,7 @@ import math
 
 from bitarray import bitarray
 
-from bitarray_dict import BitarrayDict
+from active_manipulation_detectors.side_channel.bitarray_dict import BitarrayDict
 
 
 class IntBitsEncoderDecoder:

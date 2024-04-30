@@ -4,10 +4,7 @@ from vimba import Camera, Frame, FrameStatus
 from active_manipulation_detectors.side_channel.bits_encoder import IntBitsEncoderDecoder
 from active_manipulation_detectors.side_channel.data_generator import RandomBitsGenerator
 from active_manipulation_detectors.side_channel.validation import DataValidator
-from active_manipulation_detectors.validation_status import ValidationStatus
-from gige.gvsp_frame import convert_image_to_rgb
 from gige.handlers import ViewerHandler
-from 
 
 
 TOTAL_ROWS = 1216
