@@ -16,7 +16,7 @@ class VaryingShapeHandler(ViewerHandler):
         random_bits_generator: RandomBitsGenerator,
         data_validator: DataValidator,
         num_levels: int,
-        increment: int = 1,
+        increment: int = 2,
     ) -> None:
         super().__init__()
         self.rows_values = [TOTAL_ROWS - increment * ind for ind in range(num_levels)]
@@ -32,24 +32,21 @@ class VaryingShapeHandler(ViewerHandler):
 
         with cam:
             img = self.get_rgb_image(cam, frame)
-            
             if img is not None:
                 # read data of current image
-                height = img.shape[0]
-                received_symbol = self.encoder_decoder.encode(height)
                 if self.shape_changed:
-                    validation_result = self.data_validator.validate (received_symbol)
+                    height = img.shape[0]
+                    received_symbol = self.encoder_decoder.encode(height)
+                    validation_result = self.data_validator.validate(received_symbol)
                     print(validation_result)
 
-
-                self.plot(img, cam)
-
+                # self.plot(img, cam)
             
                 # change height for next frame
                 symbol = next(self.random_bits_generator) #TODO check if returns bitarray
                 num_rows = self.encoder_decoder.decode(symbol=symbol)
                 cam.Height.set(num_rows)
+                self.data_validator.add_trasnmitted_data(symbol)
                 self.shape_changed = True
 
-
-            cam.queue_frame(frame)
+                cam.queue_frame(frame)
