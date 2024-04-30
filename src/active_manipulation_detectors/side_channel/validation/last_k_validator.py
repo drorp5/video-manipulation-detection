@@ -15,7 +15,7 @@ class DataValidatorKSymbols(DataValidator):
         if len(self.received_data) < self.bits_for_detection:
             return ValidationStatus.Incomplete
         
-        if self.received_data == self.transmitted_data[-self.bits_for_detection:]
+        if self.received_data == self.transmitted_data[:self.bits_for_detection]:
             return ValidationStatus.Valid
         
         return ValidationStatus.Invalid
@@ -23,5 +23,5 @@ class DataValidatorKSymbols(DataValidator):
     def clean(self, result: ValidationStatus) -> None:
         if result == ValidationStatus.Incomplete:
             return
-        self.transmitted_data = bitarray()
-        self.received_data = bitarray()
+        self.transmitted_data = self.transmitted_data[self.bits_in_symbol:]
+        self.received_data = self.received_data[self.bits_in_symbol:]
