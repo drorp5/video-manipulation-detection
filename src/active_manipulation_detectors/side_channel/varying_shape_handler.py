@@ -35,7 +35,7 @@ class VaryingShapeHandler(ViewerHandler):
             if img is not None:
                 # read data of current image
                 if self.shape_changed:
-                    height = img.shape[0]
+                    height = frame.get_height()
                     received_symbol = self.encoder_decoder.encode(height)
                     validation_result = self.data_validator.validate(received_symbol)
                     print(validation_result)
