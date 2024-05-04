@@ -162,6 +162,7 @@ class GigELink():
     def send_start_command(self, count=1, ack_required = False):
         cmd = self._get_aquisition_cmd(reg_val=1, ack_required=ack_required)
         sendp(cmd, iface=self.interface, count=count, verbose=False)
+    
     def sniff_link_parameters(self):
         def pkt_callback(pkt):
             gvsp_port_found = self.gvsp_dst_port != -1
@@ -238,16 +239,18 @@ class GigELink():
             pkt[Layers.IP.value].dst = self.cp_ip
             pkt[Layers.GVSP.value].BlockID = block_id
         return gvsp_packets
-
-    def img_to_gvsp(self, img_path: str, save_pcap_debug=True, block_id: int=default_block_id) -> PacketList:
+    
+    def get_gvsp_payload_packets(self, img_path: str) -> PacketList:
         img_bgr = cv2.imread(img_path) # BGR
         img_bgr = cv2.resize(img_bgr,(self.img_width,self.img_height))
         img_bayer = self.bgr_to_bayer_rg(img_bgr)
         payload = self.img_to_packets_payload(img_bayer)
-  
+        return payload  
+    
+    def img_to_gvsp(self, img_path: str, save_pcap_debug=True, block_id: int=default_block_id) -> PacketList:        
         gvsp_packets = [] 
+        
         packet_id =  0
-
         leader_packet = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
             sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
                 BlockID=block_id, Format="LEADER", PacketID=packet_id)/GvspLeader(
@@ -255,6 +258,7 @@ class GigELink():
         gvsp_packets.append(leader_packet)
         packet_id += 1
         
+        payload = self.get_gvsp_payload_packets(img_path=img_path)
         for pkt_payload in payload:
             next_pkt = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
             sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
@@ -276,8 +280,35 @@ class GigELink():
                 pktdump.write(pkt)
             pktdump.close()  
 
-        return gvsp_packets
-        
+        return gvsp_packets    
+
+    def inject_gvsp_packets(self, gvsp_packets: PacketList, future_id_diff: int = 10, count: int = 100) -> None:
+        print('Sniffing for blockID')
+        sniff(iface=self.interface, filter="udp", prn=self.callback_update_block_id, stop_filter=self.sniffing_for_trailer_filter, store=0, timeout=1)
+        # modify block id to future one
+        future_id = future_id_diff + self.last_block_id
+        print(f'Injecting stripe with blockID={future_id}')
+        for pkt in gvsp_packets:
+            pkt[Layers.GVSP.value].BlockID = future_id            
+        sendp(gvsp_packets, iface=self.interface, verbose=False, realtime=True,) 
+
+    def get_stripe_gvsp_packets(self, img_path: str, first_row: int, num_rows: int, block_id: int) -> PacketList:        
+        full_payload = self.get_gvsp_payload_packets(img_path=img_path)
+        rows_per_packet = self.img_height / len(full_payload)        
+        first_packet = int(first_row // rows_per_packet)
+        num_packets = int(np.ceil(num_rows / rows_per_packet))
+        stripe_packets = []
+        for packet_offset, pkt_payload in enumerate(full_payload[first_packet: first_packet+num_packets]):
+            next_pkt = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
+            sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
+                BlockID=block_id, Format="PAYLOAD", PacketID=packet_offset+first_packet+1)/Raw(bytes(pkt_payload))
+            stripe_packets.append(next_pkt)
+        return stripe_packets            
+    
+    def inject_stripe(self, img_path: str, first_row: int, num_rows: int, future_id_diff: int = 10, count: int = 100) -> None:
+        stripe_packets = self.get_stripe_gvsp_packets(img_path, first_row, num_rows, block_id=0)
+        self.inject_gvsp_packets(stripe_packets, future_id_diff=future_id_diff, count=count)
+
     def fake_still_image(self, img_path, duration, frame_rate):
         # TODO: read register to get frames rate 
         timeout = 1 # seconds
