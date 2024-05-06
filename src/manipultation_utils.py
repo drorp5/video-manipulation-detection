@@ -293,16 +293,19 @@ class GigELink():
         sendp(gvsp_packets, iface=self.interface, verbose=False, realtime=True,) 
 
     def get_stripe_gvsp_packets(self, img_path: str, first_row: int, num_rows: int, block_id: int) -> PacketList:        
-        full_payload = self.get_gvsp_payload_packets(img_path=img_path)
-        rows_per_packet = self.img_height / len(full_payload)        
-        first_packet = int(first_row // rows_per_packet)
-        num_packets = int(np.ceil(num_rows / rows_per_packet))
+        img_bgr = cv2.imread(img_path) # BGR
+        img_bgr = cv2.resize(img_bgr,(self.img_width,self.img_height))
+        img_bgr[:first_row, :, :] = 0
+        img_bgr[first_row+num_rows:, :, :] = 0
+        img_bayer = self.bgr_to_bayer_rg(img_bgr)
+        payload = self.img_to_packets_payload(img_bayer)
         stripe_packets = []
-        for packet_offset, pkt_payload in enumerate(full_payload[first_packet: first_packet+num_packets]):
-            next_pkt = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
-            sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
-                BlockID=block_id, Format="PAYLOAD", PacketID=packet_offset+first_packet+1)/Raw(bytes(pkt_payload))
-            stripe_packets.append(next_pkt)
+        for pkt_id, pkt_payload in enumerate(payload):
+            if (pkt_payload != 0).any():
+                next_pkt = Ether(dst=cp_mac,src=camera_mac)/IP(src=self.camera_ip,dst=self.cp_ip)/UDP(
+                sport=Ports.GVSP_SRC.value,dport=self.gvsp_dst_port,chksum=0)/Gvsp(
+                    BlockID=block_id, Format="PAYLOAD", PacketID=pkt_id+1)/Raw(bytes(pkt_payload))
+                stripe_packets.append(next_pkt)
         return stripe_packets            
     
     def inject_stripe(self, img_path: str, first_row: int, num_rows: int, future_id_diff: int = 10, count: int = 100) -> None:
