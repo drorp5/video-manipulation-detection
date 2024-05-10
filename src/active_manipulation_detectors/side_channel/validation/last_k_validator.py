@@ -1,5 +1,3 @@
-from bitarray import bitarray
-
 from active_manipulation_detectors import ValidationStatus
 from active_manipulation_detectors.side_channel.validation import DataValidator
 
@@ -11,7 +9,7 @@ class DataValidatorKSymbols(DataValidator):
         self.symbols_for_detection = symbols_for_detection
         self.bits_for_detection = symbols_for_detection * bits_in_symbol
 
-    def _validate(self) -> ValidationStatus:
+    def _validate(self) -> ValidationStatus:        
         if len(self.received_data) < self.bits_for_detection:
             return ValidationStatus.Incomplete
         
