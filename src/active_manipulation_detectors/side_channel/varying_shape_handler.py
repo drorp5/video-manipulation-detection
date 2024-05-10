@@ -8,7 +8,8 @@ from gige.handlers import ViewerHandler, SignDetectorHandler
 from sign_detectors.stop_sign_detectors import StopSignDetector
 
 
-TOTAL_ROWS = 1216
+MAX_HEIGHT = 1216
+MAX_WIDTH = 1936
 
 
 class VaryingShapeHandler(SignDetectorHandler):
@@ -21,8 +22,9 @@ class VaryingShapeHandler(SignDetectorHandler):
         sign_detector: Optional[StopSignDetector] = None
     ) -> None:
         super().__init__(detector=sign_detector)
-        self.rows_values = [TOTAL_ROWS - increment * ind for ind in range(num_levels)]
-        self.encoder_decoder = IntBitsEncoderDecoder(self.rows_values)
+        self.height_values = [MAX_HEIGHT - increment * ind for ind in range(num_levels)]
+        self.width_values = [MAX_WIDTH - increment * ind for ind in range(num_levels)]
+        self.encoder_decoder = IntBitsEncoderDecoder(self.width_values)
         self.random_bits_generator = random_bits_generator
         self.random_bits_generator.num_bits_per_iteration = (self.encoder_decoder.bits_per_symbol)
         self.data_validator = data_validator
@@ -37,18 +39,24 @@ class VaryingShapeHandler(SignDetectorHandler):
             if img is not None:
                 # read data of current image
                 if self.shape_changed:
-                    height = frame.get_height()
-                    received_symbol = self.encoder_decoder.encode(height)
+                    # height = frame.get_height()
+                    width = frame.get_width()
+                    received_symbol = self.encoder_decoder.encode(width)
                     validation_result = self.data_validator.validate(received_symbol)
-                    print(validation_result)
+                    print(f'Frame #{frame.get_id()}: {width} -> {validation_result}\n')
 
-                # self.plot(img, cam)
+                try:
+                    self.plot(img, cam)
+                except Exception as e:
+                    print(e)
+                    pass
             
                 # change height for next frame
                 symbol = next(self.random_bits_generator) #TODO check if returns bitarray
-                num_rows = self.encoder_decoder.decode(symbol=symbol)
-                cam.Height.set(num_rows)
+                new_width = self.encoder_decoder.decode(symbol=symbol)
+                cam.Width.set(new_width)
                 self.data_validator.add_trasnmitted_data(symbol)
                 self.shape_changed = True
 
-                cam.queue_frame(frame)
+            cam.queue_frame(frame)
+                
