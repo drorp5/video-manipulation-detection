@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from Crypto.Cipher import ARC4
 from bitarray import bitarray
-
+from itertools import cycle
 
 class RandomBitsGenerator(ABC):
     def __init__(self, key: bytes, num_bits_per_iteration: int) -> None:
@@ -53,6 +53,25 @@ class RandomBitsGeneratorRC4(RandomBitsGenerator):
         res = self.stored_bits[: self.num_bits_per_iteration]
         del self.stored_bits[: self.num_bits_per_iteration]
         return res
+
+
+class SequentialBitsGenerator(RandomBitsGenerator):
+    def __init__(self, key: bytes, num_bits_per_iteration: int) -> None:
+        super().__init__(key, num_bits_per_iteration)
+        self.values = [bitarray(bin(n)[2:].zfill(num_bits_per_iteration)) for n in range(2**num_bits_per_iteration)]
+        self.cycle_iter = cycle(self.values)
+
+    def load_bits(self) -> None:
+        added_bits = next(self.cycle_iter)
+        ic(added_bits)
+        self.stored_bits.extend(added_bits)
+    
+    def __next__(self) -> bitarray:
+        self.load_bits()
+        res = self.stored_bits[: self.num_bits_per_iteration]
+        del self.stored_bits[: self.num_bits_per_iteration]
+        return res
+
 
 
 if __name__ == "__main__":
