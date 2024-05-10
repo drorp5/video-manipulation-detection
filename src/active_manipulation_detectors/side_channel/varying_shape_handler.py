@@ -1,24 +1,26 @@
-from typing import List
+from typing import List, Optional
 from vimba import Camera, Frame, FrameStatus
 
 from active_manipulation_detectors.side_channel.bits_encoder import IntBitsEncoderDecoder
 from active_manipulation_detectors.side_channel.data_generator import RandomBitsGenerator
 from active_manipulation_detectors.side_channel.validation import DataValidator
-from gige.handlers import ViewerHandler
+from gige.handlers import ViewerHandler, SignDetectorHandler
+from sign_detectors.stop_sign_detectors import StopSignDetector
 
 
 TOTAL_ROWS = 1216
 
 
-class VaryingShapeHandler(ViewerHandler):
+class VaryingShapeHandler(SignDetectorHandler):
     def __init__(
         self,
         random_bits_generator: RandomBitsGenerator,
         data_validator: DataValidator,
         num_levels: int,
         increment: int = 2,
+        sign_detector: Optional[StopSignDetector] = None
     ) -> None:
-        super().__init__()
+        super().__init__(detector=sign_detector)
         self.rows_values = [TOTAL_ROWS - increment * ind for ind in range(num_levels)]
         self.encoder_decoder = IntBitsEncoderDecoder(self.rows_values)
         self.random_bits_generator = random_bits_generator
