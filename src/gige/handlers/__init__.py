@@ -1,1 +1,2 @@
 from gige.handlers.viewer_handler import ViewerHandler
+from gige.handlers.sign_detector_handler import SignDetectorHandler

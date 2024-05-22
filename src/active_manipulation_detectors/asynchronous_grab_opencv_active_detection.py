@@ -29,11 +29,14 @@ from typing import Optional
 from vimba import *
 import argparse
 from argparse import Namespace
+from icecream import ic
+import traceback
 
 from gige.handlers import ViewerHandler
 from active_manipulation_detectors.side_channel.varying_shape_handler import VaryingShapeHandler
-from active_manipulation_detectors.side_channel.data_generator import RandomBitsGeneratorRC4
-from active_manipulation_detectors.side_channel.validation import DataValidatorKSymbols
+from active_manipulation_detectors.side_channel.data_generator import RandomBitsGeneratorRC4, SequentialBitsGenerator
+from active_manipulation_detectors.side_channel.validation import DataValidatorKSymbols, DataValidatorKSymbolsDelayed
+from sign_detectors.stop_sign_detectors import get_detector, get_detectors_dict
 
 
 def print_preamble():
@@ -101,10 +104,12 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
 
         # Set constant frame rate if specified
         if fps_val is not None:
+            ic(fps_val)
             try:
                 cam.TriggerMode.set("Off")
                 cam.AcquisitionFrameRateAbs.set(fps_val)
-            except (AttributeError, VimbaFeatureError):
+            except (AttributeError, VimbaFeatureError) as e:
+                traceback.print_exc()
                 pass
 
         # Query available, open_cv compatible pixel formats
@@ -129,7 +134,8 @@ def parse_args() -> Namespace:
     parser.add_argument("--camera_id", help="camera ID for direct access")
     parser.add_argument("--duration", help="duration of streaming [seconds]. -1 infinite", type=float, default=None)
     parser.add_argument("--buffer_count", help="streaming buffer", type=int, default=1)
-    parser.add_argument("--fps", help="frame rate [frames per second]", type=int, default=10)
+    parser.add_argument("--fps", help="frame rate [frames per second]", type=int, default=1)
+    parser.add_argument("--detector", choices=get_detectors_dict(), help="detection method")
     
     args = parser.parse_args()
     return args
@@ -137,7 +143,8 @@ def parse_args() -> Namespace:
 def main_script():
     print_preamble()
     args = parse_args()
-    args.duration = 5
+    # args.duration = 20
+    args.buffer_count = 1
     start_async_grab(args)
     
 def start_async_grab(args):
@@ -145,15 +152,22 @@ def start_async_grab(args):
         with get_camera(args.camera_id) as cam:
             setup_camera(cam, fps_val=args.fps)
                         
-            # handler = ViewerHandler()
             random_bits_generator = RandomBitsGeneratorRC4(key=b'key', num_bits_per_iteration=2)
-            data_validator = DataValidatorKSymbols(bits_in_symbol=2, symbols_for_detection=2)
-            handler = VaryingShapeHandler(random_bits_generator=random_bits_generator, data_validator=data_validator, num_levels=4, increment=20)
+            # random_bits_generator = SequentialBitsGenerator(key=b'key', num_bits_per_iteration=2)
+            data_validator = DataValidatorKSymbolsDelayed(bits_in_symbol=2, symbols_for_detection=2, max_delay=1)
+            sign_detector = get_detector(args.detector)
 
+            handler = VaryingShapeHandler(random_bits_generator=random_bits_generator, 
+                                        data_validator=data_validator,
+                                        num_levels=4,
+                                        increment=2,
+                                        sign_detector=sign_detector)
             # Start Streaming with a custom frames buffer
             try:
                 cam.start_streaming(handler=handler, buffer_count=args.buffer_count)
                 handler.shutdown_event.wait(args.duration)
+            except Exception as e:
+                print(e)
             finally:
                 cam.stop_streaming()
               
