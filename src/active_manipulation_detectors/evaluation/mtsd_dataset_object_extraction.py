@@ -9,8 +9,8 @@ import os
 import json
 import shutil
 
+
 from detectors_evaluation.bootstrapper import DST_SHAPE
-from sign_detectors import get_detector, draw_bounding_boxes
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")
@@ -76,9 +76,22 @@ if __name__ == "__main__":
     target_annotations = get_target_annotations(target_object="regulatory--stop--g1")
     print(f"Total {len(target_annotations)} annotations of target class")
 
-
     for anno in tqdm(target_annotations):
         source_file = images_directory / f'{anno["image_key"]}.jpg'
-        destination_file = dataset_directory/ 'stop_sign_images' / f'{anno["image_key"]}.jpg'
+        destination_file = (
+            dataset_directory / "stop_sign_images" / f'{anno["image_key"]}.jpg'
+        )
         shutil.copyfile(source_file, destination_file)
 
+    # resize and write imaes to directory
+    for anno in tqdm(target_annotations):
+        source_file = images_directory / f'{anno["image_key"]}.jpg'
+        img_bgr = cv2.imread(source_file.as_posix())
+        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        img_rgb = cv2.resize(img_rgb, DST_SHAPE)
+        destination_file = (
+            dataset_directory / "stop_sign_images_resized" / f'{anno["image_key"]}.jpg'
+        )
+        cv2.imwrite(
+            destination_file.as_posix(), cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        )
