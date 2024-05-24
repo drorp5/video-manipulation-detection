@@ -3,17 +3,16 @@ from vimba import Frame, PixelFormat
 from typing import Tuple
 import numpy as np
 from scapy.all import PacketList
-from vimba import PixelFormat
 import sys
+from dataclasses import dataclass
 
-sys.path.append("src")
 from manipultation_utils import (
     Gvsp,
     GvspLeader,
     GvspTrailer,
 )  # TODO: change location of modules
-from dataclasses import dataclass
 from gige.constansts import Layers, CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
+from gige.utils import packet_id_to_payload_indices
 
 
 class MissingLeaderError(Exception):
@@ -49,12 +48,11 @@ class MockFrame:
     def packet_id_to_payload_indices(
         self, packet_id: int, payload_size_bytes: int, max_payload_size_bytes: int
     ) -> Tuple[np.ndarray, np.ndarray]:
-        bytes_per_pixel = 1
-        pixels_per_packet = int(max_payload_size_bytes / bytes_per_pixel)
-        payload_size_pixels = int(payload_size_bytes / bytes_per_pixel)
-        start_index_ravelled = (packet_id - 1) * pixels_per_packet
-        return np.unravel_index(
-            np.arange(payload_size_pixels) + start_index_ravelled, self.shape
+        return packet_id_to_payload_indices(
+            packet_id=packet_id,
+            payload_size_bytes=payload_size_bytes,
+            max_payload_size_bytes=max_payload_size_bytes,
+            shape=self.shape,
         )
 
     def packets_to_raw_image(
