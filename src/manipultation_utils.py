@@ -18,6 +18,7 @@ import sys
 sys.path.append('./src')
 from gige.gige_constants import *
 from gige.constansts import *
+from utils.image_processing import bgr_to_bayer_rg
 import random
 
 class Method(Enum):
@@ -223,7 +224,7 @@ class GigELink():
     def img_to_gvsp_using_ref(self, img_path: str, reference_gvsp_pacp: str) -> PacketList:
         img_bgr = cv2.imread(img_path) # BGR
         img_bgr = cv2.resize(img_bgr,(img_width,img_height))
-        img_bayer = self.bgr_to_bayer_rg(img_bgr)
+        img_bayer = bgr_to_bayer_rg(img_bgr)
         payload = self.img_to_packets_payload(img_bayer)
         gvsp_packets = self.insert_payload_to_gvsp_pcap(payload,reference_gvsp_pacp)
         return gvsp_packets
@@ -243,7 +244,7 @@ class GigELink():
     def get_gvsp_payload_packets(self, img_path: str) -> PacketList:
         img_bgr = cv2.imread(img_path) # BGR
         img_bgr = cv2.resize(img_bgr,(self.img_width,self.img_height))
-        img_bayer = self.bgr_to_bayer_rg(img_bgr)
+        img_bayer = bgr_to_bayer_rg(img_bgr)
         payload = self.img_to_packets_payload(img_bayer)
         return payload  
     
@@ -297,7 +298,7 @@ class GigELink():
         img_bgr = cv2.resize(img_bgr,(self.img_width,self.img_height))
         img_bgr[:first_row, :, :] = 0
         img_bgr[first_row+num_rows:, :, :] = 0
-        img_bayer = self.bgr_to_bayer_rg(img_bgr)
+        img_bayer = bgr_to_bayer_rg(img_bgr)
         payload = self.img_to_packets_payload(img_bayer)
         stripe_packets = []
         for pkt_id, pkt_payload in enumerate(payload):
@@ -346,19 +347,6 @@ class GigELink():
         self.send_start_command(count=1)
 
         print(f'average iteration time = {np.average(np.array(iterations_time))}')
-        
-    def bgr_to_bayer_rg(self, img_bgr):
-        # note: in open cv I need to read the image as bayer BG to convert it correctly
-        (B,G,R) = cv2.split(img_bgr)
-        dst_img_bayer = np.empty((self.img_height, self.img_width), np.uint8)
-        # strided slicing for this pattern:
-        #   R G
-        #   G B
-        dst_img_bayer[0::2, 0::2] = R[0::2, 0::2] # top left
-        dst_img_bayer[0::2, 1::2] = G[0::2, 1::2] # top right
-        dst_img_bayer[1::2, 0::2] = G[1::2, 0::2] # bottom left
-        dst_img_bayer[1::2, 1::2] = B[1::2, 1::2] # bottom right
-        return dst_img_bayer
 
     def img_to_packets_payload(self,img)->List[bytes]:
         # to bytes
