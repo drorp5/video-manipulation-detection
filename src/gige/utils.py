@@ -1,7 +1,6 @@
 from typing import List, Tuple
 import numpy as np
 
-
 from gige.gige_constants import BYTES_PER_PIXEL
 from utils.image_processing import bgr_to_bayer_rg
 
@@ -37,3 +36,25 @@ def packet_id_to_payload_indices(
     return np.unravel_index(
         np.arange(payload_size_pixels) + start_index_ravelled, shape
     )
+
+
+def payload_gvsp_bytes_to_raw_image(
+    payload_packets: List[bytes],
+    shape: IMG_SHAPE,
+) -> Tuple[np.ndarray, np.ndarray]:
+    raw_pixels = np.zeros(shape, dtype=np.uint8)
+    assigned_pixels = np.zeros(shape, dtype=bool)
+
+    max_payload_size_bytes = np.max([len(pkt) for pkt in payload_packets])
+    for packet_id, packet_bytes in enumerate(payload_packets):
+        rows_indices, cols_indices = packet_id_to_payload_indices(
+            packet_id=packet_id + 1,
+            payload_size_bytes=len(packet_bytes),
+            max_payload_size_bytes=max_payload_size_bytes,
+            shape=shape,
+        )
+        raw_pixels[rows_indices, cols_indices] = np.frombuffer(
+            packet_bytes, dtype=np.uint8
+        )
+        assigned_pixels[rows_indices, cols_indices] = True
+    return raw_pixels, assigned_pixels
