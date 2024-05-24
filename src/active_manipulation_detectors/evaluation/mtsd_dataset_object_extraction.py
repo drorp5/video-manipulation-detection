@@ -72,26 +72,31 @@ def get_target_annotations(target_object: str) -> List[Dict]:
     return target_annotations
 
 
-if __name__ == "__main__":
-    target_annotations = get_target_annotations(target_object="regulatory--stop--g1")
-    print(f"Total {len(target_annotations)} annotations of target class")
-
-    for anno in tqdm(target_annotations):
+def copy_images_to_directory(annotations: List[dict], dst_dir: Path) -> None:
+    for anno in tqdm(annotations):
         source_file = images_directory / f'{anno["image_key"]}.jpg'
-        destination_file = (
-            dataset_directory / "stop_sign_images" / f'{anno["image_key"]}.jpg'
-        )
-        shutil.copyfile(source_file, destination_file)
+        destination_file = dst_dir / f'{anno["image_key"]}.jpg'
+    shutil.copyfile(source_file, destination_file)
 
-    # resize and write imaes to directory
-    for anno in tqdm(target_annotations):
+
+def resize_images_and_save_to_directory(annotations: List[dict], dst_dir: Path) -> None:
+    for anno in tqdm(annotations):
         source_file = images_directory / f'{anno["image_key"]}.jpg'
         img_bgr = cv2.imread(source_file.as_posix())
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         img_rgb = cv2.resize(img_rgb, DST_SHAPE)
-        destination_file = (
-            dataset_directory / "stop_sign_images_resized" / f'{anno["image_key"]}.jpg'
-        )
+        destination_file = dst_dir / f'{anno["image_key"]}.jpg'
         cv2.imwrite(
             destination_file.as_posix(), cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         )
+
+
+if __name__ == "__main__":
+    target_annotations = get_target_annotations(target_object="regulatory--stop--g1")
+    print(f"Total {len(target_annotations)} annotations of target class")
+
+    dst_dir = dataset_directory / "stop_sign_images"
+    copy_images_to_directory(target_annotations, dst_dir)
+
+    dst_dir = dataset_directory / "stop_sign_images_resized"
+    resize_images_and_save_to_directory(target_annotations, dst_dir)
