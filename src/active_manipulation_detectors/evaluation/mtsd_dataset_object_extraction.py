@@ -8,7 +8,8 @@ import cv2
 import os
 import json
 import shutil
-
+import multiprocessing
+from functools import partial
 
 from detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
@@ -95,7 +96,6 @@ def resize_images_and_save_to_directory(annotations: List[dict], dst_dir: Path) 
 
 def run_sign_detection(
     annotation: dict,
-    detector: StopSignDetector,
     dst_shape: Tuple[int, int] = DST_SHAPE,
     iou_th: float = 0.5,
 ) -> None:
@@ -143,6 +143,17 @@ def run_sign_detection(
             break
 
     if matched:
+        # copy image
+        destination_dir = dataset_directory / f"{detector.name}_detections"
+        if not destination_dir.exists():
+            destination_dir.mkdir(parents=True)
+        destination_file = destination_dir / f"{annotation['image_key']}.jpg"
+        cv2.imwrite(
+            destination_file.as_posix(),
+            cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR),
+        )
+
+        # copy image and markk bounding boxes
         destination_dir = dataset_directory / f"{detector.name}_detections_marked"
         if not destination_dir.exists():
             destination_dir.mkdir(parents=True)
@@ -155,16 +166,21 @@ def run_sign_detection(
         )
 
 
+detector = get_detector("MobileNet")
+
 if __name__ == "__main__":
     target_annotations = get_target_annotations(target_object="regulatory--stop--g1")
     print(f"Total {len(target_annotations)} annotations of target class")
 
-    # dst_dir = dataset_directory / "stop_sign_images"
-    # copy_images_to_directory(target_annotations, dst_dir)
+    dst_dir = dataset_directory / "stop_sign_images"
+    copy_images_to_directory(target_annotations, dst_dir)
 
-    # dst_dir = dataset_directory / "stop_sign_images_resized"
-    # resize_images_and_save_to_directory(target_annotations, dst_dir)
+    dst_dir = dataset_directory / "stop_sign_images_resized"
+    resize_images_and_save_to_directory(target_annotations, dst_dir)
 
-    detector = get_detector("MobileNet")
-    for annotation in tqdm(target_annotations):
-        run_sign_detection(annotation, detector)
+    with multiprocessing.Pool(4) as p:
+        for res in tqdm(
+            p.imap_unordered(run_sign_detection, target_annotations),
+            total=len(target_annotations),
+        ):
+            pass
