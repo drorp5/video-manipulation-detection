@@ -78,7 +78,7 @@ def copy_images_to_directory(annotations: List[dict], dst_dir: Path) -> None:
     for anno in tqdm(annotations):
         source_file = images_directory / f'{anno["image_key"]}.jpg'
         destination_file = dst_dir / f'{anno["image_key"]}.jpg'
-    shutil.copyfile(source_file, destination_file)
+        shutil.copyfile(source_file, destination_file)
 
 
 def resize_images_and_save_to_directory(annotations: List[dict], dst_dir: Path) -> None:
