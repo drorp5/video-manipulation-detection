@@ -18,9 +18,7 @@ annotations_directory = dataset_directory / "annotations"
 
 detector = get_detector("MobileNet")
 
-injections_images_directory = (
-    dataset_directory / "MobileNet_detections_injections_YOlO_detections"
-)
+injections_images_directory = dataset_directory / "MobileNet_detections_injections"
 if not injections_images_directory.exists():
     injections_images_directory.mkdir(parents=True)
 
