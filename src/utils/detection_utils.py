@@ -29,6 +29,9 @@ class Rectangle:
     def __str__(self) -> str:
         return f"({self.xmin}, {self.ymin}), ({self.xmax}, {self.ymax})"
 
+    def to_points(self) -> Tuple[Point, Point]:
+        return (self.xmin, self.ymin), (self.xmax, self.ymax)
+
 
 def calculate_iou(rect1: Rectangle, rect2: Rectangle) -> float:
     """
@@ -43,8 +46,8 @@ def calculate_iou(rect1: Rectangle, rect2: Rectangle) -> float:
     """
 
     # Unpack the input rectangles
-    (x1_min, y1_min), (x1_max, y1_max) = rect1
-    (x2_min, y2_min), (x2_max, y2_max) = rect2
+    (x1_min, y1_min), (x1_max, y1_max) = rect1.to_points()
+    (x2_min, y2_min), (x2_max, y2_max) = rect2.to_points()
 
     # Calculate the (x, y)-coordinates of the intersection rectangle
     x_inter_min = max(x1_min, x2_min)

@@ -14,6 +14,7 @@ from functools import partial
 from detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
 from utils.detection_utils import calculate_iou, Rectangle
+from utils.image_processing import bgr_to_bayer_rg
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")
@@ -102,34 +103,31 @@ def run_sign_detection(
     """run sign detector on specific frame, and if detection matches annotation bounding box, saves the reshaped image in directory"""
     source_file = images_directory / f'{annotation["image_key"]}.jpg'
     img_bgr = cv2.imread(source_file.as_posix())
-    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
-    # reisze image and detect
-    original_height, original_width, _ = img_rgb.shape
-    img_rgb = cv2.resize(img_rgb, dst_shape)
+    # reisze image
+    original_height, original_width, _ = img_bgr.shape
+    img_bgr = cv2.resize(img_bgr, dst_shape)
     new_width, new_height = dst_shape
-    detections = detector.detect(img_rgb)
 
-    # resize bounding boxes
+    # convert to bayer and then to RGB to simulate real frame
+    bayer_img = bgr_to_bayer_rg(img_bgr)
+    img_rgb = cv2.cvtColor(bayer_img, cv2.COLOR_BayerBG2RGB)
+
+    # resize ground truth bounding boxes
     width_resizing_factor = new_width / original_width
     height_resizing_factor = new_height / original_height
     gt_detections = []
     for object in annotation["objects"]:
-        gt_bounding_box = object["bbox"]
-        gt_detections.append(
-            Rectangle(
-                (
-                    int(gt_bounding_box["xmin"] * width_resizing_factor),
-                    int(gt_bounding_box["ymin"] * height_resizing_factor),
-                ),
-                (
-                    int(gt_bounding_box["xmax"] * width_resizing_factor),
-                    int(gt_bounding_box["ymax"] * height_resizing_factor),
-                ),
-            )
+        gt_bounding_box_annotation = object["bbox"]
+        gt_bounding_box = Rectangle(
+            (gt_bounding_box_annotation["xmin"], gt_bounding_box_annotation["ymin"]),
+            (gt_bounding_box_annotation["xmax"], gt_bounding_box_annotation["ymax"]),
         )
+        gt_bounding_box.resize(width_resizing_factor, height_resizing_factor)
+        gt_detections.append(gt_bounding_box)
 
     # check for matching detections
+    detections = detector.detect(img_rgb)
     matched = False
     for detection in detections:
         x, y, w, h = detection
@@ -172,11 +170,11 @@ if __name__ == "__main__":
     target_annotations = get_target_annotations(target_object="regulatory--stop--g1")
     print(f"Total {len(target_annotations)} annotations of target class")
 
-    dst_dir = dataset_directory / "stop_sign_images"
-    copy_images_to_directory(target_annotations, dst_dir)
+    # dst_dir = dataset_directory / "stop_sign_images"
+    # copy_images_to_directory(target_annotations, dst_dir)
 
-    dst_dir = dataset_directory / "stop_sign_images_resized"
-    resize_images_and_save_to_directory(target_annotations, dst_dir)
+    # dst_dir = dataset_directory / "stop_sign_images_resized"
+    # resize_images_and_save_to_directory(target_annotations, dst_dir)
 
     with multiprocessing.Pool(4) as p:
         for res in tqdm(
