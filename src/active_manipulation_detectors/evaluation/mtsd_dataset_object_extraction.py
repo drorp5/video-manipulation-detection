@@ -13,7 +13,7 @@ from functools import partial
 
 from detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
-from utils.detection_utils import calculate_iou
+from utils.detection_utils import calculate_iou, Rectangle
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")
@@ -117,7 +117,7 @@ def run_sign_detection(
     for object in annotation["objects"]:
         gt_bounding_box = object["bbox"]
         gt_detections.append(
-            (
+            Rectangle(
                 (
                     int(gt_bounding_box["xmin"] * width_resizing_factor),
                     int(gt_bounding_box["ymin"] * height_resizing_factor),
@@ -133,7 +133,7 @@ def run_sign_detection(
     matched = False
     for detection in detections:
         x, y, w, h = detection
-        pred_detection = ((x, y), (x + w, y + h))
+        pred_detection = Rectangle((x, y), (x + w, y + h))
         for gt_detection in gt_detections:
             iou = calculate_iou(pred_detection, gt_detection)
             if iou >= iou_th:

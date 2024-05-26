@@ -1,8 +1,33 @@
 from typing import Tuple
+import math
 
 # Define type aliases
 Point = Tuple[int, int]
-Rectangle = Tuple[Point, Point]
+
+
+class Rectangle:
+    def __init__(self, upper_left_corner: Point, lower_right_corner: Point) -> None:
+        self.xmin, self.ymin = upper_left_corner
+        self.xmax, self.ymax = lower_right_corner
+
+    @property
+    def num_rows(self) -> int:
+        return self.ymax - self.ymin
+
+    def resize(self, width_factor: float = 1, height_factor: float = 1) -> None:
+        self.xmin = int(self.xmin * width_factor)
+        self.ymin = int(self.ymin * height_factor)
+        self.xmax = int(self.xmax * width_factor)
+        self.ymax = int(self.ymax * height_factor)
+
+    def enforce_super_pixel_size(self, pixel_size: int) -> None:
+        self.xmin = math.floor(self.xmin / pixel_size) * pixel_size
+        self.xmax = math.ceil(self.xmax / pixel_size) * pixel_size
+        self.ymin = math.floor(self.ymin / pixel_size) * pixel_size
+        self.ymax = math.ceil(self.ymax / pixel_size) * pixel_size
+
+    def __str__(self) -> str:
+        return f"({self.xmin}, {self.ymin}), ({self.xmax}, {self.ymax})"
 
 
 def calculate_iou(rect1: Rectangle, rect2: Rectangle) -> float:
