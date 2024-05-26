@@ -28,8 +28,10 @@ import random
 
 from gige.constansts import *
 from gige.gige_constants import *
-from utils.image_processing import bgr_to_bayer_rg
 from gige.utils import img_to_packets_payload, bgr_img_to_packets_payload
+from utils.image_processing import bgr_to_bayer_rg
+from utils.injection import get_stripe, insert_stripe_to_img
+from utils.detection_utils import Rectangle
 
 
 class Method(Enum):
@@ -414,13 +416,23 @@ class GigELink:
         )
 
     def get_stripe_gvsp_packets(
-        self, img_path: str, first_row: int, num_rows: int, block_id: int
+        self,
+        img_path: str,
+        first_row: int,
+        num_rows: int,
+        block_id: int,
+        target_row: int = 0,
     ) -> PacketList:
         img_bgr = cv2.imread(img_path)  # BGR
         img_bgr = cv2.resize(img_bgr, (self.img_width, self.img_height))
-        img_bgr[:first_row, :, :] = 0
-        img_bgr[first_row + num_rows :, :, :] = 0
-        payload = bgr_img_to_packets_payload(img_bgr, self.max_payload_bytes)
+
+        stripe = get_stripe(
+            img_bgr, Rectangle((0, first_row), (self.img_width, first_row + num_rows))
+        )
+        background_img = np.zeros_like(img_bgr)
+        injection_img = insert_stripe_to_img(background_img, stripe, target_row)
+
+        payload = bgr_img_to_packets_payload(injection_img, self.max_payload_bytes)
         stripe_packets = []
         for pkt_id, pkt_payload in enumerate(payload):
             if (pkt_payload != 0).any():
