@@ -33,12 +33,18 @@ def get_stripe_gvsp_payload_bytes(
     bounding_box: Rectangle,
     max_payload_bytes: int,
     target_row: int = 0,
-) -> List[bytes]:
+) -> Tuple[List[int], List[bytes]]:
     stripe = get_stripe(img_bgr, bounding_box)
     background_img = np.zeros_like(img_bgr)
     injection_img = insert_stripe_to_img(background_img, stripe, target_row)
-    gvsp_payload_stripe = bgr_img_to_packets_payload(injection_img, max_payload_bytes)
-    gvsp_payload_stripe = list(
-        filter(lambda pkt_payload: (pkt_payload != 0).any(), gvsp_payload_stripe)
-    )
-    return gvsp_payload_stripe
+    all_gvsp_payload = bgr_img_to_packets_payload(injection_img, max_payload_bytes)
+
+    gvsp_payload_stripe = []
+    gvsp_packets_ids = []
+
+    for ind, pkt_payload in enumerate(all_gvsp_payload):
+        if (pkt_payload != 0).any():
+            gvsp_payload_stripe.append(pkt_payload)
+            gvsp_packets_ids.append(ind + 1)
+
+    return gvsp_packets_ids, gvsp_payload_stripe
