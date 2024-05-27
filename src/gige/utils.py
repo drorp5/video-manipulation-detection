@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import numpy as np
 
 from gige.gige_constants import BYTES_PER_PIXEL
@@ -41,14 +41,19 @@ def packet_id_to_payload_indices(
 def payload_gvsp_bytes_to_raw_image(
     payload_packets: List[bytes],
     shape: IMG_SHAPE,
+    packets_ids: Optional[List[int]] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     raw_pixels = np.zeros(shape, dtype=np.uint8)
     assigned_pixels = np.zeros(shape, dtype=bool)
 
     max_payload_size_bytes = np.max([len(pkt) for pkt in payload_packets])
-    for packet_id, packet_bytes in enumerate(payload_packets):
+
+    if packets_ids is None:
+        packets_ids = list(range(1, len(payload_packets) + 1))
+
+    for packet_id, packet_bytes in zip(packets_ids, payload_packets):
         rows_indices, cols_indices = packet_id_to_payload_indices(
-            packet_id=packet_id + 1,
+            packet_id=packet_id,
             payload_size_bytes=len(packet_bytes),
             max_payload_size_bytes=max_payload_size_bytes,
             shape=shape,
