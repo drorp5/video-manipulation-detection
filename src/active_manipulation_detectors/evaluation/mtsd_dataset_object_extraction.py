@@ -15,6 +15,7 @@ from detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
 from utils.detection_utils import calculate_iou, Rectangle
 from utils.image_processing import bgr_to_bayer_rg
+from utils.injection import get_masked_stripe
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")
@@ -113,31 +114,45 @@ def run_sign_detection(
     bayer_img = bgr_to_bayer_rg(img_bgr)
     img_rgb = cv2.cvtColor(bayer_img, cv2.COLOR_BayerBG2RGB)
 
-    # resize ground truth bounding boxes
-    width_resizing_factor = new_width / original_width
-    height_resizing_factor = new_height / original_height
-    gt_detections = []
+    # get largest object detection
+    min_area = 0
+    largest_gt_bounding_box_annotation = None
     for object in annotation["objects"]:
         gt_bounding_box_annotation = object["bbox"]
-        gt_bounding_box = Rectangle(
-            (gt_bounding_box_annotation["xmin"], gt_bounding_box_annotation["ymin"]),
-            (gt_bounding_box_annotation["xmax"], gt_bounding_box_annotation["ymax"]),
-        )
-        gt_bounding_box.resize(width_resizing_factor, height_resizing_factor)
-        gt_detections.append(gt_bounding_box)
+        area = (
+            gt_bounding_box_annotation["xmax"] - gt_bounding_box_annotation["xmin"]
+        ) * (gt_bounding_box_annotation["ymax"] - gt_bounding_box_annotation["ymin"])
+        if area > min_area:
+            min_area = area
+            largest_gt_bounding_box_annotation = gt_bounding_box_annotation
+
+    # resize bounding box
+    width_resizing_factor = new_width / original_width
+    height_resizing_factor = new_height / original_height
+    gt_bounding_box = Rectangle(
+        (
+            largest_gt_bounding_box_annotation["xmin"],
+            largest_gt_bounding_box_annotation["ymin"],
+        ),
+        (
+            largest_gt_bounding_box_annotation["xmax"],
+            largest_gt_bounding_box_annotation["ymax"],
+        ),
+    )
+    gt_bounding_box.resize(width_resizing_factor, height_resizing_factor)
+
+    # get stripe of the image
+    masked_stripe = get_masked_stripe(img_rgb, gt_bounding_box)
 
     # check for matching detections
-    detections = detector.detect(img_rgb)
+    detections = detector.detect(masked_stripe)
     matched = False
     for detection in detections:
         x, y, w, h = detection
         pred_detection = Rectangle((x, y), (x + w, y + h))
-        for gt_detection in gt_detections:
-            iou = calculate_iou(pred_detection, gt_detection)
-            if iou >= iou_th:
-                matched = True
-                break
-        if matched:
+        iou = calculate_iou(pred_detection, gt_bounding_box)
+        if iou >= iou_th:
+            matched = True
             break
 
     if matched:

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import numpy as np
 from utils.detection_utils import Rectangle
 from gige.utils import bgr_img_to_packets_payload
@@ -19,6 +19,13 @@ def insert_stripe_to_img(
     target_row = min(target_row, num_rows_in_img - num_rows_in_stripe)
     dst[target_row : target_row + num_rows_in_stripe, :, :] = stripe
     return dst
+
+
+def get_masked_stripe(img: np.ndarray, rect: Rectangle) -> np.ndarray:
+    stripe = get_stripe(img, rect)
+    background_img = np.zeros_like(img)
+    masked_stripe = insert_stripe_to_img(background_img, stripe, rect.ymin)
+    return masked_stripe
 
 
 def get_stripe_gvsp_payload_bytes(
