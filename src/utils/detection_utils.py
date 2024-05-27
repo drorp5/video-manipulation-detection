@@ -1,5 +1,6 @@
-from typing import Tuple
+from typing import Tuple, Iterator, Optional
 import math
+import numpy as np
 
 # Define type aliases
 Point = Tuple[int, int]
@@ -72,3 +73,29 @@ def calculate_iou(rect1: Rectangle, rect2: Rectangle) -> float:
     iou = inter_area / union_area if union_area != 0 else 0
 
     return iou
+
+
+def sliding_window(
+    image: np.ndarray,
+    window_size: Tuple[int, int],
+    step_size: Optional[Tuple[int, int]] = None,
+) -> Iterator[Tuple[int, int, np.ndarray]]:
+    """
+    Slide a window across the image.
+
+    Parameters:
+    - image: The input image.
+    - window_size: The size of the window (width, height).
+    - step_size: The number of pixels to move the window by in (x, y) directions. If None, slidiing witout overlap
+
+    Yields:
+    - (x, y, window): The top-left corner (x, y) and the window image.
+    """
+
+    window_width, window_height = window_size
+    if step_size is None:
+        step_size = window_size
+    step_x, step_y = step_size
+    for y in range(0, image.shape[0] - window_height + 1, step_y):
+        for x in range(0, image.shape[1] - window_width + 1, step_x):
+            yield (x, y, image[y : y + window_height, x : x + window_width])
