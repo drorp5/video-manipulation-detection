@@ -1,30 +1,26 @@
 from abc import ABC, abstractmethod
-from bitarray import bitarray
 
-from active_manipulation_detectors import ValidationStatus
+from active_manipulation_detectors import ValidationStatus, FixedSizeNaryQueue
 
 
 class DataValidator(ABC):
-    def __init__(self) -> None:
-        self.transmitted_data = bitarray()
-        self.received_data = bitarray()
+    def __init__(self, queue_size: int, num_symbols: int) -> None:
+        self.transmitted_data = FixedSizeNaryQueue(
+            base=num_symbols, max_size=queue_size
+        )
+        self.received_data = FixedSizeNaryQueue(base=num_symbols, max_size=queue_size)
 
-    def add_received_data(self, received_bits: bitarray) -> None:
-        self.received_data.extend(received_bits)
+    def add_received_data(self, received_symbol: int) -> None:
+        self.received_data.enqueue(received_symbol)
 
-    def add_trasnmitted_data(self, transmitted_bits: bitarray):
-        self.transmitted_data.extend(transmitted_bits)
+    def add_trasnmitted_data(self, transmitted_symbol: int) -> None:
+        self.transmitted_data.enqueue(transmitted_symbol)
 
     @abstractmethod
     def _validate(self) -> ValidationStatus:
         raise NotImplementedError
 
-    @abstractmethod
-    def clean(self, result: ValidationStatus) -> None:
-        raise NotImplementedError
-
-    def validate(self, received_bits: bitarray) -> ValidationStatus:
-        self.add_received_data(received_bits)
+    def validate(self, received_symbol: int) -> ValidationStatus:
+        self.add_received_data(received_symbol)
         result = self._validate()
-        self.clean(result)
         return result
