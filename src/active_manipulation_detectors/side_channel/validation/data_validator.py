@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from active_manipulation_detectors import ValidationStatus, FixedSizeNaryQueue
+from active_manipulation_detectors.validation_status import ValidationStatus
+from active_manipulation_detectors.side_channel.queue import FixedSizeNaryQueue
 
 
 class DataValidator(ABC):

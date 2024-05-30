@@ -1,8 +1,6 @@
-from active_manipulation_detectors import (
-    ValidationStatus,
-    DataValidator,
-    FixedSizeNaryQueue,
-)
+from active_manipulation_detectors.side_channel.validation import DataValidator
+from active_manipulation_detectors.side_channel.queue import FixedSizeNaryQueue
+from active_manipulation_detectors.validation_status import ValidationStatus
 
 
 class DataValidatorKSymbolsDelayed(DataValidator):

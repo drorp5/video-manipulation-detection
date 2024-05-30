@@ -1,4 +1,5 @@
-from active_manipulation_detectors import ValidationStatus, DataValidator
+from active_manipulation_detectors.validation_status import ValidationStatus
+from active_manipulation_detectors.side_channel.validation import DataValidator
 
 
 class DataValidatorKSymbols(DataValidator):
