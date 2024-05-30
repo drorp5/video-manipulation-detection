@@ -1,0 +1,13 @@
+duration: null
+camera:
+  streaming_buffer: null
+  fps: null
+actions:
+  viewer: null
+  detector: null
+variation:
+  key: null
+  num_widths: null
+validator:
+  num_symbols: null
+  max_delay: 1
