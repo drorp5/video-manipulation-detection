@@ -1,3 +1,5 @@
+from logging import Logger
+from typing import Optional
 import cv2
 import numpy as np
 
@@ -9,8 +11,8 @@ ENTER_KEY_CODE = 13
 
 
 class ViewerHandler(GigeHandler):
-    def __init__(self, downfactor: int = 4):
-        super().__init__()
+    def __init__(self, logger: Optional[Logger] = None, downfactor: int = 4) -> None:
+        super().__init__(logger)
         self.downfactor = downfactor
 
     def resize_image(self, img: np.ndarray) -> np.ndarray:

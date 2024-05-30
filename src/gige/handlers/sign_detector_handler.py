@@ -1,3 +1,4 @@
+from logging import Logger
 from typing import Optional
 import cv2
 import numpy as np
@@ -14,10 +15,15 @@ ENTER_KEY_CODE = 13
 
 
 class SignDetectorHandler(ViewerHandler):
-    def __init__(self, downfactor: int = 4,  detector: Optional[StopSignDetector] = None):
-        super().__init__(downfactor=downfactor)
+    def __init__(
+        self,
+        logger: Optional[Logger] = None,
+        downfactor: int = 4,
+        detector: Optional[StopSignDetector] = None,
+    ) -> None:
+        super().__init__(logger=logger, downfactor=downfactor)
         self.detector = detector
-    
+
     def detect_objects_in_image(self, img: np.ndarray) -> np.ndarray:
         detections = self.detector.detect(img)
         img = draw_bounding_boxes(img, detections)
