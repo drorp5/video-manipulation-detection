@@ -1,0 +1,48 @@
+experiment:
+  duration: null
+  results_directory: null
+  record_pcap: True
+  log_type: [console, file]
+car:
+  duration: null
+  camera:
+    streaming_buffer: 1
+    fps: 20
+  actions:
+    viewer: null
+    detector: null
+  variation:
+    key: key
+    num_widths: 8
+  validator:
+    num_symbols: 3
+    max_delay: 1
+attacker:
+  timing:
+    pre_attack_duration_in_seconds: 0
+    attack_duration_in_seconds: null
+    post_attack_duration_in_seconds: 0
+    ampiric_frame_time_in_seconds: 0.13
+  gige:
+    interface: "Ethernet 6"
+    camera:
+      mac: "00:0f:31:03:67:c4"
+      ip: "192.168.10.150"
+    cp:
+      mac: "00:18:7d:c8:e6:31"
+      ip: "192.168.1.100"
+    gvsp:
+      width: 1936
+      height: 1216
+      max_payload_bytes: 8963
+  injection:
+    fake_path: null
+    dataset:
+      name: mtsd
+      images_dir: '../datasets/mtsd_v2_fully_annotated/MobileNet_detections'
+      annotations_dir: '../datasets/mtsd_v2_fully_annotated/annotations'
+    stripe:
+      first_row: null
+      num_rows: null
+      future_id_diff: 1
+      count: 5
