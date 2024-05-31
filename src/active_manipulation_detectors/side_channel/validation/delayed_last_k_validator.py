@@ -22,10 +22,18 @@ class DataValidatorKSymbolsDelayed(DataValidator):
         self.all_received_queues.extend(self.delayed_received_queues)
 
     def add_received_data(self, received_symbol: int) -> None:
-        insertion_value = self.received_data.peak_first()
+        try:
+            insertion_value = self.received_data.peak_first()
+        except IndexError:
+            self.received_data.enqueue(received_symbol)
+            return    
         self.received_data.enqueue(received_symbol)
         for current_queue in self.delayed_received_queues:
-            current_first_val = current_queue.peak_first()
+            try:
+                current_first_val = current_queue.peak_first()
+            except IndexError:
+                current_queue.enqueue(insertion_value)
+                return
             current_queue.enqueue(insertion_value)
             insertion_value = current_first_val
 
