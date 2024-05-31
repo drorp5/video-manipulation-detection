@@ -26,3 +26,6 @@ class GigeHandler(ABC):
                 img = convert_image_to_rgb(img, pixel_format)
                 return img
         return None
+
+    def cleanup(self, cam: Camera) -> None:
+        pass

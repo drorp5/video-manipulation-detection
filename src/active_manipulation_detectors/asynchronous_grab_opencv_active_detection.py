@@ -169,6 +169,7 @@ def start_async_grab(args):
             except Exception as e:
                 print(e)
             finally:
+                handler.cleanup(cam)
                 cam.stop_streaming()
               
 if __name__ == '__main__':
