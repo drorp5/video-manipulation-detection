@@ -1,13 +1,40 @@
 import enum
-from typing import Dict, List
+from typing import Dict, List, Any
 import math
+from abc import ABC, abstractmethod
 
 from bitarray import bitarray
 
 from active_manipulation_detectors.side_channel.bitarray_dict import BitarrayDict
 
 
-class IntBitsEncoderDecoder:
+
+class EncoderDecoder(ABC):
+    def __init__(self, values: list) -> None:
+        self.values = values
+    
+    @property
+    def values_to_symbols(self) -> Dict[int, Any]:
+        return self._values_to_symbols
+    
+    @property
+    def symbols_to_values(self) -> Dict[int, Any]:
+        return self._symbols_to_values    
+
+    def encode(self, value: Any) -> Any:
+        return self._values_to_symbols[value]
+
+    def decode(self, symbol: Any) -> Any:
+        return self._symbols_to_values[symbol]
+
+
+class IntIndEncoderDecoder(EncoderDecoder):
+    def __init__(self, values: List[int]) -> None:
+        self._values_to_symbols = {value: ind for ind, value in enumerate(values)}
+        self._symbols_to_values = {ind: value for ind, value in enumerate(values)}
+
+
+class IntBitsEncoderDecoder(EncoderDecoder):
     def __init__(self, values: List[int]):
         self._bits_per_symbol = math.ceil(math.log2(len(values)))
         self._values_to_symbols = {
