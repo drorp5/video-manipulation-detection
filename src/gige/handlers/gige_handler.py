@@ -43,3 +43,6 @@ class GigeHandler(ABC):
             self.logger.critical(msg)
         else:
             raise ValueError(f"Invalid log level: {log_level}")
+    
+    def cleanup(self, cam: Camera) -> None:
+        pass

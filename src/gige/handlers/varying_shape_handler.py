@@ -72,3 +72,7 @@ class VaryingShapeHandler(SignDetectorHandler):
                 self.shape_changed = True
 
             cam.queue_frame(frame)
+    
+    def cleanup(self, cam: Camera) -> None:
+        with cam:
+            cam.Width.set(MAX_WIDTH)
