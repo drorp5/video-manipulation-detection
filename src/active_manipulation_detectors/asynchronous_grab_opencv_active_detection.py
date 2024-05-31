@@ -31,6 +31,7 @@ import argparse
 from argparse import Namespace
 from icecream import ic
 import traceback
+import numpy as np
 
 from gige.handlers import ViewerHandler
 from active_manipulation_detectors.side_channel.varying_shape_handler import VaryingShapeHandler
@@ -152,14 +153,16 @@ def start_async_grab(args):
         with get_camera(args.camera_id) as cam:
             setup_camera(cam, fps_val=args.fps)
                         
-            random_bits_generator = RandomBitsGeneratorRC4(key=b'key', num_bits_per_iteration=2)
-            # random_bits_generator = SequentialBitsGenerator(key=b'key', num_bits_per_iteration=2)
-            data_validator = DataValidatorKSymbolsDelayed(bits_in_symbol=2, symbols_for_detection=2, max_delay=1)
+            num_symbols = 8
+            bits_per_symbol = int(np.ceil(np.log2(num_symbols)))
+            random_bits_generator = RandomBitsGeneratorRC4(key=b'key', num_bits_per_iteration=bits_per_symbol)
+            # random_bits_generator = SequentialBitsGenerator(key=b'key', num_bits_per_iteration=bits_per_symbol)
+            data_validator = DataValidatorKSymbolsDelayed(bits_in_symbol=bits_per_symbol, symbols_for_detection=2, max_delay=1)
             sign_detector = get_detector(args.detector)
 
             handler = VaryingShapeHandler(random_bits_generator=random_bits_generator, 
                                         data_validator=data_validator,
-                                        num_levels=4,
+                                        num_levels=num_symbols,
                                         increment=2,
                                         sign_detector=sign_detector)
             # Start Streaming with a custom frames buffer
