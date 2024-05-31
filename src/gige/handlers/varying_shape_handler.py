@@ -27,6 +27,7 @@ class VaryingShapeHandler(SignDetectorHandler):
         logger: Optional[logging.Logger] = None,
         downfactor: int = 4,
         sign_detector: Optional[StopSignDetector] = None,
+        view: bool = False
     ) -> None:
         super().__init__(logger=logger, downfactor=downfactor, detector=sign_detector)
         self.height_values = [MAX_HEIGHT - increment * ind for ind in range(num_levels)]
@@ -38,6 +39,7 @@ class VaryingShapeHandler(SignDetectorHandler):
         )
         self.data_validator = data_validator
         self.shape_changed = False
+        self.view = view
 
     def __call__(self, cam: Camera, frame: Frame):
         if self.is_stop_key_selected():
@@ -54,20 +56,21 @@ class VaryingShapeHandler(SignDetectorHandler):
                     validation_result = self.data_validator.validate(received_symbol)
                     self.log(f"Frame #{frame.get_id()}: {width} -> {validation_result}")
 
-                try:
-                    self.plot(img, cam)
-                except Exception as e:
-                    self.log(e, logging.ERROR)
-                    pass
+                if self.view:
+                    try:
+                        self.plot(img, cam)
+                    except Exception as e:
+                        self.log(e, logging.ERROR)
+                        pass
 
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)
                 new_width = self.encoder_decoder.decode(symbol=symbol)
-                cam.Width.set(new_width)
                 self.log(
-                    f"#{frame.get_id()}: new set width = {width}",
+                    f"#{frame.get_id()}: Setting next frame width = {new_width}",
                     log_level=logging.DEBUG,
                 )
+                cam.Width.set(new_width)
                 self.data_validator.add_trasnmitted_data(symbol)
                 self.shape_changed = True
 

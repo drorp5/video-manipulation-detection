@@ -1,3 +1,4 @@
+from gige.handlers.gige_handler import GigeHandler
 from gige.handlers.viewer_handler import ViewerHandler
 from gige.handlers.sign_detector_handler import SignDetectorHandler
 from gige.handlers.varying_shape_handler import VaryingShapeHandler

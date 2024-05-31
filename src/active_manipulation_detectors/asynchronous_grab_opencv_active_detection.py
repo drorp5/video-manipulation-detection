@@ -105,7 +105,6 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
 
         # Set constant frame rate if specified
         if fps_val is not None:
-            ic(fps_val)
             try:
                 cam.TriggerMode.set("Off")
                 cam.AcquisitionFrameRateAbs.set(fps_val)

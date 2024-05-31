@@ -1,22 +1,25 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import yaml
-from driving_experiments import run_experiment  # Import the run_experiment function
+from driving_experiments.run_experiment import run_experiment
 
 # Define float keys globally
-FLOAT_KEYS = {
-    "duration",
+INT_KEYS = {
     "num_widths",
     "num_symbols",
     "max_delay",
-    "pre_attack_duration_in_seconds",
-    "post_attack_duration_in_seconds",
-    "attack_duration_in_seconds",
-    "ampiric_frame_time_in_seconds",
     "first_row",
     "num_rows",
     "future_id_diff",
-    "count",
+    "count"
+}
+
+FLOAT_KEYS = {
+    "duration",
+    "pre_attack_duration_in_seconds",
+    "post_attack_duration_in_seconds",
+    "attack_duration_in_seconds",
+    "ampiric_frame_time_in_seconds"
 }
 
 
@@ -224,7 +227,6 @@ class ConfigGUI:
             return
         new_config = self.get_entries(self.config, "")
         run_experiment(new_config)
-        print("Experiment started!")
 
     def get_entries(self, config, parent_key):
         new_config = {}
@@ -253,6 +255,8 @@ class ConfigGUI:
                     entry_value = self.entries[current_key].get()
                     if entry_value == "":
                         new_config[key] = None
+                    elif key in INT_KEYS:
+                        new_config[key] = int(entry_value)
                     elif key in FLOAT_KEYS:
                         new_config[key] = float(entry_value)
                     else:

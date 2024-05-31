@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Optional
 import logging
 
+from gige.handlers import GigeHandler
+
 
 class Car(ABC):
     @abstractmethod
@@ -9,7 +11,12 @@ class Car(ABC):
         super().__init__()
         self.logger = logger
 
+    @abstractmethod
     def run(self) -> None:
+        pass
+
+    @abstractmethod
+    def get_handler(self) -> GigeHandler:
         pass
 
     def log(self, msg, log_level=logging.INFO):

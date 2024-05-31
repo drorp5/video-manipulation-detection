@@ -8,6 +8,7 @@ from active_manipulation_detectors.asynchronous_grab_opencv_active_detection imp
     get_camera,
     setup_camera,
 )
+from gige.handlers import GigeHandler
 from gige.handlers.varying_shape_handler import (
     VaryingShapeHandler,
 )
@@ -31,41 +32,45 @@ class ShapeVaryingLogicCar(Car):
         self.random_bits_generator = random_bits_generator
         self.data_validator = data_validator
 
-    def run(self) -> None:
-        with Vimba.get_instance():
-            with get_camera() as cam:
-                setup_camera(cam, fps_val=self.config["camera"]["fps"])
-                self.log(
-                    f'Finished setting up camera with frame rate {self.config["camera"]["fps"]}',
-                    logging.DEBUG,
-                )
-
-            sign_detector = get_detector(self.config["actions"]["detector"])
-
-            handler = VaryingShapeHandler(
+    def get_handler(self) -> GigeHandler:
+        sign_detector = get_detector(self.config["actions"]["detector"])
+        handler = VaryingShapeHandler(
                 logger=self.logger,
                 random_bits_generator=self.random_bits_generator,
                 data_validator=self.data_validator,
                 num_levels=self.config["variation"]["num_widths"],
                 increment=2,  # bayer
                 sign_detector=sign_detector,
+                view=self.config["actions"]["viewer"]
             )
-            # Start Streaming with a custom frames buffer
-            self.log(
-                f"Starting camera with varying widths: {handler.width_values}",
-                logging.DEBUG,
-            )
-            try:
-                cam.start_streaming(
-                    handler=handler,
-                    buffer_count=self.config["camera"]["streaming_buffer"],
-                )
-                handler.shutdown_event.wait(self.config["duration"])
+        return handler
+        
+    def run(self) -> None:
+        handler = self.get_handler()
+        with Vimba.get_instance():
+            with get_camera() as cam:
+                setup_camera(cam, fps_val=self.config["camera"]["fps"])
                 self.log(
-                    f"Shutting down camera",
+                    f'Finished setting up camera with frame rate {self.config["camera"]["fps"]}',
+                    logging.DEBUG)
+            
+                # Start Streaming with a custom frames buffer
+                self.log(
+                    f"Starting camera with varying widths: {handler.width_values}",
                     logging.DEBUG,
                 )
-            except Exception as e:
-                self.log(e, logging.ERROR)
-            finally:
-                cam.stop_streaming()
+                try:
+                    cam.start_streaming(
+                        handler=handler,
+                        buffer_count=self.config["camera"]["streaming_buffer"],
+                    )
+                    handler.shutdown_event.wait(self.config["duration"])
+                    self.log(
+                        f"Shutting down camera",
+                        logging.DEBUG,
+                    )
+                except Exception as e:
+                    self.log(e, logging.ERROR)
+                finally:
+                    handler.cleanup(cam)
+                    cam.stop_streaming()
