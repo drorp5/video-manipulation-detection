@@ -63,7 +63,6 @@ class SequentialBitsGenerator(RandomBitsGenerator):
 
     def load_bits(self) -> None:
         added_bits = next(self.cycle_iter)
-        ic(added_bits)
         self.stored_bits.extend(added_bits)
     
     def __next__(self) -> bitarray:
