@@ -396,7 +396,7 @@ class GigELink:
 
     def inject_gvsp_packets(
         self, gvsp_packets: PacketList, future_id_diff: int = 10, count: int = 100
-    ) -> None:
+    ) -> int:
         print("Sniffing for blockID")
         sniff(
             iface=self.interface,
@@ -417,6 +417,7 @@ class GigELink:
             verbose=False,
             realtime=True,
         )
+        return future_id
 
     def get_stripe_gvsp_packets(
         self,
@@ -458,13 +459,14 @@ class GigELink:
         num_rows: int,
         future_id_diff: int = 10,
         count: int = 100,
-    ) -> None:
+    ) -> int:
         stripe_packets = self.get_stripe_gvsp_packets(
             img_path, first_row, num_rows, block_id=0
         )
-        self.inject_gvsp_packets(
+        injected_id = self.inject_gvsp_packets(
             stripe_packets, future_id_diff=future_id_diff, count=count
         )
+        return injected_id
 
     def fake_still_image(self, img_path, duration, frame_rate):
         # TODO: read register to get frames rate
