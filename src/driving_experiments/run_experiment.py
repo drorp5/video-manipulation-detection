@@ -107,7 +107,7 @@ def run_experiment(experiment_config: dict) -> None:
 
     # set experiment
     experiment = Experiment(
-        config=experiment_config["experiment"],
+        config=experiment_config,
         logger=logger,
         car=car_logic,
         attacker=attacker,
