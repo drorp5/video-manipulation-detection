@@ -102,13 +102,13 @@ class Experiment:
         if self.config["experiment"]["record_pcap"]:
             tshark_thread = self.start_pcap_recording_thread()
         car_thread = run_thread(self.car.run)
-        # attacker_thread = run_thread(self.attacker.run)
+        attacker_thread = run_thread(self.attacker.run)
 
         threading.Timer(self.config["experiment"]["duration"], self.car.shutdown_event.set).start()
-        # threading.Timer(self.config["experiment"]["duration"], self.attcker.shutdown_event.set).start()
+        threading.Timer(self.config["experiment"]["duration"], self.attacker.shutdown_event.set).start()
         
         # Join threads
-        # attacker_thread.join()
+        attacker_thread.join()
         car_thread.join()
         if self.config["experiment"]["record_pcap"]:
             tshark_thread.join()
