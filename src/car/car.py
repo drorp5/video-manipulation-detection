@@ -8,10 +8,11 @@ from gige.handlers import GigeHandler
 
 class Car(ABC):
     @abstractmethod
-    def __init__(self, logger: Optional[logging.Logger] = None) -> None:
+    def __init__(self, logger: Optional[logging.Logger] = None, external_event: Optional[threading.Event] = None) -> None:
         super().__init__()
         self.logger = logger
         self.shutdown_event = threading.Event()
+        self.external_event = external_event
 
     @abstractmethod
     def _run(self) -> None:

@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 import yaml
 from pathlib import Path
 import numpy as np
@@ -94,11 +95,14 @@ def run_experiment(experiment_config: dict) -> None:
         symbols_for_detection=car_config["validator"]["num_symbols"],
         max_delay=car_config["validator"]["max_delay"],
     )
+    
+    streaming_stopped_event = threading.Event()
     car_logic = ShapeVaryingLogicCar(
         config=experiment_config["car"],
         random_bits_generator=random_bits_generator,
         data_validator=data_validator,
         logger=logger,
+        external_event=streaming_stopped_event
     )
 
     # attacker

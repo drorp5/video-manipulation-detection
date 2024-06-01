@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Optional
 from vimba import *
 
@@ -26,8 +27,9 @@ class ShapeVaryingLogicCar(Car):
         random_bits_generator: RandomBitsGenerator,
         data_validator: DataValidator,
         logger: Optional[logging.Logger] = None,
+        external_event: Optional[threading.Event] = None
     ) -> None:
-        super().__init__(logger)
+        super().__init__(logger, external_event)
         self.config = config
         self.random_bits_generator = random_bits_generator
         self.data_validator = data_validator
@@ -74,3 +76,6 @@ class ShapeVaryingLogicCar(Car):
                 finally:
                     handler.cleanup(cam)
                     cam.stop_streaming()
+                    if self.external_event is not None:
+                        self.external_event.set()
+

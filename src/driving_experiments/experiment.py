@@ -35,8 +35,7 @@ class Experiment:
         self.start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 
         # initialize results directory
-        self.base_results_dir = Path(self.config["results_directory"]) / f"{self.start_time_string}_{self.id}"
-
+        self.base_results_dir = Path(self.config["experiment"]["results_directory"]) / f"{self.start_time_string}_{self.id}"
         self.base_results_dir.mkdir(parents=True)
 
         # save cpnfiguration file
@@ -47,13 +46,13 @@ class Experiment:
         # add logger handlers
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         log_level = self.logger.getEffectiveLevel()
-        if "console" in self.config["log_type"]:
+        if "console" in self.config["experiment"]["log_type"]:
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(log_level)
             console_handler.setFormatter(formatter)
             logger.addHandler(console_handler)
 
-        if "file" in self.config["log_type"]:
+        if "file" in self.config["experiment"]["log_type"]:
             log_path = self.base_results_dir / f"log_{self.id}.log"
             file_handler = logging.FileHandler(log_path.as_posix())
             file_handler.setLevel(log_level)
@@ -61,61 +60,56 @@ class Experiment:
             self.logger.addHandler(file_handler)
 
     def _start_pcap_recording(self) -> None:
-        while not self.pcap_shutdown_event.is_set():
-            pcap_path = self.base_results_dir / f"{self.id}.pcap"
-            cp_ip = self.attacker.cp_ip
-            camera_ip = self.attacker.camera_ip
-            gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
-            tshark_command = [
-                "tshark",
-                "-i",
-                self.attacker.interface,
-                "-w",
-                pcap_path.absolute().as_posix(),
-                "-f",
-                gvsp_gvcp_filter,
-                "-a",
-                f"duration:{self.config['duration']}",
-            ]
-            # Start the subprocess
-            self.logger.info("Pcap Recording Started")
-            process = subprocess.Popen(
-                tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-            try:
-                # Let tshark run for the specified duration
-                time.sleep(self.config["duration"])
-            finally:
-                # Terminate tshark process
+        pcap_path = self.base_results_dir / f"{self.id}.pcap"
+        cp_ip = self.attacker.cp_ip
+        camera_ip = self.attacker.camera_ip
+        gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
+        tshark_command = [
+            "tshark",
+            "-i",
+            self.attacker.interface,
+            "-w",
+            pcap_path.absolute().as_posix(),
+            "-f",
+            gvsp_gvcp_filter
+        ]
+
+        # Start the subprocess
+        self.logger.info("Pcap Recording Started")
+        process = subprocess.Popen(tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        try:
+            # Wait for the subprocess to finish or for the shutdown event to be set
+            while process.poll() is None:
+                if self.pcap_shutdown_event.wait(timeout=1):  # Wait for 1 second or event set
+                    process.terminate()  # Terminate the process if shutdown event is set
+                    process.wait()  # Wait for the process to terminate
+                    break
+        finally:
+            # Ensure the process is terminated if the function exits for any reason
+            if process.poll() is None:
                 process.terminate()
-                self.logger.info("Pcap Recording Terminated")
-                stdout, stderr = process.communicate()
-                if process.returncode == 0:
-                    self.logger.info("Tshark Output:", stdout.decode("utf-8"))
-                else:
-                    self.logger.error("Tshark Error:", stderr.decode("utf-8"))
+                process.wait()
+        self.logger.info("Pcap Recording Stopped")
 
     def start_pcap_recording_thread(self):
-        self.pcap_shutdown_event = threading.Event()
+        self.pcap_shutdown_event = self.car.external_event
         thread = threading.Thread(target=self._start_pcap_recording)
         thread.start()
         return thread
 
     def run(self):
-        if self.config["record_pcap"]:
+        if self.config["experiment"]["record_pcap"]:
             tshark_thread = self.start_pcap_recording_thread()
         car_thread = run_thread(self.car.run)
-        attacker_thread = run_thread(self.attacker.run)
+        # attacker_thread = run_thread(self.attacker.run)
 
-        time.sleep(self.config["duration"])
-
-        if self.config["record_pcap"]:
-            self.pcap_shutdown_event.set()
-        self.car.shutdown_event.set()
-        self.attacker.shutdown_event.set()
-
+        threading.Timer(self.config["experiment"]["duration"], self.car.shutdown_event.set).start()
+        # threading.Timer(self.config["experiment"]["duration"], self.attcker.shutdown_event.set).start()
+        
         # Join threads
-        if self.config["record_pcap"]:
-            tshark_thread.join()
-        attacker_thread.join()
+        # attacker_thread.join()
         car_thread.join()
+        if self.config["experiment"]["record_pcap"]:
+            tshark_thread.join()
+        
