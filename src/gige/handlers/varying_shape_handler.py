@@ -48,14 +48,15 @@ class VaryingShapeHandler(SignDetectorHandler):
         with cam:
             img = self.get_rgb_image(cam, frame)
             if img is not None:
+                frame_id = frame.get_id()
                 # read data of current image
                 if self.shape_changed:
                     # height = frame.get_height()
                     width = frame.get_width()
                     received_symbol = self.encoder_decoder.encode(width)
                     validation_result = self.data_validator.validate(received_symbol)
-                    self.log(f"Frame #{frame.get_id()}: {width} -> {validation_result}")
-
+                    self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
+                    
                 if self.view:
                     try:
                         self.plot(img, cam)
@@ -67,7 +68,7 @@ class VaryingShapeHandler(SignDetectorHandler):
                 symbol = next(self.random_bits_generator)
                 new_width = self.encoder_decoder.decode(symbol=symbol)
                 self.log(
-                    f"#{frame.get_id()}: Setting next frame width = {new_width}",
+                    f"Frame # {frame_id}: Setting next frame width = {new_width}",
                     log_level=logging.DEBUG,
                 )
                 cam.Width.set(new_width)
