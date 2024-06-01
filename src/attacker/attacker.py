@@ -48,16 +48,13 @@ class GigEAttacker(ABC):
             self.attack()
 
     def run_post_attack_stage(self) -> None:
-        sleep(self.config["timing"]["post_attack_duration_in_seconds"])
+        while self.shutdown_event.wait(1):
+            pass
 
-    def _run(self):
+    def run(self):
         self.run_pre_attack_stage()
         self.run_attack_stage()
         self.run_post_attack_stage()
-
-    def run(self) -> None:
-        while not self.shutdown_event.is_set():
-            self._run()
 
     @property
     def cp_ip(self) -> str:
