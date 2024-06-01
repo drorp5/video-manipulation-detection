@@ -220,7 +220,6 @@ class ConfigGUI:
         new_config = self.get_entries(self.config, "")
         with open("config_updated.yaml", "w") as file:
             yaml.safe_dump(new_config, file)
-        print("Configuration saved!")
 
     def run_experiment(self):
         if not self.validate_duration():
