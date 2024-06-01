@@ -19,7 +19,6 @@ from active_manipulation_detectors.evaluation.mtsd_evaluation import (
     resize_bounding_box,
 )
 from active_manipulation_detectors.evaluation.metadata import DATASET_TO_TARGET_OBJECT
-from utils.injection import Rectangle
 
 
 def run_experiment_using_config_path(config_path: Path) -> None:
@@ -104,7 +103,7 @@ def run_experiment(experiment_config: dict) -> None:
 
     # attacker
     fill_attacker_config(experiment_config)
-    attacker = GigEAttackerStripeInjection(experiment_config["attacker"])
+    attacker = GigEAttackerStripeInjection(experiment_config["attacker"], logger=logger)
 
     # set experiment
     experiment = Experiment(

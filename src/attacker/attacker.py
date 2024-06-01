@@ -1,5 +1,8 @@
 from time import sleep, time
 from abc import ABC, abstractmethod
+import threading
+import logging
+from typing import Optional
 
 from manipultation_utils import GigELink
 
@@ -8,8 +11,11 @@ class GigEAttacker(ABC):
     def __init__(
         self,
         config: dict,
+        logger: Optional[logging.Logger] = None
     ) -> None:
         self.config = config
+        self.shutdown_event = threading.Event()
+        self.logger = logger
 
     def set_gige_link(self) -> None:
         self.gige_link = GigELink(
@@ -20,28 +26,38 @@ class GigEAttacker(ABC):
             img_height=self.config["gige"]["gvsp"]["height"],
             max_payload_bytes=self.config["gige"]["gvsp"]["max_payload_bytes"],
         )
+        self.log('Sniffing link parameters')
         self.gige_link.sniff_link_parameters()
+        self.log(self.gige_link.get_summary(), log_level=logging.DEBUG)
 
     def run_pre_attack_stage(self) -> None:
-        sleep(self.config["timing"]["pre_attack_duration_in_seconds"])
+        waiting_time = self.config["timing"]["pre_attack_duration_in_seconds"]
+        self.log('Attacking Pre stage - waiting for {waiting_time} seconds', log_level=logging.DEBUG)
+        sleep(waiting_time)
 
     @abstractmethod
     def attack(self) -> None:
         raise NotImplementedError
 
     def run_attack_stage(self) -> None:
+        self.log('Starting attack stage') 
         start_time = time()
         self.set_gige_link()
         while time() - start_time < self.config["timing"]["attack_duration_in_seconds"]:
+            self.log('Attacking', log_level=logging.DEBUG)
             self.attack()
 
     def run_post_attack_stage(self) -> None:
-        sleep(self.post_attack_duration_in_seconds)
+        sleep(self.config["timing"]["post_attack_duration_in_seconds"])
 
-    def run(self):
+    def _run(self):
         self.run_pre_attack_stage()
         self.run_attack_stage()
         self.run_post_attack_stage()
+
+    def run(self) -> None:
+        while not self.shutdown_event.is_set():
+            self._run()
 
     @property
     def cp_ip(self) -> str:
@@ -54,3 +70,21 @@ class GigEAttacker(ABC):
     @property
     def interface(self) -> str:
         return self.config["gige"]["interface"]
+    
+    def log(self, msg, log_level=logging.INFO):
+        if self.logger is None:
+            print(msg)
+            return
+        if log_level == logging.DEBUG:
+            self.logger.debug(msg)
+        elif log_level == logging.INFO:
+            self.logger.info(msg)
+        elif log_level == logging.WARNING:
+            self.logger.warning(msg)
+        elif log_level == logging.ERROR:
+            self.logger.error(msg)
+        elif log_level == logging.CRITICAL:
+            self.logger.critical(msg)
+        else:
+            raise ValueError(f"Invalid log level: {log_level}")
+

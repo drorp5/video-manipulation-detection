@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import uuid4
 import time
-import multiprocessing
+import threading
 import subprocess
 from datetime import datetime
 import yaml
@@ -12,11 +12,10 @@ from attacker import GigEAttacker
 from car import Car
 
 
-def run_process(func):
-    process = multiprocessing.Process(target=func)
-    process.start()
-    return process
-
+def run_thread(func):
+    thread = threading.Thread(target=func)
+    thread.start()
+    return thread
 
 class Experiment:
     def __init__(
@@ -61,55 +60,62 @@ class Experiment:
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
 
-    def start_pcap_recording(self) -> None:
-        pcap_path = self.base_results_dir / f"{self.id}.pcap"
-        cp_ip = self.attacker.cp_ip
-        camera_ip = self.attacker.camera_ip
-        # gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
-        gvsp_gvcp_filter = f"host {camera_ip}) and host {cp_ip}"
-        tshark_command = [
-            "tshark",
-            "-i",
-            self.attacker.interface,
-            "-w",
-            pcap_path.absolute().as_posix(),
-            "-f",
-            gvsp_gvcp_filter,
-            "-a",
-            f"duration:{self.config['duration']}",
-        ]
-        # Start the subprocess
-        self.logger.info("Pcap Recording Started")
-        process = subprocess.Popen(
-            tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        try:
-            # Let tshark run for the specified duration
-            time.sleep(self.config["duration"])
-        finally:
-            # Terminate tshark process
-            process.terminate()
-            self.logger.info("Pcap Recording Terminated")
-            stdout, stderr = process.communicate()
-            if process.returncode == 0:
-                self.logger.info("Tshark Output:", stdout.decode("utf-8"))
-            else:
-                self.logger.error("Tshark Error:", stderr.decode("utf-8"))
+    def _start_pcap_recording(self) -> None:
+        while not self.pcap_shutdown_event.is_set():
+            pcap_path = self.base_results_dir / f"{self.id}.pcap"
+            cp_ip = self.attacker.cp_ip
+            camera_ip = self.attacker.camera_ip
+            gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
+            tshark_command = [
+                "tshark",
+                "-i",
+                self.attacker.interface,
+                "-w",
+                pcap_path.absolute().as_posix(),
+                "-f",
+                gvsp_gvcp_filter,
+                "-a",
+                f"duration:{self.config['duration']}",
+            ]
+            # Start the subprocess
+            self.logger.info("Pcap Recording Started")
+            process = subprocess.Popen(
+                tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            try:
+                # Let tshark run for the specified duration
+                time.sleep(self.config["duration"])
+            finally:
+                # Terminate tshark process
+                process.terminate()
+                self.logger.info("Pcap Recording Terminated")
+                stdout, stderr = process.communicate()
+                if process.returncode == 0:
+                    self.logger.info("Tshark Output:", stdout.decode("utf-8"))
+                else:
+                    self.logger.error("Tshark Error:", stderr.decode("utf-8"))
+
+    def start_pcap_recording_thread(self):
+        self.pcap_shutdown_event = threading.Event()
+        thread = threading.Thread(target=self._start_pcap_recording)
+        thread.start()
+        return thread
 
     def run(self):
         if self.config["record_pcap"]:
-            tshark_process = run_process(self.start_pcap_recording)
-        car_process = run_process(self.car.run)
-        attaker_process = run_process(self.attacker.run)
+            tshark_thread = self.start_pcap_recording_thread()
+        car_thread = run_thread(self.car.run)
+        attacker_thread = run_thread(self.attacker.run)
 
         time.sleep(self.config["duration"])
 
         if self.config["record_pcap"]:
-            tshark_process = run_process(self.start_pcap_recording)
-        attaker_process.terminate()
-        car_process.terminate()
+            self.pcap_shutdown_event.set()
+        self.car.shutdown_event.set()
+        self.attacker.shutdown_event.set()
 
-        attaker_process.join()
-        car_process.join()
+        # Join threads
         if self.config["record_pcap"]:
-            tshark_process.join()
+            tshark_thread.join()
+        attacker_thread.join()
+        car_thread.join()

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 import logging
+import threading
 
 from gige.handlers import GigeHandler
 
@@ -10,10 +11,15 @@ class Car(ABC):
     def __init__(self, logger: Optional[logging.Logger] = None) -> None:
         super().__init__()
         self.logger = logger
+        self.shutdown_event = threading.Event()
 
     @abstractmethod
-    def run(self) -> None:
+    def _run(self) -> None:
         pass
+
+    def run(self) -> None:
+        while not self.shutdown_event.is_set():
+            self._run()
 
     @abstractmethod
     def get_handler(self) -> GigeHandler:

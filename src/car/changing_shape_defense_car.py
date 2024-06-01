@@ -45,7 +45,7 @@ class ShapeVaryingLogicCar(Car):
             )
         return handler
         
-    def run(self) -> None:
+    def _run(self) -> None:
         handler = self.get_handler()
         with Vimba.get_instance():
             with get_camera() as cam:

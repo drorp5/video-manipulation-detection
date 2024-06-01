@@ -27,7 +27,7 @@ class VaryingShapeHandler(SignDetectorHandler):
         logger: Optional[logging.Logger] = None,
         downfactor: int = 4,
         sign_detector: Optional[StopSignDetector] = None,
-        view: bool = False
+        view: bool = True
     ) -> None:
         super().__init__(logger=logger, downfactor=downfactor, detector=sign_detector)
         self.height_values = [MAX_HEIGHT - increment * ind for ind in range(num_levels)]

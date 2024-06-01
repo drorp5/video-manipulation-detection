@@ -177,6 +177,9 @@ class GigELink:
             f"Camera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})"
         )
 
+    def get_summary(self) -> str:
+        return f"GVCP:\nCP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({Ports.GVCP_DST.value})\nGVSP:\nCamera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})"
+
     def _get_writereg_cmd(self, address: int, value: int, ack_required: bool = False):
         flags = 0x01 if ack_required else 0x00
         request_id = random.randint(a=1, b=0xFFFF)

@@ -131,7 +131,7 @@ class ConfigGUI:
                     button.pack(side="left")
                 elif key == "detector":
                     options = ["null", "Haar", "Yolo", "MobileNet"]
-                    var = tk.StringVar(value="null")  # Default to "null"
+                    var = tk.StringVar(value=value)  # Default to "null"
                     combobox = ttk.Combobox(frame, textvariable=var, values=options)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
