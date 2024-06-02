@@ -416,6 +416,7 @@ class GigELink:
             iface=self.interface,
             verbose=False,
             realtime=True,
+            count=count,
         )
         return future_id
 
