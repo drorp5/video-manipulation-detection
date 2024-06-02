@@ -82,6 +82,9 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
     with cam:
         # Enable auto exposure time setting if camera supports it
         try:
+            if fps_val is not None:
+                max_exposure_time_in_microseconds = int(1/fps_val * 1e6)
+                cam.ExposureAutoMax.set(max_exposure_time_in_microseconds)
             cam.ExposureAuto.set('Continuous')
         except (AttributeError, VimbaFeatureError):
                 pass
