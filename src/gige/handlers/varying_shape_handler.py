@@ -56,13 +56,15 @@ class VaryingShapeHandler(SignDetectorHandler):
                     received_symbol = self.encoder_decoder.encode(width)
                     validation_result = self.data_validator.validate(received_symbol)
                     self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
-                    
-                if self.view:
-                    try:
-                        self.plot(img, cam)
-                    except Exception as e:
-                        self.log(e, logging.ERROR)
-                        pass
+                
+                if self.detector is not None or self.view:
+                    img = self.resize_for_detection(img)
+                    if self.detector is not None:
+                        detections = self.detect_objects_in_image(img)
+                        if len(detections) > 0:
+                            self.log(f"DETECTIONS: {detections.__str__()}")
+                    if self.view:
+                        self.plot_detected(img, cam, detections)
 
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)

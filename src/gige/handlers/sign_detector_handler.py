@@ -1,5 +1,5 @@
 from logging import Logger
-from typing import Optional
+from typing import List, Optional, Tuple
 import cv2
 import numpy as np
 from vimba import Camera, Frame
@@ -24,14 +24,20 @@ class SignDetectorHandler(ViewerHandler):
         super().__init__(logger=logger, downfactor=downfactor)
         self.detector = detector
 
-    def detect_objects_in_image(self, img: np.ndarray) -> np.ndarray:
-        detections = self.detector.detect(img)
-        img = draw_bounding_boxes(img, detections)
-        return img
-
-    def plot(self, img: np.ndarray, cam: Camera) -> None:
-        img = self.resize_image(img)
+    def resize_for_detection(self, img: np.ndarray) -> np.ndarray:
+        return  self.resize_image(img)
+    
+    def detect_objects_in_image(self, img: np.ndarray) -> Optional[List[np.ndarray]]:
         if self.detector is not None:
-            img = self.detect_objects_in_image(img)
+            return self.detector.detect(img)
+    
+    def plot_detected(self, img: np.ndarray, cam: Camera, detections: Optional[List[np.ndarray]]=None):
+        if detections is not None:
+            img = draw_bounding_boxes(img, detections)
         window_name = f"Stream from '{cam.get_name()}'. Press <Enter> to stop stream."
         cv2.imshow(window_name, img)
+
+    def plot(self, img: np.ndarray, cam: Camera) -> None:
+        img = self.resize_for_detection(img)
+        detections = self.detect_objects_in_image(img)
+        self.plot_detected(img, cam, detections)
