@@ -71,7 +71,9 @@ class Experiment:
             "-w",
             pcap_path.absolute().as_posix(),
             "-f",
-            gvsp_gvcp_filter
+            gvsp_gvcp_filter,
+            "-B",
+            5,
         ]
 
         # Start the subprocess
