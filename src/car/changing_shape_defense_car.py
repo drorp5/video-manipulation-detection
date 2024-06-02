@@ -27,9 +27,9 @@ class ShapeVaryingLogicCar(Car):
         random_bits_generator: RandomBitsGenerator,
         data_validator: DataValidator,
         logger: Optional[logging.Logger] = None,
-        external_event: Optional[threading.Event] = None
-    ) -> None:
-        super().__init__(logger, external_event)
+        camera_started_event: Optional[threading.Event] = None,
+        camera_stopped_event: Optional[threading.Event] = None) -> None:
+        super().__init__(logger=logger, camera_started_event=camera_started_event, camera_stopped_event=camera_stopped_event)
         self.config = config
         self.random_bits_generator = random_bits_generator
         self.data_validator = data_validator
@@ -66,6 +66,8 @@ class ShapeVaryingLogicCar(Car):
                         handler=handler,
                         buffer_count=self.config["camera"]["streaming_buffer"],
                     )
+                    if self.camera_started_event is not None:
+                        self.camera_started_event.set()
                     handler.shutdown_event.wait(self.config["duration"])
                     self.log(
                         f"Shutting down camera",
@@ -76,6 +78,6 @@ class ShapeVaryingLogicCar(Car):
                 finally:
                     handler.cleanup(cam)
                     cam.stop_streaming()
-                    if self.external_event is not None:
-                        self.external_event.set()
+                    if self.camera_stopped_event is not None:
+                        self.camera_stopped_event.set()
 

@@ -11,11 +11,13 @@ class GigEAttacker(ABC):
     def __init__(
         self,
         config: dict,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
+        initialization_event: Optional[threading.Event] = None
     ) -> None:
         self.config = config
         self.shutdown_event = threading.Event()
         self.logger = logger
+        self.initialization_event = initialization_event
 
     def set_gige_link(self) -> None:
         self.gige_link = GigELink(
@@ -31,6 +33,8 @@ class GigEAttacker(ABC):
         self.log(self.gige_link.get_summary(), log_level=logging.DEBUG)
 
     def run_pre_attack_stage(self) -> None:
+        if self.initialization_event is not None:
+            self.initialization_event.wait()
         waiting_time = self.config["timing"]["pre_attack_duration_in_seconds"]
         self.log(f'Attacking Pre stage - waiting for {waiting_time} seconds', log_level=logging.DEBUG)
         sleep(waiting_time)

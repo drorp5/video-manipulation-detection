@@ -13,7 +13,7 @@ from active_manipulation_detectors.side_channel.data_generator import (
 from active_manipulation_detectors.side_channel.validation import (
     DataValidatorKSymbolsDelayed,
 )
-from attacker import GigEAttackerStripeInjection
+from attacker import GigEAttackerStripeInjection, GigEAttackerFrameInjection
 from driving_experiments.experiment import Experiment
 from active_manipulation_detectors.evaluation.mtsd_evaluation import (
     get_largest_bounding_box,
@@ -94,18 +94,21 @@ def run_experiment(experiment_config: dict) -> None:
         max_delay=car_config["validator"]["max_delay"],
     )
     
-    streaming_stopped_event = threading.Event()
+    camera_started_event = threading.Event()
+    camera_stopped_event = threading.Event()
     car_logic = ShapeVaryingLogicCar(
         config=experiment_config["car"],
         random_bits_generator=random_bits_generator,
         data_validator=data_validator,
         logger=logger,
-        external_event=streaming_stopped_event
+        camera_started_event=camera_started_event,
+        camera_stopped_event=camera_stopped_event
     )
 
     # attacker
     fill_attacker_config(experiment_config)
-    attacker = GigEAttackerStripeInjection(experiment_config["attacker"], logger=logger)
+    # attacker = GigEAttackerStripeInjection(experiment_config["attacker"], logger=logger, initialization_event=camera_started_event)
+    attacker = GigEAttackerFrameInjection(experiment_config["attacker"], logger=logger, initialization_event=camera_started_event)
 
     # set experiment
     experiment = Experiment(
