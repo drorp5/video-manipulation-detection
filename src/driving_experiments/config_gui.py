@@ -1,7 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import yaml
+
 from driving_experiments.run_experiment import run_experiment
+from attacker import Attackers
 
 # Define float keys globally
 INT_KEYS = {
@@ -131,6 +133,12 @@ class ConfigGUI:
                 elif key == "detector":
                     options = ["null", "Haar", "Yolo", "MobileNet"]
                     var = tk.StringVar(value=value)  # Default to "null"
+                    combobox = ttk.Combobox(frame, textvariable=var, values=options)
+                    combobox.pack(side="top", fill="x", expand=True, anchor="w")
+                    self.entries[current_key] = var
+                elif key == "attack_type":
+                    options = list(Attackers.keys())
+                    var = tk.StringVar(value=value)
                     combobox = ttk.Combobox(frame, textvariable=var, values=options)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
