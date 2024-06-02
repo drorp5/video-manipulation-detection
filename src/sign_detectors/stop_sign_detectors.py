@@ -45,7 +45,7 @@ class StopSignDetector(ABC):
         return all_detections
 
 
-def draw_bounding_boxes(img, bounding_boxes):
+def draw_bounding_boxes(img: np.ndarray, bounding_boxes: List[np.ndarray]) -> np.ndarray:
     for x, y, w, h in bounding_boxes:
         cv2.rectangle(
             img,
