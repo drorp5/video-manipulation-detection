@@ -394,9 +394,7 @@ class GigELink:
 
         return gvsp_packets
 
-    def inject_gvsp_packets(
-        self, gvsp_packets: PacketList, future_id_diff: int = 10, count: int = 100
-    ) -> int:
+    def sniff_block_id(self) -> None:
         print("Sniffing for blockID")
         sniff(
             iface=self.interface,
@@ -406,11 +404,12 @@ class GigELink:
             store=0,
             timeout=1,
         )
-        # modify block id to future one
-        future_id = future_id_diff + self.last_block_id
-        print(f"Injecting stripe with blockID={future_id}")
+
+    def inject_gvsp_packets(
+        self, gvsp_packets: PacketList, block_id: int, count: int = 100
+    ) -> None:
         for pkt in gvsp_packets:
-            pkt[Layers.GVSP.value].BlockID = future_id
+            pkt[Layers.GVSP.value].BlockID = block_id
         sendp(
             gvsp_packets,
             iface=self.interface,
@@ -418,7 +417,6 @@ class GigELink:
             realtime=True,
             count=count,
         )
-        return future_id
 
     def get_stripe_gvsp_packets(
         self,
@@ -464,10 +462,38 @@ class GigELink:
         stripe_packets = self.get_stripe_gvsp_packets(
             img_path, first_row, num_rows, block_id=0
         )
-        injected_id = self.inject_gvsp_packets(
-            stripe_packets, future_id_diff=future_id_diff, count=count
-        )
+        self.sniff_block_id()
+        injected_id = self.last_block_id + future_id_diff
+        self.inject_gvsp_packets(stripe_packets, block_id=injected_id, count=count)
         return injected_id
+
+    def inject_stripe_consecutive_frames(
+        self,
+        img_path: str,
+        first_row: int,
+        num_rows: int,
+        fps: float,
+        injection_duration: float,
+        future_id_diff: int = 10,
+        count: int = 100,
+    ):
+        stripe_packets = self.get_stripe_gvsp_packets(
+            img_path, first_row, num_rows, block_id=0
+        )
+        num_injections = int(np.ceil(fps * injection_duration))
+        frame_duration = 1 / fps
+        self.sniff_block_id()
+        first_injected_id = self.last_block_id + future_id_diff
+        print(
+            f"Attempting stripe injection for frames {first_injected_id} - {first_injected_id + num_injections - 1}"
+        )
+        for injection_ind in range(num_injections):
+            start_time = time.time()
+            self.inject_gvsp_packets(
+                stripe_packets, block_id=first_injected_id + injection_ind, count=count
+            )
+            end_time = time.time()
+            time.sleep(min(0, frame_duration - (end_time - start_time)))
 
     def fake_still_image(
         self,
@@ -478,15 +504,7 @@ class GigELink:
     ):
         # TODO: read register to get fps
         timeout = 1  # seconds
-        print("Sniffing for blockID")
-        sniff(
-            iface=self.interface,
-            filter="udp",
-            prn=self.callback_update_block_id,
-            stop_filter=self.sniffing_for_trailer_filter,
-            store=0,
-            timeout=1,
-        )
+        self.sniff_block_id()
         print("BlockID found")
         print(f"Stopping acquisition for {duration} seconds with still image")
         self.send_stop_command(count=1)
