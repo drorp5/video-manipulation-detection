@@ -31,12 +31,10 @@ def run_experiment_using_config_path(config_path: Path) -> None:
 def fill_attacker_config(config: dict) -> None:
     if config["attacker"]["timing"]["pre_attack_duration_in_seconds"] is None:
         config["attacker"]["timing"]["pre_attack_duration_in_seconds"] = 0
-    if config["attacker"]["timing"]["post_attack_duration_in_seconds"] is None:
-        config["attacker"]["timing"]["post_attack_duration_in_seconds"] = 0
-    config["attacker"]["timing"]["attack_duration_in_seconds"] = (
+    if config["attacker"]["timing"]["attack_duration_in_seconds"] is None:
+        config["attacker"]["timing"]["attack_duration_in_seconds"] = (
         config["experiment"]["duration"]
         - config["attacker"]["timing"]["pre_attack_duration_in_seconds"]
-        - config["attacker"]["timing"]["post_attack_duration_in_seconds"]
     )
     if config["attacker"]["injection"]["fake_path"] is None:
         # draw randomly from dir

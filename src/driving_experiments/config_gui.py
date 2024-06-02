@@ -17,7 +17,6 @@ INT_KEYS = {
 FLOAT_KEYS = {
     "duration",
     "pre_attack_duration_in_seconds",
-    "post_attack_duration_in_seconds",
     "attack_duration_in_seconds",
     "ampiric_frame_time_in_seconds"
 }
@@ -147,7 +146,6 @@ class ConfigGUI:
                     if current_key in {
                         "experiment.duration",
                         "attacker.timing.pre_attack_duration_in_seconds",
-                        "attacker.timing.post_attack_duration_in_seconds",
                     }:
                         var.trace("w", self.sync_duration)
                     entry = ttk.Entry(frame, textvariable=var)
@@ -156,39 +154,13 @@ class ConfigGUI:
 
                     if current_key == "car.duration":
                         entry.config(state="disabled")
-                    if current_key == "attacker.timing.attack_duration_in_seconds":
-                        entry.config(state="disabled")
 
     def sync_duration(self, *args):
         experiment_duration_key = "experiment.duration"
         car_duration_key = "car.duration"
-        pre_attack_duration_key = "attacker.timing.pre_attack_duration_in_seconds"
-        post_attack_duration_key = "attacker.timing.post_attack_duration_in_seconds"
-        attack_duration_key = "attacker.timing.attack_duration_in_seconds"
-
         if experiment_duration_key in self.entries:
             experiment_duration = self.entries[experiment_duration_key].get()
             self.entries[car_duration_key].set(experiment_duration)
-
-        if (
-            experiment_duration_key in self.entries
-            and pre_attack_duration_key in self.entries
-            and post_attack_duration_key in self.entries
-        ):
-            experiment_duration = self.entries[experiment_duration_key].get()
-            pre_attack_duration = self.entries[pre_attack_duration_key].get()
-            post_attack_duration = self.entries[post_attack_duration_key].get()
-
-            if experiment_duration and pre_attack_duration and post_attack_duration:
-                try:
-                    attack_duration = (
-                        float(experiment_duration)
-                        - float(pre_attack_duration)
-                        - float(post_attack_duration)
-                    )
-                    self.entries[attack_duration_key].set(str(attack_duration))
-                except ValueError:
-                    self.entries[attack_duration_key].set("")
 
     def browse(self, var, key):
         if key == "fake_path":

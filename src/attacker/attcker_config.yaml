@@ -1,7 +1,6 @@
 timing:
   pre_attack_duration_in_seconds: null
   attack_duration_in_seconds: null
-  post_attack_duration_in_seconds: null
   ampiric_frame_time_in_seconds: 0.13
 gige:
   interface: "Ethernet 6"

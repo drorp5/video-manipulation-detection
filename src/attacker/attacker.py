@@ -32,7 +32,7 @@ class GigEAttacker(ABC):
 
     def run_pre_attack_stage(self) -> None:
         waiting_time = self.config["timing"]["pre_attack_duration_in_seconds"]
-        self.log('Attacking Pre stage - waiting for {waiting_time} seconds', log_level=logging.DEBUG)
+        self.log(f'Attacking Pre stage - waiting for {waiting_time} seconds', log_level=logging.DEBUG)
         sleep(waiting_time)
 
     @abstractmethod
@@ -47,14 +47,9 @@ class GigEAttacker(ABC):
             self.log('Attacking', log_level=logging.DEBUG)
             self.attack()
 
-    def run_post_attack_stage(self) -> None:
-        while self.shutdown_event.wait(1):
-            pass
-
     def run(self):
         self.run_pre_attack_stage()
         self.run_attack_stage()
-        self.run_post_attack_stage()
 
     @property
     def cp_ip(self) -> str:
