@@ -142,9 +142,20 @@ class Experiment:
                     unique_frames.add(int(match))
         return len(unique_frames)
 
+    def get_number_of_detections_frames(self) -> int:
+        if not self.log_path.exists():
+            raise FileNotFoundError
+        detections = 0
+        with open(self.log_path.as_posix(), "r") as log_file:
+            for line in log_file:
+                if "DETECTIONS" in line:
+                    detections += 1
+        return detections
+
     def summarize_log_file(self) -> str:
         try:
             unique_frames = self.get_number_of_logged_frames()
+            detections_frames = self.get_number_of_detections_frames()
         except FileNotFoundError:
             return "Log Not Found"
 
@@ -154,5 +165,7 @@ class Experiment:
                 * self.config["car"]["camera"]["fps"]
             )
         )
-        summary = f"# Expected Frames = {expected_number_of_frames}\n# Logged Frames = {len(unique_frames)}"
+        summary = f"# Expected Frames = {expected_number_of_frames}\n"
+        summary += f"Logged Frames = {unique_frames}\n"
+        summary += f"Detections Frames = {detections_frames}\n"
         return summary
