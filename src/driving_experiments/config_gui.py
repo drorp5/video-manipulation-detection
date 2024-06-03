@@ -74,11 +74,17 @@ class ConfigGUI:
         )
         run_button.pack(pady=5)
 
-        # Validate experiment button
+        # Validate experiment recording button
         validate_button = ttk.Button(
-            root, text="Validate Experiment", command=self.validate_experiment
+            root, text="Validate Experiment Pcap", command=self.validate_experient_pcap
         )
         validate_button.pack(pady=5)
+
+        # log summary button
+        log_button = ttk.Button(
+            root, text="Show Log Summary", command=self.show_log_summary
+        )
+        log_button.pack(pady=5)
 
         # Configure canvas scrolling
         self.canvas.bind("<Configure>", self.on_canvas_configure)
@@ -218,12 +224,18 @@ class ConfigGUI:
         new_config = self.get_entries(self.config, "")
         self._experiment = run_experiment(new_config)
 
-    def validate_experiment(self):
+    def validate_experient_pcap(self):
         parser = GvspPcapParser(self._experiment.pcap_path)
         frames_statistics = parser.get_frames_statistics()
         messagebox.showinfo(
             "Experiment Recording Statistics",
             str(frames_statistics),
+        )
+
+    def show_log_summary(self):
+        messagebox.showinfo(
+            "Experiment Log File",
+            str(self._experiment.summarize_log_file()),
         )
 
     def get_entries(self, config, parent_key):

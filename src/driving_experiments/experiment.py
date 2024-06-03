@@ -1,4 +1,6 @@
+import math
 from pathlib import Path
+import re
 from uuid import uuid4
 import time
 import threading
@@ -57,8 +59,8 @@ class Experiment:
             logger.addHandler(console_handler)
 
         if "file" in self.config["experiment"]["log_type"]:
-            log_path = self.base_results_dir / f"log_{self.id}.log"
-            file_handler = logging.FileHandler(log_path.as_posix())
+            self.log_path = self.base_results_dir / f"log_{self.id}.log"
+            file_handler = logging.FileHandler(self.log_path.as_posix())
             file_handler.setLevel(log_level)
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
@@ -126,3 +128,31 @@ class Experiment:
         car_thread.join()
         if self.config["experiment"]["record_pcap"]:
             tshark_thread.join()
+
+    def get_number_of_logged_frames(self) -> int:
+        if not self.log_path.exists():
+            raise FileNotFoundError
+
+        unique_frames = set()
+        frame_id_regex = r"Frame # (\d+)"
+        with open(self.log_path.as_posix(), "r") as log_file:
+            for line in log_file:
+                matches = re.findall(frame_id_regex, line)
+                for match in matches:
+                    unique_frames.add(int(match))
+        return len(unique_frames)
+
+    def summarize_log_file(self) -> str:
+        try:
+            unique_frames = self.get_number_of_logged_frames()
+        except FileNotFoundError:
+            return "Log Not Found"
+
+        expected_number_of_frames = int(
+            math.ceil(
+                self.config["experiment"]["duration"]
+                * self.config["car"]["camera"]["fps"]
+            )
+        )
+        summary = f"# Expected Frames = {expected_number_of_frames}\n# Logged Frames = {len(unique_frames)}"
+        return summary
