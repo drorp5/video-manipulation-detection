@@ -84,7 +84,7 @@ class Experiment:
             "-f",
             gvsp_gvcp_filter,
             "-B",
-            5,
+            "5",
         ]
 
         # Start the subprocess
@@ -110,7 +110,7 @@ class Experiment:
         self.logger.info("Pcap Recording Stopped")
 
     def start_pcap_recording_thread(self):
-        self.pcap_shutdown_event = self.car.external_event
+        self.pcap_shutdown_event = self.car.camera_started_event
         thread = threading.Thread(target=self._start_pcap_recording)
         thread.start()
         return thread

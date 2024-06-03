@@ -7,7 +7,7 @@ car:
   duration: null
   camera:
     streaming_buffer: 1
-    fps: 20
+    fps: 5
   actions:
     viewer: null
     detector: null
@@ -44,5 +44,5 @@ attacker:
     stripe:
       first_row: null
       num_rows: null
-      future_id_diff: 1
-      count: 5
+      future_id_diff: 2
+      count: 3

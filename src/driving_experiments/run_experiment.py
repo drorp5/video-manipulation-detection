@@ -30,6 +30,7 @@ def run_experiment_using_config_path(config_path: Path) -> None:
 
 
 def fill_attacker_config(config: dict) -> None:
+    config["attacker"]["timing"]["fps"] = config["car"]["camera"]["fps"]
     if config["attacker"]["timing"]["pre_attack_duration_in_seconds"] is None:
         config["attacker"]["timing"]["pre_attack_duration_in_seconds"] = 0
     if config["attacker"]["timing"]["attack_duration_in_seconds"] is None:

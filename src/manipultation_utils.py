@@ -489,11 +489,16 @@ class GigELink:
         )
         for injection_ind in range(num_injections):
             start_time = time.time()
+            print(f"Injecting stripe to {first_injected_id + injection_ind}")
             self.inject_gvsp_packets(
                 stripe_packets, block_id=first_injected_id + injection_ind, count=count
             )
             end_time = time.time()
-            time.sleep(min(0, frame_duration - (end_time - start_time)))
+            print(f"Insertion took {end_time - start_time} seconds")
+            time.sleep(max(0, frame_duration - (end_time - start_time)))
+        print(
+            f"Attack finished"
+        )
 
     def fake_still_image(
         self,
@@ -532,7 +537,7 @@ class GigELink:
             iteration_ended = time.time()
             iteration_duration = iteration_ended - itertation_started
             iterations_time.append(iteration_duration)
-            time.sleep(min(0, 1 / fps - iteration_duration))
+            time.sleep(max(0, 1 / fps - iteration_duration))
             self.last_block_id = self.last_block_id + 1
 
         aliasing_finished = time.time()
