@@ -17,6 +17,7 @@ def run_thread(func):
     thread.start()
     return thread
 
+
 class Experiment:
     def __init__(
         self,
@@ -35,7 +36,10 @@ class Experiment:
         self.start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 
         # initialize results directory
-        self.base_results_dir = Path(self.config["experiment"]["results_directory"]) / f"{self.start_time_string}_{self.id}"
+        self.base_results_dir = (
+            Path(self.config["experiment"]["results_directory"])
+            / f"{self.start_time_string}_{self.id}"
+        )
         self.base_results_dir.mkdir(parents=True)
 
         # save cpnfiguration file
@@ -60,7 +64,7 @@ class Experiment:
             self.logger.addHandler(file_handler)
 
     def _start_pcap_recording(self) -> None:
-        pcap_path = self.base_results_dir / f"{self.id}.pcap"
+        self.pcap_path = self.base_results_dir / f"{self.id}.pcap"
         cp_ip = self.attacker.cp_ip
         camera_ip = self.attacker.camera_ip
         gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
@@ -69,7 +73,7 @@ class Experiment:
             "-i",
             self.attacker.interface,
             "-w",
-            pcap_path.absolute().as_posix(),
+            self.pcap_path.absolute().as_posix(),
             "-f",
             gvsp_gvcp_filter,
             "-B",
@@ -78,12 +82,16 @@ class Experiment:
 
         # Start the subprocess
         self.logger.info("Pcap Recording Started")
-        process = subprocess.Popen(tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
+        process = subprocess.Popen(
+            tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+
         try:
             # Wait for the subprocess to finish or for the shutdown event to be set
             while process.poll() is None:
-                if self.pcap_shutdown_event.wait(timeout=1):  # Wait for 1 second or event set
+                if self.pcap_shutdown_event.wait(
+                    timeout=1
+                ):  # Wait for 1 second or event set
                     process.terminate()  # Terminate the process if shutdown event is set
                     process.wait()  # Wait for the process to terminate
                     break
@@ -106,12 +114,15 @@ class Experiment:
         car_thread = run_thread(self.car.run)
         attacker_thread = run_thread(self.attacker.run)
 
-        threading.Timer(self.config["experiment"]["duration"], self.car.shutdown_event.set).start()
-        threading.Timer(self.config["experiment"]["duration"], self.attacker.shutdown_event.set).start()
-        
+        threading.Timer(
+            self.config["experiment"]["duration"], self.car.shutdown_event.set
+        ).start()
+        threading.Timer(
+            self.config["experiment"]["duration"], self.attacker.shutdown_event.set
+        ).start()
+
         # Join threads
         attacker_thread.join()
         car_thread.join()
         if self.config["experiment"]["record_pcap"]:
             tshark_thread.join()
-        

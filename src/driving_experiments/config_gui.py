@@ -4,6 +4,9 @@ import yaml
 
 from driving_experiments.run_experiment import run_experiment
 from attacker import Attackers
+from driving_experiments.experiment import Experiment
+from gige import FramesStatistics, GvspPcapParser
+from gige.pcap import PcapParser
 
 # Define float keys globally
 INT_KEYS = {
@@ -13,14 +16,14 @@ INT_KEYS = {
     "first_row",
     "num_rows",
     "future_id_diff",
-    "count"
+    "count",
 }
 
 FLOAT_KEYS = {
     "duration",
     "pre_attack_duration_in_seconds",
     "attack_duration_in_seconds",
-    "ampiric_frame_time_in_seconds"
+    "ampiric_frame_time_in_seconds",
 }
 
 
@@ -71,9 +74,17 @@ class ConfigGUI:
         )
         run_button.pack(pady=5)
 
+        # Validate experiment button
+        validate_button = ttk.Button(
+            root, text="Validate Experiment", command=self.validate_experiment
+        )
+        validate_button.pack(pady=5)
+
         # Configure canvas scrolling
         self.canvas.bind("<Configure>", self.on_canvas_configure)
         self.scrollable_frame.bind("<Configure>", self.on_frame_configure)
+
+        self._experiment = None
 
     def create_widgets(self, config, parent_key, parent_frame):
         for key, value in config.items():
@@ -205,7 +216,15 @@ class ConfigGUI:
         if not self.validate_duration():
             return
         new_config = self.get_entries(self.config, "")
-        run_experiment(new_config)
+        self._experiment = run_experiment(new_config)
+
+    def validate_experiment(self):
+        parser = GvspPcapParser(self._experiment.pcap_path)
+        frames_statistics = parser.get_frames_statistics()
+        messagebox.showinfo(
+            "Experiment Recording Statistics",
+            str(frames_statistics),
+        )
 
     def get_entries(self, config, parent_key):
         new_config = {}

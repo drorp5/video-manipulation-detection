@@ -33,9 +33,9 @@ def fill_attacker_config(config: dict) -> None:
         config["attacker"]["timing"]["pre_attack_duration_in_seconds"] = 0
     if config["attacker"]["timing"]["attack_duration_in_seconds"] is None:
         config["attacker"]["timing"]["attack_duration_in_seconds"] = (
-        config["experiment"]["duration"]
-        - config["attacker"]["timing"]["pre_attack_duration_in_seconds"]
-    )
+            config["experiment"]["duration"]
+            - config["attacker"]["timing"]["pre_attack_duration_in_seconds"]
+        )
     if config["attacker"]["injection"]["fake_path"] is None:
         # draw randomly from dir
         fake_dir = Path(config["attacker"]["injection"]["dataset"]["images_dir"])
@@ -74,7 +74,7 @@ def fill_attacker_config(config: dict) -> None:
             )
 
 
-def run_experiment(experiment_config: dict) -> None:
+def run_experiment(experiment_config: dict) -> Experiment:
     # logger
     logger = logging.getLogger(f"experiment_logger")
     log_level = logging.DEBUG
@@ -94,7 +94,7 @@ def run_experiment(experiment_config: dict) -> None:
         symbols_for_detection=car_config["validator"]["num_symbols"],
         max_delay=car_config["validator"]["max_delay"],
     )
-    
+
     camera_started_event = threading.Event()
     camera_stopped_event = threading.Event()
     car_logic = ShapeVaryingLogicCar(
@@ -103,13 +103,17 @@ def run_experiment(experiment_config: dict) -> None:
         data_validator=data_validator,
         logger=logger,
         camera_started_event=camera_started_event,
-        camera_stopped_event=camera_stopped_event
+        camera_stopped_event=camera_stopped_event,
     )
 
     # attacker
     fill_attacker_config(experiment_config)
     attack_type = experiment_config["attacker"]["attack_type"]
-    attacker = Attackers[attack_type](experiment_config["attacker"], logger=logger, initialization_event=camera_started_event)
+    attacker = Attackers[attack_type](
+        experiment_config["attacker"],
+        logger=logger,
+        initialization_event=camera_started_event,
+    )
 
     # set experiment
     experiment = Experiment(
@@ -120,6 +124,8 @@ def run_experiment(experiment_config: dict) -> None:
     )
 
     experiment.run()
+
+    return experiment
 
 
 if __name__ == "__main__":
