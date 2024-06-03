@@ -1,6 +1,7 @@
 import math
 from pathlib import Path
 import re
+from typing import Optional
 from uuid import uuid4
 import time
 import threading
@@ -27,13 +28,17 @@ class Experiment:
         logger: logging.Logger,
         car: Car,
         attacker: GigEAttacker,
+        id: Optional[str] = None,
     ) -> None:
         self.logger = logger
         self.attacker = attacker
         self.car = car
         self.config = config
 
-        self.id = str(uuid4())
+        if id is None:
+            self.id = str(uuid4())
+        else:
+            self.id = id
         now = datetime.now()
         self.start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 

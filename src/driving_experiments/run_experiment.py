@@ -5,6 +5,7 @@ import yaml
 from pathlib import Path
 import numpy as np
 import random
+import uuid
 
 from car.changing_shape_defense_car import ShapeVaryingLogicCar
 from active_manipulation_detectors.side_channel.data_generator import (
@@ -75,8 +76,11 @@ def fill_attacker_config(config: dict) -> None:
 
 
 def run_experiment(experiment_config: dict) -> Experiment:
+    # generte experiment id
+    experiment_id = str(uuid.uuid4())
+
     # logger
-    logger = logging.getLogger(f"experiment_logger")
+    logger = logging.getLogger(experiment_id)
     log_level = logging.DEBUG
     logger.setLevel(log_level)
 
@@ -117,6 +121,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
 
     # set experiment
     experiment = Experiment(
+        id=experiment_id,
         config=experiment_config,
         logger=logger,
         car=car_logic,
