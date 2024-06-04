@@ -1,6 +1,5 @@
 import math
 from pathlib import Path
-import re
 from typing import Optional
 from uuid import uuid4
 import time
@@ -13,6 +12,7 @@ import sys
 
 from attacker import GigEAttacker
 from car import Car
+from driving_experiments.parsers import *
 
 
 def run_thread(func):
@@ -134,33 +134,9 @@ class Experiment:
         if self.config["experiment"]["record_pcap"]:
             tshark_thread.join()
 
-    def get_number_of_logged_frames(self) -> int:
-        if not self.log_path.exists():
-            raise FileNotFoundError
-
-        unique_frames = set()
-        frame_id_regex = r"Frame # (\d+)"
-        with open(self.log_path.as_posix(), "r") as log_file:
-            for line in log_file:
-                matches = re.findall(frame_id_regex, line)
-                for match in matches:
-                    unique_frames.add(int(match))
-        return len(unique_frames)
-
-    def get_number_of_detections_frames(self) -> int:
-        if not self.log_path.exists():
-            raise FileNotFoundError
-        detections = 0
-        with open(self.log_path.as_posix(), "r") as log_file:
-            for line in log_file:
-                if "DETECTIONS" in line:
-                    detections += 1
-        return detections
-
     def summarize_log_file(self) -> str:
         try:
-            unique_frames = self.get_number_of_logged_frames()
-            detections_frames = self.get_number_of_detections_frames()
+            log_summary = summarize_log_file(self.log_path)
         except FileNotFoundError:
             return "Log Not Found"
 
@@ -171,6 +147,5 @@ class Experiment:
             )
         )
         summary = f"# Expected Frames = {expected_number_of_frames}\n"
-        summary += f"Logged Frames = {unique_frames}\n"
-        summary += f"Detections Frames = {detections_frames}\n"
+        summary += log_summary
         return summary

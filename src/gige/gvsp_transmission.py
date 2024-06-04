@@ -100,7 +100,10 @@ class GvspPcapParser(PcapParser):
                 num_partial_frames += 1
             last_frame_id = frame.id
 
-        total_frames = last_frame_id - first_frame_id + 1
+        if last_frame_id is not None:
+            total_frames = last_frame_id - first_frame_id + 1
+        else:
+            total_frames = 0
         return FramesStatistics(
             total_frames=total_frames,
             completed_frames=num_completed_frames,
