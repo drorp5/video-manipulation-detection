@@ -20,8 +20,9 @@ from manipulation_detectors.image_processing import (
     HueSaturationHistogramDetector,
     ImageProcessingDetector,
 )
+from gige import MAX_HEIGHT, MAX_WIDTH
 
-DST_SHAPE = (1936, 1216)
+DST_SHAPE = (MAX_WIDTH, MAX_HEIGHT)
 
 
 def get_stop_sign_injector(injector_type: str) -> Injector:

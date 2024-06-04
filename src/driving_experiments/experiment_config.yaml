@@ -11,6 +11,7 @@ car:
   actions:
     viewer: null
     detector: null
+    record_video: null
   variation:
     key: key
     num_widths: 8

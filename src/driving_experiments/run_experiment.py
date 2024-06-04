@@ -1,6 +1,8 @@
+from datetime import datetime
 import json
 import logging
 import threading
+from typing import Optional
 import yaml
 from pathlib import Path
 import numpy as np
@@ -27,6 +29,15 @@ def run_experiment_using_config_path(config_path: Path) -> None:
     with open(config_path.as_posix(), "r") as f:
         experiment_config = yaml.safe_load(stream=f)
     run_experiment(experiment_config)
+
+
+def fill_car_config(config: dict):
+    if config["car"]["actions"]["record_video"]:
+        video_path = (
+            Path(config["experiment"]["results_directory"])
+            / f"{config['experiment']['id']}.mp4"
+        )
+        config["car"]["actions"]["video_path"] = video_path.absolute().as_posix()
 
 
 def fill_attacker_config(config: dict) -> None:
@@ -79,6 +90,19 @@ def fill_attacker_config(config: dict) -> None:
 def run_experiment(experiment_config: dict) -> Experiment:
     # generte experiment id
     experiment_id = str(uuid.uuid4())
+    experiment_config["experiment"]["id"] = experiment_id
+
+    # set output directory
+    now = datetime.now()
+    start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
+    base_results_dir = (
+        Path(experiment_config["experiment"]["results_directory"])
+        / f"{start_time_string}_{id}"
+    )
+    base_results_dir.mkdir(parents=True)
+    experiment_config["experiment"][
+        "results_directory"
+    ] = base_results_dir.absolute().as_posix()
 
     # logger
     logger = logging.getLogger(experiment_id)
@@ -86,6 +110,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
     logger.setLevel(log_level)
 
     # car
+    fill_car_config(experiment_config)
     car_config = experiment_config["car"]
     key = car_config["variation"]["key"].encode("utf-8")
     num_symbols = car_config["variation"]["num_widths"]
@@ -99,9 +124,10 @@ def run_experiment(experiment_config: dict) -> Experiment:
         symbols_for_detection=car_config["validator"]["num_symbols"],
         max_delay=car_config["validator"]["max_delay"],
     )
-
     camera_started_event = threading.Event()
     camera_stopped_event = threading.Event()
+    
+    
     car_logic = ShapeVaryingLogicCar(
         config=experiment_config["car"],
         random_bits_generator=random_bits_generator,
@@ -123,6 +149,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
     # set experiment
     experiment = Experiment(
         id=experiment_id,
+        base_results_dir=base_results_dir,
         config=experiment_config,
         logger=logger,
         car=car_logic,

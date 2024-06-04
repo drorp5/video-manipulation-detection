@@ -28,6 +28,7 @@ class Experiment:
         logger: logging.Logger,
         car: Car,
         attacker: GigEAttacker,
+        base_results_dir: Path,
         id: Optional[str] = None,
     ) -> None:
         self.logger = logger
@@ -39,14 +40,9 @@ class Experiment:
             self.id = str(uuid4())
         else:
             self.id = id
-        now = datetime.now()
-        self.start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
 
         # initialize results directory
-        self.base_results_dir = (
-            Path(self.config["experiment"]["results_directory"])
-            / f"{self.start_time_string}_{self.id}"
-        )
+        self.base_results_dir = base_results_dir
         self.base_results_dir.mkdir(parents=True)
 
         # save cpnfiguration file

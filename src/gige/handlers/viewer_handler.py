@@ -1,19 +1,25 @@
 from logging import Logger
+from pathlib import Path
 from typing import Optional
 import cv2
 import numpy as np
+from vimba import Camera, Frame
 
 from gige.handlers.gige_handler import GigeHandler
-from vimba import Camera, Frame
 
 
 ENTER_KEY_CODE = 13
 
 
 class ViewerHandler(GigeHandler):
-    def __init__(self, logger: Optional[Logger] = None, downfactor: int = 4) -> None:
+    def __init__(
+        self,
+        logger: Optional[Logger] = None,
+        downfactor: int = 4,
+    ) -> None:
         super().__init__(logger)
         self.downfactor = downfactor
+        self._plotted_img = None
 
     def resize_image(self, img: np.ndarray) -> np.ndarray:
         height = int(img.shape[0] / self.downfactor)
@@ -21,10 +27,12 @@ class ViewerHandler(GigeHandler):
         dim = (width, height)
         return cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
 
-    def plot(self, img: np.ndarray, cam: Camera) -> None:
+    def plot(self, img: np.ndarray, cam: Camera) -> np.ndarray:
         resized_img = self.resize_image(img)
         window_name = f"Stream from '{cam.get_name()}'. Press <Enter> to stop stream."
+        self._plotted_img = resized_img
         cv2.imshow(window_name, resized_img)
+        return self._plotted_img
 
     def is_stop_key_selected(self, delay_ms: int = 1) -> bool:
         key = cv2.waitKey(delay_ms)
