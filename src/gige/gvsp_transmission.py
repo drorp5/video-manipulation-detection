@@ -87,28 +87,27 @@ class GvspPcapParser(PcapParser):
         self.pcap_reader.close()
 
     def get_frames_statistics(self) -> FramesStatistics:
-        first_frame_id = None
-        last_frame_id = None
-        num_completed_frames = 0
-        num_partial_frames = 0
+        frames_ids = []
+        completed_ids = []
+        partial_ids = []
         for frame in self.frames:
-            if first_frame_id is None:
-                first_frame_id = frame.id
+            frames_ids.append(frame.id)
             if frame.success_status:
-                num_completed_frames += 1
+                completed_ids.append(frame.id)
             else:
-                print(frame.id)
-                num_partial_frames += 1
-            last_frame_id = frame.id
+                partial_ids.append(frame.id)
 
-        if last_frame_id is not None:
-            total_frames = last_frame_id - first_frame_id + 1
-        else:
+        frames_ids = list(set(frames_ids))
+        completed_ids = list(set(completed_ids))
+        partial_ids = list(set(partial_ids))
+        if len(frames_ids) == 0:
             total_frames = 0
+        else:
+            total_frames = max(frames_ids) - min(frames_ids) + 1
         return FramesStatistics(
             total_frames=total_frames,
-            completed_frames=num_completed_frames,
-            partial_frames=num_partial_frames,
+            completed_frames=len(completed_ids),
+            partial_frames=len(partial_ids),
         )
 
     def save_images(self, dst_dir: Path):
