@@ -110,7 +110,7 @@ class Experiment:
         self.logger.info("Pcap Recording Stopped")
 
     def start_pcap_recording_thread(self):
-        self.pcap_shutdown_event = self.car.camera_started_event
+        self.pcap_shutdown_event = self.car.camera_stopped_event
         thread = threading.Thread(target=self._start_pcap_recording)
         thread.start()
         return thread
@@ -122,10 +122,10 @@ class Experiment:
         attacker_thread = run_thread(self.attacker.run)
 
         threading.Timer(
-            self.config["experiment"]["duration"], self.car.shutdown_event.set
+            self.config["experiment"]["duration"], self.attacker.shutdown_event.set
         ).start()
         threading.Timer(
-            self.config["experiment"]["duration"], self.attacker.shutdown_event.set
+            self.config["experiment"]["duration"], self.car.shutdown_event.set
         ).start()
 
         # Join threads
