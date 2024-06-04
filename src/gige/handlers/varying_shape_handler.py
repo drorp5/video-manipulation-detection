@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 from vimba import Camera, Frame, FrameStatus
+import cv2
 
 from active_manipulation_detectors.side_channel.bits_encoder import (
     IntBitsEncoderDecoder,
@@ -11,7 +12,7 @@ from active_manipulation_detectors.side_channel.data_generator import (
 from active_manipulation_detectors.side_channel.validation import DataValidator
 from gige.handlers.sign_detector_handler import SignDetectorHandler
 from gige.handlers.video_recorder_handler import VideoRecorderHandler
-from utils.video_recorder import VideoReocrder
+from utils.video_recorder import VideoReocrder, add_text_box
 from sign_detectors.stop_sign_detectors import StopSignDetector, draw_bounding_boxes
 from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
@@ -76,6 +77,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                     else:
                         plotted_img = draw_bounding_boxes(img, detections)
                     if self.record_video:
+                        plotted_img = add_text_box(plotted_img, f"{frame_id}")
                         self.video_recoder.write(plotted_img)
 
                 # change shape for next frame
