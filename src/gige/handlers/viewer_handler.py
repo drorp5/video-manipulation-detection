@@ -53,4 +53,5 @@ class ViewerHandler(GigeHandler):
             cam.queue_frame(frame)
 
     def cleanup(self, cam: Camera) -> None:
-        cv2.destroyAllWindows()
+        pass
+        
