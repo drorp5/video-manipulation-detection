@@ -51,7 +51,4 @@ class ViewerHandler(GigeHandler):
                 self.plot(img, cam)
 
             cam.queue_frame(frame)
-
-    def cleanup(self, cam: Camera) -> None:
-        pass
-        
+    

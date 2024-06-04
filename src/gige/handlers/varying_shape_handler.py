@@ -99,3 +99,4 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
             self.video_recoder.release()
         with cam:
             cam.Width.set(MAX_WIDTH)
+            self.log("Cleanup: Setting width to maximal value", log_level=logging.DEBUG)
