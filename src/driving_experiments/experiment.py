@@ -43,7 +43,7 @@ class Experiment:
 
         # initialize results directory
         self.base_results_dir = base_results_dir
-        self.base_results_dir.mkdir(parents=True)
+        self.base_results_dir.mkdir(parents=True, exist_ok=True)
 
         # save cpnfiguration file
         yaml_file_path = self.base_results_dir / f"config_{self.id}.yaml"

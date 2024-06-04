@@ -97,9 +97,9 @@ def run_experiment(experiment_config: dict) -> Experiment:
     start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
     base_results_dir = (
         Path(experiment_config["experiment"]["results_directory"])
-        / f"{start_time_string}_{id}"
+        / f"{start_time_string}_{experiment_id}"
     )
-    base_results_dir.mkdir(parents=True)
+    base_results_dir.mkdir(parents=True, exist_ok=True)
     experiment_config["experiment"][
         "results_directory"
     ] = base_results_dir.absolute().as_posix()

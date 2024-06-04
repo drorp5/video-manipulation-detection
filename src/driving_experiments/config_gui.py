@@ -160,7 +160,7 @@ class ConfigGUI:
                     combobox = ttk.Combobox(frame, textvariable=var, values=options)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
-                elif key in ["record_pcap", "viewer"]:
+                elif key in ["record_pcap", "viewer", "record_video"]:
                     var = tk.BooleanVar(
                         value=(value is True)
                     )  # Default to True if True in config, otherwise False
