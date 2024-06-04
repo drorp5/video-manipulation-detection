@@ -27,7 +27,7 @@ class VaryingShapeHandler(SignDetectorHandler):
         logger: Optional[logging.Logger] = None,
         downfactor: int = 4,
         sign_detector: Optional[StopSignDetector] = None,
-        view: bool = True
+        view: bool = True,
     ) -> None:
         super().__init__(logger=logger, downfactor=downfactor, detector=sign_detector)
         self.height_values = [MAX_HEIGHT - increment * ind for ind in range(num_levels)]
@@ -56,7 +56,7 @@ class VaryingShapeHandler(SignDetectorHandler):
                     received_symbol = self.encoder_decoder.encode(width)
                     validation_result = self.data_validator.validate(received_symbol)
                     self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
-                
+
                 if self.detector is not None or self.view:
                     img = self.resize_for_detection(img)
                     if self.detector is not None:
@@ -78,7 +78,8 @@ class VaryingShapeHandler(SignDetectorHandler):
                 self.shape_changed = True
 
             cam.queue_frame(frame)
-    
+
     def cleanup(self, cam: Camera) -> None:
+        super().cleanup(cam)
         with cam:
             cam.Width.set(MAX_WIDTH)
