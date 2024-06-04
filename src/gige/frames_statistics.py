@@ -16,4 +16,4 @@ class FramesStatistics:
             return None
 
     def __str__(self) -> str:
-        return f"Total Frames = {self.total_frames}\nCompleted Frames = {self.completed_frames}\nPartial Frames = {self.partial_frames}\nPL = {self.pl():.1f}"
+        return f"Total Frames = {self.total_frames}\nCompleted Frames = {self.completed_frames}\nPartial Frames = {self.partial_frames}\nPL = {self.pl():.1f}%"
