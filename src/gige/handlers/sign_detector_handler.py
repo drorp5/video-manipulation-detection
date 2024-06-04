@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from vimba import Camera, Frame
 
-from gige.handlers import ViewerHandler
+from gige.handlers.viewer_handler import ViewerHandler
 from sign_detectors.stop_sign_detectors import StopSignDetector, draw_bounding_boxes
 
 

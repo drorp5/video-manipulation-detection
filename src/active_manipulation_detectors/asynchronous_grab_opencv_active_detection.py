@@ -33,7 +33,7 @@ from icecream import ic
 import traceback
 import numpy as np
 
-from gige.handlers import ViewerHandler
+from gige.handlers.viewer_handler import ViewerHandler
 from gige.handlers.varying_shape_handler import VaryingShapeHandler
 from active_manipulation_detectors.side_channel.data_generator import RandomBitsGeneratorRC4, SequentialBitsGenerator
 from active_manipulation_detectors.side_channel.validation import DataValidatorKSymbols, DataValidatorKSymbolsDelayed

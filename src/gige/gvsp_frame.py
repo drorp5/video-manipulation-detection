@@ -13,7 +13,7 @@ from manipultation_utils import (
 )  # TODO: change location of modules
 from gige.constansts import Layers, CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
 from gige.utils import packet_id_to_payload_indices
-from gige import MAX_HEIGHT, MAX_WIDTH
+from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 class MissingLeaderError(Exception):
     pass

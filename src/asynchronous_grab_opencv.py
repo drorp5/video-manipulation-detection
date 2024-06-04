@@ -42,7 +42,7 @@ import re
 import numpy as np
 from functools import wraps
 
-from gige.handlers import ViewerHandler
+from gige.handlers.viewer_handler import ViewerHandler
 
 
 def timeit(func):

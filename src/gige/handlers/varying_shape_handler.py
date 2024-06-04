@@ -9,10 +9,11 @@ from active_manipulation_detectors.side_channel.data_generator import (
     RandomBitsGenerator,
 )
 from active_manipulation_detectors.side_channel.validation import DataValidator
-from gige.handlers import SignDetectorHandler, VideoRecorderHandler
+from gige.handlers.sign_detector_handler import SignDetectorHandler
+from gige.handlers.video_recorder_handler import VideoRecorderHandler
 from utils.video_recorder import VideoReocrder
 from sign_detectors.stop_sign_detectors import StopSignDetector, draw_bounding_boxes
-from gige import MAX_HEIGHT, MAX_WIDTH
+from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 
 class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):

@@ -3,7 +3,7 @@ from typing import Optional
 import logging
 import threading
 
-from gige.handlers import GigeHandler
+from gige.handlers.gige_handler import GigeHandler
 
 
 class Car(ABC):

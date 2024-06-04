@@ -20,7 +20,7 @@ from manipulation_detectors.image_processing import (
     HueSaturationHistogramDetector,
     ImageProcessingDetector,
 )
-from gige import MAX_HEIGHT, MAX_WIDTH
+from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 DST_SHAPE = (MAX_WIDTH, MAX_HEIGHT)
 

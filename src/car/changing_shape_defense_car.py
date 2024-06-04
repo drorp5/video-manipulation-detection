@@ -12,7 +12,7 @@ from active_manipulation_detectors.asynchronous_grab_opencv_active_detection imp
     setup_camera,
 )
 from gige.gige_constants import MAX_WIDTH, MAX_HEIGHT
-from gige.handlers import GigeHandler
+from gige.handlers.gige_handler import GigeHandler
 from gige.handlers.varying_shape_handler import (
     VaryingShapeHandler,
 )
