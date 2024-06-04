@@ -99,7 +99,7 @@ class ShapeVaryingLogicCar(Car):
                 except Exception as e:
                     self.log(e, logging.ERROR)
                 finally:
-                    handler.cleanup(cam)
                     cam.stop_streaming()
                     if self.camera_stopped_event is not None:
                         self.camera_stopped_event.set()
+                    handler.cleanup(cam)
