@@ -97,6 +97,7 @@ class GvspPcapParser(PcapParser):
             if frame.success_status:
                 num_completed_frames += 1
             else:
+                print(frame.id)
                 num_partial_frames += 1
             last_frame_id = frame.id
 

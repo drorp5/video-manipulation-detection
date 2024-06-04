@@ -5,8 +5,8 @@ import yaml
 from driving_experiments.run_experiment import run_experiment
 from attacker import Attackers
 from driving_experiments.experiment import Experiment
-from gige import FramesStatistics, GvspPcapParser
-from gige.pcap import PcapParser
+from gige import FramesStatistics, AttackedGvspPcapParser
+
 
 # Define float keys globally
 INT_KEYS = {
@@ -225,7 +225,7 @@ class ConfigGUI:
         self._experiment = run_experiment(new_config)
 
     def validate_experient_pcap(self):
-        parser = GvspPcapParser(self._experiment.pcap_path)
+        parser = AttackedGvspPcapParser(self._experiment.pcap_path)
         frames_statistics = parser.get_frames_statistics()
         messagebox.showinfo(
             "Experiment Recording Statistics",

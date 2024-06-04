@@ -13,7 +13,7 @@ from manipultation_utils import (
 )  # TODO: change location of modules
 from gige.constansts import Layers, CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
 from gige.utils import packet_id_to_payload_indices
-
+from gige import MAX_HEIGHT, MAX_WIDTH
 
 class MissingLeaderError(Exception):
     pass
@@ -21,8 +21,8 @@ class MissingLeaderError(Exception):
 
 @dataclass
 class DefaultLeader:
-    SizeY = 1216
-    SizeX = 1936
+    SizeY = MAX_HEIGHT
+    SizeX = MAX_WIDTH
     PixelFormat = 0x1080009
     Timestamp = None  # this is the timestamp reported in the GVSP protocol
     time = None  # this is field of the timestamp of the sniffed packet
