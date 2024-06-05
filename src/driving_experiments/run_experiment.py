@@ -120,14 +120,13 @@ def run_experiment(experiment_config: dict) -> Experiment:
     )
 
     data_validator = DataValidatorKSymbolsDelayed(
-        bits_in_symbol=num_bits_per_iteration,
         symbols_for_detection=car_config["validator"]["num_symbols"],
         max_delay=car_config["validator"]["max_delay"],
+        data_holder_type="list",
     )
     camera_started_event = threading.Event()
     camera_stopped_event = threading.Event()
-    
-    
+
     car_logic = ShapeVaryingLogicCar(
         config=experiment_config["car"],
         random_bits_generator=random_bits_generator,

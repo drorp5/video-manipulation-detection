@@ -60,8 +60,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                 if self.shape_changed:
                     # height = frame.get_height()
                     width = frame.get_width()
-                    received_symbol = self.encoder_decoder.encode(width)
-                    validation_result = self.data_validator.validate(received_symbol)
+                    validation_result = self.data_validator.validate(width)
                     self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
 
                 if self.detector is not None or self.view or self.record_video:
@@ -88,7 +87,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                     log_level=logging.DEBUG,
                 )
                 cam.Width.set(new_width)
-                self.data_validator.add_trasnmitted_data(symbol)
+                self.data_validator.add_trasnmitted_data(new_width)
                 self.shape_changed = True
 
             cam.queue_frame(frame)
