@@ -401,6 +401,7 @@ class GigELink:
             store=0,
             timeout=1,
         )
+        self.log(f"Last Sniffed BLockID = {self.last_block_id}", log_level=logging.DEBUG)
 
     def inject_gvsp_packets(
         self, gvsp_packets: PacketList, block_id: int, count: int = 100
