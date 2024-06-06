@@ -412,7 +412,7 @@ class GigELink:
             gvsp_packets,
             iface=self.interface,
             verbose=False,
-            realtime=True,
+            realtime=False,
             count=count,
         )
 
