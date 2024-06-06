@@ -25,6 +25,8 @@ class GigeHandler(ABC):
                 pixel_format = frame.get_pixel_format()
                 img = convert_image_to_rgb(img, pixel_format)
                 return img
+            else:
+                self.log(f"Frame # {frame.get_id()} {frame.get_status()}", log_level=logging.DEBUG)
         return None
 
     def log(self, msg, log_level=logging.INFO):
