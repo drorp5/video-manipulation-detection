@@ -1,7 +1,7 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, Union
-
-from numpy import isin
+from itertools import combinations
 
 from active_manipulation_detectors.side_channel.data_structure.data_holder import (
     DataHolder,
@@ -92,3 +92,9 @@ class ListDataHolder(DataHolder):
 
     def __repr__(self) -> str:
         return self._data.__repr__()
+
+    def get_combinations(self, k: int) -> Iterable[ListDataHolder]:
+        for comb_data in combinations(self._data, k):
+            ret = ListDataHolder(data_unit=self._data_unit)
+            ret._data = comb_data
+            yield ret
