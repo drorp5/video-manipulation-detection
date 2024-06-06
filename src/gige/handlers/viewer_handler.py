@@ -1,3 +1,4 @@
+from datetime import datetime
 from logging import Logger
 from pathlib import Path
 from typing import Optional
@@ -19,7 +20,9 @@ class ViewerHandler(GigeHandler):
     ) -> None:
         GigeHandler.__init__(self, logger=logger)
         self.downfactor = downfactor
-        self._plotted_img = None
+        self._plotted_img = None     
+        now = datetime.now()
+        self.start_time = now.strftime("%Y_%m_%d_%H_%M_%S")
 
     def resize_image(self, img: np.ndarray) -> np.ndarray:
         height = int(img.shape[0] / self.downfactor)
@@ -29,7 +32,7 @@ class ViewerHandler(GigeHandler):
 
     def plot(self, img: np.ndarray, cam: Camera) -> np.ndarray:
         resized_img = self.resize_image(img)
-        window_name = f"Stream from '{cam.get_name()}'. Press <Enter> to stop stream."
+        window_name = f"{self.start_time}: Press <Enter> to stop stream."
         self._plotted_img = resized_img
         cv2.imshow(window_name, resized_img)
         return self._plotted_img

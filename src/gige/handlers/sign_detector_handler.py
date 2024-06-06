@@ -39,7 +39,7 @@ class SignDetectorHandler(ViewerHandler):
     ) -> np.ndarray:
         if detections is not None:
             img = draw_bounding_boxes(img, detections)
-        window_name = f"Stream from '{cam.get_name()}'. Press <Enter> to stop stream."
+        window_name = f"{self.start_time}: Press <Enter> to stop stream."
         cv2.imshow(window_name, img)
         return img
 
