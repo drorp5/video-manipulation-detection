@@ -17,7 +17,7 @@ class ViewerHandler(GigeHandler):
         logger: Optional[Logger] = None,
         downfactor: int = 4,
     ) -> None:
-        super().__init__(logger)
+        GigeHandler.__init__(self, logger=logger)
         self.downfactor = downfactor
         self._plotted_img = None
 

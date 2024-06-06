@@ -30,7 +30,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
         view: bool = True,
         video_recorder: Optional[VideoReocrder] = None,
     ) -> None:
-        super().__init__(logger=logger, downfactor=downfactor, detector=sign_detector)
+        SignDetectorHandler.__init__(self, logger=logger, downfactor=downfactor, detector=sign_detector)
         self.record_video = video_recorder is not None
         if self.record_video:
             VideoRecorderHandler.__init__(
@@ -94,9 +94,9 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
             cam.queue_frame(frame)
 
     def cleanup(self, cam: Camera) -> None:
-        super().cleanup(cam)
+        SignDetectorHandler.cleanup(self, cam)
         if self.record_video:
-            self.video_recoder.release()
+            VideoRecorderHandler.cleanup(self, cam)
         with cam:
             cam.Width.set(MAX_WIDTH)
             self.log("Cleanup: Setting width to maximal value", log_level=logging.DEBUG)

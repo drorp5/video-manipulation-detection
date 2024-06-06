@@ -21,7 +21,7 @@ class SignDetectorHandler(ViewerHandler):
         downfactor: int = 4,
         detector: Optional[StopSignDetector] = None,
     ) -> None:
-        super().__init__(logger=logger, downfactor=downfactor)
+        ViewerHandler.__init__(self, logger=logger, downfactor=downfactor)
         self.detector = detector
 
     def resize_for_detection(self, img: np.ndarray) -> np.ndarray:
