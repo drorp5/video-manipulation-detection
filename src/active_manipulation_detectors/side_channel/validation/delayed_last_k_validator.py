@@ -36,12 +36,4 @@ class DataValidatorKSymbolsDelayed(DataValidatorKSymbols):
             self.received_data = self.received_data[1:]
         if result == ValidationStatus.Incomplete:
             return
-        if self.detected_delay is None:
-            self.transmitted_data = self.transmitted_data[1:]
-        else:
-            offset = (
-                len(self.transmitted_data)
-                - self.symbols_for_detection
-                - self.detected_delay
-            )
-            self.transmitted_data = self.transmitted_data[offset + 1 :]
+        self.transmitted_data = self.transmitted_data[1:]
