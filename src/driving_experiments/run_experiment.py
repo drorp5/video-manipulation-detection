@@ -16,6 +16,7 @@ from active_manipulation_detectors.side_channel.data_generator import (
 from active_manipulation_detectors.side_channel.validation import (
     DataValidatorKSymbolsDelayed,
 )
+from active_manipulation_detectors.side_channel.validation import DataValidatorKSymbolsDelayedChanged
 from attacker import GigEAttackerStripeInjection, GigEAttackerFrameInjection, Attackers
 from driving_experiments.experiment import Experiment
 from active_manipulation_detectors.evaluation.mtsd_evaluation import (
@@ -119,7 +120,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
         key=key, num_bits_per_iteration=num_bits_per_iteration
     )
 
-    data_validator = DataValidatorKSymbolsDelayed(
+    data_validator = DataValidatorKSymbolsDelayedChanged(
         symbols_for_detection=car_config["validator"]["num_symbols"],
         max_delay=car_config["validator"]["max_delay"],
         data_holder_type="list",
