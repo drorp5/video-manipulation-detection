@@ -83,9 +83,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                 symbol = next(self.random_bits_generator)
                 new_width = self.encoder_decoder.decode(symbol=symbol)
                 self.log(
-                    f"Frame # {frame_id}: Setting next frame width = {new_width}",
-                    log_level=logging.DEBUG,
-                )
+                    f"Frame # {frame_id}: Setting next frame width = {new_width}")
                 cam.Width.set(new_width)
                 self.data_validator.add_trasnmitted_data(new_width)
                 self.shape_changed = True
