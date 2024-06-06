@@ -27,10 +27,10 @@ class GigEAttacker(ABC):
             img_width=self.config["gige"]["gvsp"]["width"],
             img_height=self.config["gige"]["gvsp"]["height"],
             max_payload_bytes=self.config["gige"]["gvsp"]["max_payload_bytes"],
+            logger=self.logger
         )
         self.log('Sniffing link parameters')
         self.gige_link.sniff_link_parameters()
-        self.log(self.gige_link.get_summary(), log_level=logging.DEBUG)
 
     def run_pre_attack_stage(self) -> None:
         if self.initialization_event is not None:

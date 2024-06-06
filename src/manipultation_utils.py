@@ -1,3 +1,4 @@
+import logging
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -150,6 +151,7 @@ class GigELink:
         img_width: int = img_width,
         img_height: int = img_height,
         max_payload_bytes: int = max_payload_bytes,
+        logger: Optional[logging.Logger] = None
     ):
         self.interface = interface
         self.cp_ip = cp_ip
@@ -160,6 +162,7 @@ class GigELink:
         self.gvsp_dst_port = -1
         self.gvcp_src_port = -1
         self.last_block_id = default_block_id - 1
+        self.logger = logger
 
     def set_gvsp_dst_port(self, gvsp_dst_port):
         self.gvsp_dst_port = gvsp_dst_port
@@ -167,18 +170,12 @@ class GigELink:
     def set_gvcp_src_port(self, gvcp_src_port):
         self.gvcp_src_port = gvcp_src_port
 
-    def print_link(self):
-        print("GVCP:")
-        print(
-            f"CP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({Ports.GVCP_DST.value})"
-        )
-        print("GVSP:")
-        print(
-            f"Camera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})"
-        )
-
-    def get_summary(self) -> str:
-        return f"GVCP:\nCP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({Ports.GVCP_DST.value})\nGVSP:\nCamera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})"
+    def log_link(self):
+        msg = "GVCP:\n"
+        msg += f"\tCP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({Ports.GVCP_DST.value})\n"
+        msg += "GVSP:\n"
+        msg += f"\tCamera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})"
+        self.log(msg)
 
     def _get_writereg_cmd(self, address: int, value: int, ack_required: bool = False):
         flags = 0x01 if ack_required else 0x00
@@ -237,7 +234,7 @@ class GigELink:
             ):
                 gvsp_dst_port = pkt[Layers.UDP.value].dport
                 self.set_gvsp_dst_port(gvsp_dst_port)
-                print(f"Found GVSP port {gvsp_dst_port}")
+                self.log(f"Found GVSP port {gvsp_dst_port}", log_level=logging.DEBUG)
             elif (
                 not gvcp_port_found
                 and pkt.haslayer(Layers.GVCP.value)
@@ -247,13 +244,13 @@ class GigELink:
                 if pkt[Layers.UDP.value].sport not in gvcp_excluded_ports:
                     gvcp_src_port = pkt[Layers.UDP.value].sport
                     self.set_gvcp_src_port(gvcp_src_port)
-                    print(f"Found GVCP port {gvcp_src_port}")
+                    self.log(f"Found GVCP port {gvcp_src_port}", log_level=logging.DEBUG)
 
         def stop_filter(pkt):
             return self.gvsp_dst_port != -1 and self.gvcp_src_port != -1
 
         # sniff for ports
-        print("sniffing")
+        self.log("sniffing")
         sniff(
             iface=self.interface,
             prn=pkt_callback,
@@ -261,7 +258,7 @@ class GigELink:
             stop_filter=stop_filter,
             store=0,
         )
-        self.print_link()
+        self.log_link()
 
     def sniffing_for_trailer_filter(self, pkt):
         if pkt.haslayer(Layers.GVSP.value):
@@ -277,9 +274,9 @@ class GigELink:
             self.last_block_id = pkt[Layers.GVSP.value].BlockID
 
     def stop_and_replace_with_pcap(self, frame_pcap_path, timeout=2):
-        print("Stopping acquisition")
+        self.log("Stopping acquisition", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
-        print(f"Sniffing until TRAILER is sent, timeout {timeout} seconds")
+        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds", log_level=logging.DEBUG)
         sniff(
             iface=self.interface,
             filter="udp",
@@ -288,7 +285,7 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        print("Aliasing")
+        self.log("Aliasing")
         gvsp_packets = rdpcap(frame_pcap_path)
         for packet in gvsp_packets:
             packet[Layers.UDP.value].dport = self.gvsp_dst_port
@@ -298,9 +295,9 @@ class GigELink:
         self.last_block_id = gvsp_packets[0][Layers.GVSP.value].BlockID
 
     def stop_and_replace_with_image(self, img_path, timeout=2):
-        print("Stopping acquisition")
+        self.log("Stopping acquisition")
         self.send_stop_command(count=1)
-        print(f"Sniffing until TRAILER is sent, timeout {timeout} seconds")
+        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds")
         sniff(
             iface=self.interface,
             filter="udp",
@@ -309,7 +306,7 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        print("Aliasing")
+        self.log("Aliasing")
         gvsp_packets = self.img_to_gvsp(img_path, block_id=self.last_block_id + 1)
         sendp(gvsp_packets, iface=self.interface, verbose=False)
         self.last_block_id = gvsp_packets[0][Layers.GVSP.value].BlockID
@@ -395,7 +392,7 @@ class GigELink:
         return gvsp_packets
 
     def sniff_block_id(self) -> None:
-        print("Sniffing for blockID")
+        self.log("Sniffing for blockID", log_level=logging.DEBUG)
         sniff(
             iface=self.interface,
             filter="udp",
@@ -484,20 +481,20 @@ class GigELink:
         frame_duration = 1 / fps
         self.sniff_block_id()
         first_injected_id = self.last_block_id + future_id_diff
-        print(
-            f"Attempting stripe injection for frames {first_injected_id} - {first_injected_id + num_injections - 1}"
-        )
+        self.log(
+            f"Attempting stripe injection for frames {first_injected_id} - {first_injected_id + num_injections - 1}",
+              log_level=logging.DEBUG)
         for injection_ind in range(num_injections):
             start_time = time.time()
-            print(f"Injecting stripe to {first_injected_id + injection_ind}")
+            self.log(f"Injecting stripe to {first_injected_id + injection_ind}", log_level=logging.DEBUG)
             self.inject_gvsp_packets(
                 stripe_packets, block_id=first_injected_id + injection_ind, count=count
             )
             end_time = time.time()
-            print(f"Insertion took {end_time - start_time} seconds")
+            self.log(f"Insertion took {end_time - start_time} seconds", log_level=logging.DEBUG)
             time.sleep(max(0, frame_duration - (end_time - start_time)))
-        print(
-            f"Attack finished"
+        self.log(
+            f"Stripe Attack Finished"
         )
 
     def fake_still_image(
@@ -510,10 +507,10 @@ class GigELink:
         # TODO: read register to get fps
         timeout = 1  # seconds
         self.sniff_block_id()
-        print("BlockID found")
-        print(f"Stopping acquisition for {duration} seconds with still image")
+        self.log("BlockID found", log_level=logging.DEBUG)
+        self.log(f"Stopping acquisition for {duration} seconds with still image", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
-        print(f"Sniffing until TRAILER is sent, timeout {timeout} seconds")
+        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds", log_level=logging.DEBUG)
         sniff(
             iface=self.interface,
             filter="udp",
@@ -522,10 +519,10 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        print("Faking")
+        self.log("Faking")
         num_frames = round(duration * min(injection_effective_frame_rate, fps))
-        print(f"Number of fake frames = {num_frames}")
-        print(f"Last GVSP BlockID = {self.last_block_id}")
+        self.log(f"Number of fake frames = {num_frames}", log_level=logging.DEBUG)
+        self.log(f"Last GVSP BlockID = {self.last_block_id}", log_level=logging.DEBUG)
         gvsp_fake_packets = self.img_to_gvsp(img_path, block_id=default_block_id)
         aliasing_started = time.time()
         iterations_time = []
@@ -541,13 +538,29 @@ class GigELink:
             self.last_block_id = self.last_block_id + 1
 
         aliasing_finished = time.time()
-        print(f"Faking for {aliasing_finished-aliasing_started} seconds")
+        self.log(f"Faking for {aliasing_finished-aliasing_started} seconds")
 
-        print("Starting acquisition")
+        self.log("Starting acquisition", log_level=logging.DEBUG)
         self.send_start_command(count=1)
 
-        print(f"average iteration time = {np.average(np.array(iterations_time))}")
+        self.log(f"average iteration time = {np.average(np.array(iterations_time))}", log_level=logging.DEBUG)
 
+    def log(self, msg, log_level=logging.INFO):
+        if self.logger is None:
+            print(msg)
+            return
+        if log_level == logging.DEBUG:
+            self.logger.debug(msg)
+        elif log_level == logging.INFO:
+            self.logger.info(msg)
+        elif log_level == logging.WARNING:
+            self.logger.warning(msg)
+        elif log_level == logging.ERROR:
+            self.logger.error(msg)
+        elif log_level == logging.CRITICAL:
+            self.logger.critical(msg)
+        else:
+            raise ValueError(f"Invalid log level: {log_level}")
 
 def parse_args():
     parser = argparse.ArgumentParser()
