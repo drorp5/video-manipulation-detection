@@ -16,10 +16,3 @@ class DataValidatorKSymbolsDelayedChanged(DataValidatorKSymbolsDelayed):
                 return ValidationStatus.Valid
         self.detected_delay = None
         return ValidationStatus.Invalid
-
-    def clean(self, result: ValidationStatus) -> None:
-        if len(self.received_data) == self.symbols_for_detection:
-            self.received_data = self.received_data[1:]
-        if result == ValidationStatus.Incomplete:
-            return
-        self.transmitted_data = self.transmitted_data[1:]
