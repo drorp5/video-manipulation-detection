@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Union
-from itertools import combinations
+from typing import Any, Iterable, List, Union
+from itertools import product
 
 from active_manipulation_detectors.side_channel.data_structure.data_holder import (
     DataHolder,
@@ -94,7 +94,27 @@ class ListDataHolder(DataHolder):
         return self._data.__repr__()
 
     def get_combinations(self, k: int) -> Iterable[ListDataHolder]:
-        for comb_data in combinations(self._data, k):
+        for comb_data in product(self._data, repeat=k):
             ret = ListDataHolder(data_unit=self._data_unit)
             ret._data = comb_data
             yield ret
+
+    def __contains__(self, item: Any) -> bool:
+        self._validate_input_length(item)
+        item_list = list(item) if isinstance(item, Iterable) and not isinstance(item, str) else [item]
+        for i in range(0, len(self._data), self._data_unit):
+            if self._data[i:i + self._data_unit] == item_list:
+                return True
+        return False
+
+    def index(self, item: Any) -> int:
+        self._validate_input_length(item)
+        item_list = list(item) if isinstance(item, Iterable) and not isinstance(item, str) else [item]
+        for i in range(0, len(self._data), self._data_unit):
+            if self._data[i:i + self._data_unit] == item_list:
+                return i // self._data_unit
+        raise ValueError(f"{item} is not in the list")
+    
+    def __iter__(self) -> Iterable:
+        for index in range(len(self)):
+            yield self._get_item(index)

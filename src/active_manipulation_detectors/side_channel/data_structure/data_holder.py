@@ -105,3 +105,19 @@ class DataHolder(ABC):
     @abstractmethod
     def get_combinations(self, k: int) -> Iterable[DataHolder]:
         pass
+
+    @abstractmethod
+    def __contains__(self, item: Any) -> bool:
+        """Check if item is in."""
+        pass
+
+    @abstractmethod
+    def index(self, item: Any) -> int:
+        """Return the index of the first occurrence of item."""
+        pass 
+        
+    @abstractmethod
+    def __iter__(self) -> Iterable:
+        """Return an iterator."""
+        pass
+        

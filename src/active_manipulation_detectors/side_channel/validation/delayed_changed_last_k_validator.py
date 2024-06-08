@@ -9,10 +9,11 @@ class DataValidatorKSymbolsDelayedChanged(DataValidatorKSymbolsDelayed):
         if len(self.transmitted_data) < self.search_window:
             return ValidationStatus.Incomplete
 
-        for delayed_transmitted_pattern in self.transmitted_data.get_combinations(
-            self.symbols_for_detection
-        ):
-            if delayed_transmitted_pattern == self.received_data:
-                return ValidationStatus.Valid
-        self.detected_delay = None
-        return ValidationStatus.Invalid
+        last_used_transmitted_index = 0
+        for symbol in self.received_data:
+            try:
+                matched_index = self.transmitted_data[last_used_transmitted_index:last_used_transmitted_index+self.search_window].index(symbol)
+                last_used_transmitted_index += max(matched_index, 1)
+            except ValueError:
+                return ValidationStatus.Invalid
+        return ValidationStatus.Valid
