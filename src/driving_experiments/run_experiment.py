@@ -9,6 +9,8 @@ import numpy as np
 import random
 import uuid
 
+from vimba import Log, LOG_CONFIG_TRACE_FILE_ONLY
+
 from car.changing_shape_defense_car import ShapeVaryingLogicCar
 from active_manipulation_detectors.side_channel.data_generator import (
     RandomBitsGeneratorRC4,
@@ -109,6 +111,8 @@ def run_experiment(experiment_config: dict) -> Experiment:
     logger = logging.getLogger(experiment_id)
     log_level = logging.DEBUG
     logger.setLevel(log_level)
+    vimba_logger = Log.get_instance()
+    vimba_logger.enable(LOG_CONFIG_TRACE_FILE_ONLY)
 
     # car
     fill_car_config(experiment_config)
