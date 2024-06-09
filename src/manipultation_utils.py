@@ -522,6 +522,10 @@ class GigELink:
             img_path, first_row, num_rows, block_id=0
         )
         num_injections = int(np.ceil(fps * injection_duration))
+        if num_injections == 0:
+            self.log("NO INJECTIONS: duration less than injection time", log_level=logging.WARNING)
+            return
+
         frame_duration = 1 / fps
         self.sniff_block_id()
         first_injected_id = self.last_block_id + future_id_diff
