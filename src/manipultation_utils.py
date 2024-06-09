@@ -276,6 +276,46 @@ class GigELink:
             return True
         return False
     
+    def send_gvsp_pcap(self, gvsp_pcap_path: Path, fps: float = 1) -> None:
+        self.log("Reading PCAP file")
+        gvsp_packets = rdpcap(gvsp_pcap_path.as_posix())
+        for packet in gvsp_packets:
+            packet["UDP"].dport = self.gvsp_dst_port
+
+        # split packet to frmaes
+        frames = []
+        frame_packets = []
+        current_frame_id = None
+        offset = 0
+        while offset < len(gvsp_packets):
+            # split leaders
+            leader_found = False
+            while offset < len(gvsp_packets) and not leader_found:
+                packet = gvsp_packets[offset]
+                if packet.haslayer(Layers.GVSP_LEADER.value):
+                    if current_frame_id is None:
+                        leader_found = True
+                    elif packet.BlockID != current_frame_id:
+                        leader_found = True
+                if not leader_found:
+                    frame_packets.append(packet)
+                    offset += 1
+
+            if leader_found:
+                if len(frame_packets) > 0:
+                    frames.append(frame_packets)
+                frame_packets = [packet]
+                current_frame_id = packet.BlockID
+                offset += 1
+    
+        frame_duration = 1/fps
+        self.log(f"Sending pcap frames at rate {fps}")
+        for frame in frames:
+            start_time = time.time()
+            sendp(frame, iface=self.interface, verbose=False)
+            sendp_duration = time.time() - start_time
+            time.sleep(max(0, frame_duration - sendp_duration))
+
     def stop_and_replace_with_pcap(self, frame_pcap_path, timeout=2):
         self.log("Stopping acquisition", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
