@@ -458,7 +458,7 @@ class GigELink:
         first_row: int,
         num_rows: int,
         future_id_diff: int = 10,
-        count: int = 100,
+        count: int = 1,
     ) -> int:
         stripe_packets = self.get_stripe_gvsp_packets(
             img_path, first_row, num_rows, block_id=0
@@ -476,7 +476,7 @@ class GigELink:
         fps: float,
         injection_duration: float,
         future_id_diff: int = 10,
-        count: int = 100,
+        count: int = 1,
     ):
         stripe_packets = self.get_stripe_gvsp_packets(
             img_path, first_row, num_rows, block_id=0
