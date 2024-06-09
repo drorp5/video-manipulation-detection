@@ -14,3 +14,8 @@ class GigEAttackerStripeInjection(GigEAttacker):
             injection_duration=self.config["timing"]["attack_duration_in_seconds"],
             fps=self.config["timing"]["fps"]
         )
+
+    def run_attack_stage(self) -> None:
+        self.set_gige_link()
+        self.log('Starting Stripe Injection Attack')
+        self.attack()
