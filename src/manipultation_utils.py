@@ -266,13 +266,16 @@ class GigELink:
                 return True
         return False
 
-    def callback_update_block_id(self, pkt):
+    def callback_update_block_id(self, pkt) -> bool:
         if (
             pkt.haslayer(Layers.GVSP.value)
             and pkt[Layers.IP.value].src == self.camera_ip
         ):
             self.last_block_id = pkt[Layers.GVSP.value].BlockID
-
+            self.log(f"Found GVSP packet for block {pkt[Layers.GVSP.value].BlockID} and packet {pkt[Layers.GVSP.value].PacketID}")
+            return True
+        return False
+    
     def stop_and_replace_with_pcap(self, frame_pcap_path, timeout=2):
         self.log("Stopping acquisition", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
@@ -397,7 +400,7 @@ class GigELink:
             iface=self.interface,
             filter="udp",
             prn=self.callback_update_block_id,
-            stop_filter=self.sniffing_for_trailer_filter,
+            stop_filter=self.callback_update_block_id,
             store=0,
             timeout=1,
         )
