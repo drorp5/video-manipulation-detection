@@ -2,7 +2,7 @@ import logging
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Callable
 from scapy.packet import Packet, bind_layers
 from scapy.fields import *
 from scapy.layers.inet import UDP, IP, Ether
@@ -260,7 +260,7 @@ class GigELink:
         )
         self.log_link()
 
-    def sniffing_for_trailer_filter(self, pkt):
+    def sniffing_for_trailer_filter(self, pkt) -> bool:
         if pkt.haslayer(Layers.GVSP.value):
             if pkt[Layers.GVSP.value].Format == "TRAILER":
                 return True
@@ -434,13 +434,15 @@ class GigELink:
 
         return gvsp_packets
 
-    def sniff_block_id(self) -> None:
+    def sniff_block_id(self, stop_filter: Optional[Callable[[Packet], bool]]=None) -> None:
         self.log("Sniffing for blockID", log_level=logging.DEBUG)
+        if stop_filter is None:
+            stop_filter = self.callback_update_block_id
         sniff(
             iface=self.interface,
             filter="udp",
             prn=self.callback_update_block_id,
-            stop_filter=self.callback_update_block_id,
+            stop_filter=stop_filter,
             store=0,
             timeout=1,
         )
@@ -569,31 +571,31 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        self.log("Faking")
+        self.log("Injecting Full Frame")
         num_frames = round(duration * min(injection_effective_frame_rate, fps))
         self.log(f"Number of fake frames = {num_frames}", log_level=logging.DEBUG)
         self.log(f"Last GVSP BlockID = {self.last_block_id}", log_level=logging.DEBUG)
         gvsp_fake_packets = self.img_to_gvsp(img_path, block_id=default_block_id)
-        aliasing_started = time.time()
+        injection_started = time.time()
         iterations_time = []
         for _ in range(num_frames):
+            itertation_started = time.time()
             for pkt in gvsp_fake_packets:
                 pkt[Layers.GVSP.value].BlockID = self.last_block_id + 1
-            itertation_started = time.time()
+            self.last_block_id += 1
             sendp(gvsp_fake_packets, iface=self.interface, verbose=False)
             iteration_ended = time.time()
             iteration_duration = iteration_ended - itertation_started
             iterations_time.append(iteration_duration)
             time.sleep(max(0, 1 / fps - iteration_duration))
-            self.last_block_id = self.last_block_id + 1
 
-        aliasing_finished = time.time()
-        self.log(f"Faking for {aliasing_finished-aliasing_started} seconds")
+        injection_finished = time.time()
+        self.log(f"Injected for {injection_finished-injection_started} seconds")
+        self.log(f"average iteration time = {np.average(np.array(iterations_time))}", log_level=logging.DEBUG)
 
         self.log("Starting acquisition", log_level=logging.DEBUG)
         self.send_start_command(count=1)
 
-        self.log(f"average iteration time = {np.average(np.array(iterations_time))}", log_level=logging.DEBUG)
 
     def log(self, msg, log_level=logging.INFO):
         if self.logger is None:
