@@ -571,7 +571,7 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        self.log("Injecting Full Frame")
+        self.log("Full Frame Injection Started")
         num_frames = round(duration * min(injection_effective_frame_rate, fps))
         self.log(f"Number of fake frames = {num_frames}", log_level=logging.DEBUG)
         self.log(f"Last GVSP BlockID = {self.last_block_id}", log_level=logging.DEBUG)
@@ -590,10 +590,11 @@ class GigELink:
             time.sleep(max(0, 1 / fps - iteration_duration))
 
         injection_finished = time.time()
-        self.log(f"Injected for {injection_finished-injection_started} seconds")
+        self.log("Full Frame Injection Ended")
+        self.log(f"Injected for {injection_finished-injection_started} seconds",  log_level=logging.DEBUG)
         self.log(f"average iteration time = {np.average(np.array(iterations_time))}", log_level=logging.DEBUG)
 
-        self.log("Starting acquisition", log_level=logging.DEBUG)
+        self.log("Restarting acquisition", log_level=logging.DEBUG)
         self.send_start_command(count=1)
 
 
