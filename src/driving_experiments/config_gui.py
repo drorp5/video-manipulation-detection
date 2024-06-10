@@ -32,6 +32,7 @@ LOG_HANDLERS_OPTIONS = ["console", "file"]
 TIME_OF_DAY_OPTIONS = ["day", "night"]
 ROAD_TYPE_OPTIONS = ["urban", "highway"]
 RECORDER_OPTIONS = ["video", "frames", None]
+DETECTOR_OPTIONS = ["Haar", "Yolo", "MobileNet", None]
 
 
 
@@ -156,9 +157,8 @@ class ConfigGUI:
                     )
                     button.pack(side="left")
                 elif key == "detector":
-                    options = ["null", "Haar", "Yolo", "MobileNet"]
-                    var = tk.StringVar(value=value)  # Default to "null"
-                    combobox = ttk.Combobox(frame, textvariable=var, values=options)
+                    var = tk.StringVar(value=value)
+                    combobox = ttk.Combobox(frame, textvariable=var, values=DETECTOR_OPTIONS)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
                 elif key == "attack_type":
@@ -167,7 +167,7 @@ class ConfigGUI:
                     combobox = ttk.Combobox(frame, textvariable=var, values=options)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
-                elif key in ["record_pcap", "viewer", "record_video"]:
+                elif key in ["record_pcap", "viewer"]:
                     var = tk.BooleanVar(
                         value=(value is True)
                     )  # Default to True if True in config, otherwise False
@@ -282,12 +282,6 @@ class ConfigGUI:
                     new_config[key] = selected_options
                 elif key in ["record_pcap", "viewer"]:
                     new_config[key] = self.entries[current_key].get()
-                elif key == "detector":
-                    new_config[key] = (
-                        self.entries[current_key].get()
-                        if self.entries[current_key].get() != "null"
-                        else None
-                    )
                 else:
                     entry_value = self.entries[current_key].get()
                     if entry_value == "":
