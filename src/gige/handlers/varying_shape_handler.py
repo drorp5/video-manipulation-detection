@@ -11,13 +11,14 @@ from active_manipulation_detectors.side_channel.data_generator import (
 )
 from active_manipulation_detectors.side_channel.validation import DataValidator
 from gige.handlers.sign_detector_handler import SignDetectorHandler
-from gige.handlers.video_recorder_handler import VideoRecorderHandler
-from utils.video_recorder import VideoReocrder, add_text_box
+from gige.handlers.recorder_handler import RecorderHandler
+from recorders import Recorder
+from utils.view import add_text_box
 from sign_detectors.stop_sign_detectors import StopSignDetector, draw_bounding_boxes
 from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 
-class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
+class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
     def __init__(
         self,
         random_bits_generator: RandomBitsGenerator,
@@ -28,13 +29,13 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
         downfactor: int = 4,
         sign_detector: Optional[StopSignDetector] = None,
         view: bool = True,
-        video_recorder: Optional[VideoReocrder] = None,
+        recorder: Optional[Recorder] = None,
     ) -> None:
         SignDetectorHandler.__init__(self, logger=logger, downfactor=downfactor, detector=sign_detector)
-        self.record_video = video_recorder is not None
-        if self.record_video:
-            VideoRecorderHandler.__init__(
-                self, video_recorder=video_recorder, logger=logger
+        self.record = recorder is not None
+        if self.record:
+            RecorderHandler.__init__(
+                self, recorder=recorder, logger=logger
             )
 
         self.height_values = [MAX_HEIGHT - increment * ind for ind in range(num_levels)]
@@ -63,7 +64,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                     validation_result = self.data_validator.validate(width)
                     self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
 
-                if self.detector is not None or self.view or self.record_video:
+                if self.detector is not None or self.view or self.record:
                     img = self.resize_for_detection(img)
                     if self.detector is not None:
                         detections = self.detect_objects_in_image(img)
@@ -76,9 +77,9 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                         plotted_img = self.plot_detected(img, cam, detections)
                     else:
                         plotted_img = draw_bounding_boxes(img, detections)
-                    if self.record_video:
+                    if self.record:
                         # plotted_img = add_text_box(plotted_img, f"{frame_id}")
-                        self.video_recoder.write(plotted_img, id=frame_id)
+                        self.recorder.write(plotted_img, id=frame_id)
 
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)
@@ -93,8 +94,8 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
 
     def cleanup(self, cam: Camera) -> None:
         SignDetectorHandler.cleanup(self, cam)
-        if self.record_video:
-            VideoRecorderHandler.cleanup(self, cam)
+        if self.record:
+            RecorderHandler.cleanup(self, cam)
         with cam:
             cam.Width.set(MAX_WIDTH)
             self.log("Cleanup: Setting width to maximal value", log_level=logging.DEBUG)

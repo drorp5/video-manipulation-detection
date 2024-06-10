@@ -21,7 +21,7 @@ from active_manipulation_detectors.side_channel.data_generator import (
 )
 from active_manipulation_detectors.side_channel.validation import DataValidator
 from sign_detectors.stop_sign_detectors import get_detector
-from utils.video_recorder import VideoReocrder
+from recorders import Recorder 
 
 
 class ShapeVaryingLogicCar(Car):
@@ -33,6 +33,7 @@ class ShapeVaryingLogicCar(Car):
         logger: Optional[logging.Logger] = None,
         camera_started_event: Optional[threading.Event] = None,
         camera_stopped_event: Optional[threading.Event] = None,
+        recorder : Optional[Recorder] = None
     ) -> None:
         super().__init__(
             logger=logger,
@@ -42,20 +43,11 @@ class ShapeVaryingLogicCar(Car):
         self.config = config
         self.random_bits_generator = random_bits_generator
         self.data_validator = data_validator
+        self.recorder = recorder
 
     def get_handler(self) -> GigeHandler:
         sign_detector = get_detector(self.config["actions"]["detector"])
         downfactor = 4
-        if self.config["actions"]["record_video"]:
-            video_path = Path(self.config["actions"]["video_path"])
-            video_shape = (MAX_WIDTH // downfactor, MAX_HEIGHT // downfactor)
-            video_recorder = VideoReocrder(
-                video_path=video_path,
-                fps=self.config["camera"]["fps"],
-                video_shape=video_shape,
-            )
-        else:
-            video_recorder = None
         handler = VaryingShapeHandler(
             logger=self.logger,
             random_bits_generator=self.random_bits_generator,
@@ -65,7 +57,7 @@ class ShapeVaryingLogicCar(Car):
             sign_detector=sign_detector,
             view=self.config["actions"]["viewer"],
             downfactor=downfactor,
-            video_recorder=video_recorder,
+            recorder=self.recorder,
         )
         return handler
 

@@ -5,19 +5,19 @@ import numpy as np
 from vimba import Camera, Frame
 
 from gige.handlers.gige_handler import GigeHandler
-from utils.video_recorder import VideoReocrder
+from recorders import Recorder
 
 ENTER_KEY_CODE = 13
 
 
-class VideoRecorderHandler(GigeHandler):
+class RecorderHandler(GigeHandler):
     def __init__(
         self,
-        video_recorder: VideoReocrder,
+        recorder: Recorder,
         logger: Optional[Logger] = None,
     ) -> None:
         super().__init__(logger=logger)
-        self.video_recoder = video_recorder
+        self.recorder = recorder
 
     def __call__(self, cam: Camera, frame: Frame) -> None:
         if self.is_stop_key_selected():
@@ -26,12 +26,10 @@ class VideoRecorderHandler(GigeHandler):
         with cam:
             img = self.get_rgb_image(cam, frame)
             if img is not None:
-                self.video_recoder.write(img)
+                self.recorder.write(img)
 
             cam.queue_frame(frame)
 
     def cleanup(self, cam: Camera) -> None:
-        self.video_recoder.release()
-        self.log(
-            f"Video saved in {self.video_recoder.video_path.absolute().as_posix()}"
-        )
+        self.recorder.release()
+        self.log(self.recorder.info())

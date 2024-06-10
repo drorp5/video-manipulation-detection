@@ -11,9 +11,9 @@ car:
     streaming_buffer: 1
     fps: 5
   actions:
-    viewer: null
-    detector: null
-    record_video: null
+    viewer: True
+    detector: MobileNet
+    recorder: None
   variation:
     key: key
     num_widths: 8

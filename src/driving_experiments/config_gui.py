@@ -31,6 +31,8 @@ FLOAT_KEYS = {
 LOG_HANDLERS_OPTIONS = ["console", "file"]
 TIME_OF_DAY_OPTIONS = ["day", "night"]
 ROAD_TYPE_OPTIONS = ["urban", "highway"]
+RECORDER_OPTIONS = ["video", "frames", None]
+
 
 
 class ConfigGUI:
@@ -184,6 +186,11 @@ class ConfigGUI:
                     combobox = ttk.Combobox(
                         frame, textvariable=var, values=ROAD_TYPE_OPTIONS
                     )
+                    combobox.pack(side="top", fill="x", expand=True, anchor="w")
+                    self.entries[current_key] = var
+                elif key == "recorder":
+                    var = tk.StringVar(value=value)
+                    combobox = ttk.Combobox(frame, textvariable=var, values=RECORDER_OPTIONS)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
                 else:
