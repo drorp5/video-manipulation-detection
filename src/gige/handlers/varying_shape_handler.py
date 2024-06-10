@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List, Optional
 from vimba import Camera, Frame, FrameStatus
 import cv2
@@ -97,5 +98,6 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
         if self.record:
             RecorderHandler.cleanup(self, cam)
         with cam:
+            time.sleep(1)
             cam.Width.set(MAX_WIDTH)
             self.log("Cleanup: Setting width to maximal value", log_level=logging.DEBUG)
