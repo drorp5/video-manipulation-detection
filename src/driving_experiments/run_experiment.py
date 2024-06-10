@@ -16,7 +16,9 @@ from active_manipulation_detectors.side_channel.data_generator import (
 from active_manipulation_detectors.side_channel.validation import (
     DataValidatorKSymbolsDelayed,
 )
-from active_manipulation_detectors.side_channel.validation import DataValidatorKSymbolsDelayedChanged
+from active_manipulation_detectors.side_channel.validation import (
+    DataValidatorKSymbolsDelayedChanged,
+)
 from attacker import GigEAttackerStripeInjection, GigEAttackerFrameInjection, Attackers
 from driving_experiments.experiment import Experiment
 from active_manipulation_detectors.evaluation.mtsd_evaluation import (
@@ -93,9 +95,12 @@ def run_experiment(experiment_config: dict) -> Experiment:
     experiment_id = str(uuid.uuid4())
     experiment_config["experiment"]["id"] = experiment_id
 
-    # set output directory
+    # set start time
     now = datetime.now()
     start_time_string = now.strftime("%Y_%m_%d_%H_%M_%S")
+    experiment_config["experiment"]["start_time"] = start_time_string
+
+    # set output directory
     base_results_dir = (
         Path(experiment_config["experiment"]["results_directory"])
         / f"{start_time_string}_{experiment_id}"
