@@ -72,11 +72,12 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                     else:
                         detections = []
                     if self.view:
+                        # img = add_text_box(img, f"{frame_id}")
                         plotted_img = self.plot_detected(img, cam, detections)
                     else:
                         plotted_img = draw_bounding_boxes(img, detections)
                     if self.record_video:
-                        plotted_img = add_text_box(plotted_img, f"{frame_id}")
+                        # plotted_img = add_text_box(plotted_img, f"{frame_id}")
                         self.video_recoder.write(plotted_img, id=frame_id)
 
                 # change shape for next frame
