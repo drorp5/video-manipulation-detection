@@ -3,6 +3,8 @@ experiment:
   results_directory: null
   record_pcap: True
   log_type: [console, file]
+  road_type: urban
+  time_of_day: day
 car:
   duration: null
   camera:

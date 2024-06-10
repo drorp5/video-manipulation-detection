@@ -28,6 +28,11 @@ FLOAT_KEYS = {
 }
 
 
+LOG_HANDLERS_OPTIONS = ["console", "file"]
+TIME_OF_DAY_OPTIONS = ["day", "night"]
+ROAD_TYPE_OPTIONS = ["urban", "highway"]
+
+
 class ConfigGUI:
     def __init__(self, root):
         self.root = root
@@ -125,7 +130,7 @@ class ConfigGUI:
                     self.entries[current_key] = {}
                     options_frame = ttk.Frame(frame)
                     options_frame.pack(side="top", fill="x", expand=True, anchor="w")
-                    for option in ["console", "file"]:
+                    for option in LOG_HANDLERS_OPTIONS:
                         var = tk.BooleanVar(value=True)  # Default is checked
                         checkbox = ttk.Checkbutton(
                             options_frame, text=option, variable=var
@@ -166,6 +171,20 @@ class ConfigGUI:
                     )  # Default to True if True in config, otherwise False
                     checkbox = ttk.Checkbutton(frame, variable=var)
                     checkbox.pack(side="top", anchor="w")
+                    self.entries[current_key] = var
+                elif key == "time_of_day":
+                    var = tk.StringVar(value=value)
+                    combobox = ttk.Combobox(
+                        frame, textvariable=var, values=TIME_OF_DAY_OPTIONS
+                    )
+                    combobox.pack(side="top", fill="x", expand=True, anchor="w")
+                    self.entries[current_key] = var
+                elif key == "road_type":
+                    var = tk.StringVar(value=value)
+                    combobox = ttk.Combobox(
+                        frame, textvariable=var, values=ROAD_TYPE_OPTIONS
+                    )
+                    combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
                 else:
                     var = tk.StringVar(value=str(value) if value is not None else "")
