@@ -9,6 +9,8 @@ import numpy as np
 import random
 import uuid
 
+import vimba
+
 from car.changing_shape_defense_car import ShapeVaryingLogicCar
 from active_manipulation_detectors.side_channel.data_generator import (
     RandomBitsGeneratorRC4,
@@ -26,21 +28,14 @@ from active_manipulation_detectors.evaluation.mtsd_evaluation import (
     resize_bounding_box,
 )
 from active_manipulation_detectors.evaluation.metadata import DATASET_TO_TARGET_OBJECT
+from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
+from recorders import VideoReocrder, FramesRecorder
 
 
 def run_experiment_using_config_path(config_path: Path) -> None:
     with open(config_path.as_posix(), "r") as f:
         experiment_config = yaml.safe_load(stream=f)
     run_experiment(experiment_config)
-
-
-def fill_car_config(config: dict):
-    if config["car"]["actions"]["record_video"]:
-        video_path = (
-            Path(config["experiment"]["results_directory"])
-            / f"{config['experiment']['id']}.mp4"
-        )
-        config["car"]["actions"]["video_path"] = video_path.absolute().as_posix()
 
 
 def fill_attacker_config(config: dict) -> None:
@@ -117,7 +112,6 @@ def run_experiment(experiment_config: dict) -> Experiment:
     
 
     # car
-    fill_car_config(experiment_config)
     car_config = experiment_config["car"]
     key = car_config["variation"]["key"].encode("utf-8")
     num_symbols = car_config["variation"]["num_widths"]
@@ -134,6 +128,28 @@ def run_experiment(experiment_config: dict) -> Experiment:
     camera_started_event = threading.Event()
     camera_stopped_event = threading.Event()
 
+    if car_config["actions"]["recorder"] == "video":
+        downfactor = 4
+        video_path = (
+            Path(experiment_config["experiment"]["results_directory"])
+            / f"{experiment_config['experiment']['id']}.mp4"
+        )
+        car_config["actions"]["video_path"] = video_path.absolute().as_posix()
+        video_shape = (MAX_WIDTH // downfactor, MAX_HEIGHT // downfactor)
+        recorder = VideoReocrder(
+                video_path=video_path,
+                fps=car_config["camera"]["fps"],
+                video_shape=video_shape,
+            )
+    elif car_config["actions"]["recorder"] == "frames":
+        frames_dir =  Path(experiment_config["experiment"]["results_directory"]) / "frames"
+        recorder = FramesRecorder(frames_dir)
+    elif car_config["actions"]["recorder"]  is not None :
+        raise ValueError("recorder type not valid")
+    else:
+        recorder = None
+
+
     car_logic = ShapeVaryingLogicCar(
         config=experiment_config["car"],
         random_bits_generator=random_bits_generator,
@@ -141,6 +157,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
         logger=logger,
         camera_started_event=camera_started_event,
         camera_stopped_event=camera_stopped_event,
+        recorder=recorder
     )
 
     # attacker
