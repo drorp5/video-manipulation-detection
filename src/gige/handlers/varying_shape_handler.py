@@ -77,7 +77,7 @@ class VaryingShapeHandler(SignDetectorHandler, VideoRecorderHandler):
                         plotted_img = draw_bounding_boxes(img, detections)
                     if self.record_video:
                         plotted_img = add_text_box(plotted_img, f"{frame_id}")
-                        self.video_recoder.write(plotted_img)
+                        self.video_recoder.write(plotted_img, id=frame_id)
 
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)

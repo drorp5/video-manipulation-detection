@@ -11,7 +11,7 @@ def add_text_box(img: np.ndarray, text: str) -> np.ndarray:
     font_scale = 1  # Adjust font size as needed
     text_size, _ = cv2.getTextSize(text, font, font_scale, 1)  # Get text width and height
     text_x = 10  # Adjust horizontal position
-    text_y = 30  # Adjust vertical position (TOP of the image)
+    text_y = 100  # Adjust vertical position (TOP of the image)
     # Create a text box with a slightly filled background for better contrast
     text_box_color = (255, 255, 250)  # Adjust background color (white with slight transparency)
     text_thickness = -1  # Fill the text box
@@ -20,16 +20,17 @@ def add_text_box(img: np.ndarray, text: str) -> np.ndarray:
                 (text_x + text_size[0] + 5, text_y + 5), text_box_color, text_thickness)
 
     # Draw the text on top of the text box
-    cv2.putText(dst_img, text, (text_x, text_y), font, font_scale, (0, 0, 0), 1)  # Black text
+    cv2.putText(dst_img, text, (text_x, text_y), font, font_scale, (0, 0, 255), 1)  # Black text
     return dst_img
 
 class VideoReocrder:
     def __init__(
-        self, video_path: Path, video_shape: Tuple[int, int], fps: Optional[float] = 20
+        self, video_path: Path, video_shape: Tuple[int, int], fps: Optional[float] = 20, save_images: bool = False 
     ) -> None:
         self.video_path = video_path
         self.video_shape = video_shape
         self.fps = fps
+        self.save_images = save_images
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         self.video_writer = cv2.VideoWriter(
@@ -83,9 +84,12 @@ class VideoReocrder:
 
         return padded_img
 
-    def write(self, img: np.ndarray) -> None:
+    def write(self, img: np.ndarray, id: Optional[int] = None) -> None:
         padded_img = self.pad_image(img)
         self.video_writer.write(padded_img)
+        if self.save_images:
+            dst_path = self.video_path.parent / f"{id}.jpg"
+            cv2.imwrite(dst_path.as_posix(), img)
 
     def release(self) -> None:
         self.video_writer.release()
