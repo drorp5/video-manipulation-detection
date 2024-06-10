@@ -529,6 +529,7 @@ class GigELink:
         frame_duration = 1 / fps
         self.sniff_block_id()
         first_injected_id = self.last_block_id + future_id_diff
+        time.sleep(0.9 * frame_duration)
         self.log(
             f"Attempting stripe injection for frames {first_injected_id} - {first_injected_id + num_injections - 1}",
               log_level=logging.DEBUG)
@@ -540,7 +541,7 @@ class GigELink:
             )
             end_time = time.time()
             self.log(f"Insertion took {end_time - start_time} seconds", log_level=logging.DEBUG)
-            time.sleep(max(0, frame_duration - (end_time - start_time)))
+            time.sleep(max(0, 0.9*frame_duration - (end_time - start_time)))
         self.log(
             f"Stripe Attack Finished"
         )
