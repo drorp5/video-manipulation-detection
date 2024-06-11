@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, Optional, Union
-
+import numpy as np
 
 class DataHolder(ABC):
     """
@@ -75,7 +75,7 @@ class DataHolder(ABC):
         pass
 
     def _validate_input_length(self, item: Any) -> None:
-        if isinstance(item, (int, bool)):
+        if isinstance(item, (int, bool, np.int32, float)):
             if self._data_unit != 1:
                 raise ValueError(
                     f"Invalid value length for appended value: must be of length {self._data_unit}"

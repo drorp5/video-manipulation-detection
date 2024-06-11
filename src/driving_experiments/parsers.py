@@ -81,8 +81,6 @@ def summarize_log_file(log_path: Path) -> str:
 
 def extract_frame_width_data(log_path: Path):
     """
-    This function reads a log file and extracts frame number, transmitted width, and received value using regular expressions.
-
     Args:
         log_path: Path to the log file.
 
@@ -90,48 +88,15 @@ def extract_frame_width_data(log_path: Path):
         A pandas DataFrame containing frame number, transmitted width, and received value.
     """
 
-    data = []
-    transmitted_pattern = "Frame # (\d+): Setting next frame width = (\d+)"
-    received_pattern = "Frame # (\d+): (\d+) -> (\w+)"
-
-    prev_frame_num = None
-    with open(log_path.as_posix(), "r") as f:
-        for line in f:
-            matched_transmitted = re.search(transmitted_pattern, line)
-            match_received = re.search(received_pattern, line)
-            if matched_transmitted:
-                prev_frame_num, trasmitted_value = matched_transmitted.groups()
-                prev_frame_num = int(prev_frame_num)
-                trasmitted_value = int(trasmitted_value)
-            elif match_received:
-                frame_num, received_value, result = match_received.groups()
-                frame_num = int(frame_num)
-                received_value = int(received_value)
-
-                if frame_num == prev_frame_num + 1:
-                    data.append(
-                        {
-                            "frame_number": frame_num,
-                            "transmitted": trasmitted_value,
-                            "received": received_value,
-                            "result": result,
-                        }
-                    )
-                else:
-                    data.append(
-                        {
-                            "frame_number": frame_num,
-                            "transmitted": None,
-                            "received": received_value,
-                            "result": result,
-                        }
-                    )
-
-
-    # Create pandas DataFrame from the extracted data
-    df = pd.DataFrame(data)
-    return df
-
+    frames_df = parse_log_file(log_path)
+    res_df = frames_df.loc[:, ["frame_id", "width", "next_width", "validation_result"]]
+    res_df_off_one = res_df.loc[1:, ["frame_id", "width", "validation_result"]]
+    res_df_off_one["transmitted"] = list(frames_df["next_width"][:-1])
+    res_df_off_one["transmitted"] = res_df_off_one["transmitted"].astype(int)
+    res_df_off_one["width"] = res_df_off_one["width"].astype(int)
+    res_df_off_one.rename(columns={"width": "received"}, inplace=True)
+    return res_df_off_one
+    
 
 if __name__ == "__main__":
     log_file = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_11_17_03_39_8022a5c8-baa4-4c7e-a1b4-f66b13c0de02\log_8022a5c8-baa4-4c7e-a1b4-f66b13c0de02.log")
