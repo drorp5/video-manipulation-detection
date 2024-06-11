@@ -58,19 +58,22 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
             img = self.get_rgb_image(cam, frame)
             if img is not None:
                 frame_id = frame.get_id()
+                timestamp = frame.get_timestamp()
+                log_dict = {'frame_id': frame_id, 'timestamp': timestamp}
                 # read data of current image
                 if self.shape_changed:
                     # height = frame.get_height()
                     width = frame.get_width()
                     validation_result = self.data_validator.validate(width)
-                    self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
+                    log_dict['width'] = width
+                    log_dict['validation_result'] = validation_result.name
 
                 if self.detector is not None or self.view or self.record:
                     img_for_detection = self.resize_image(img)
                     if self.detector is not None:
                         detections = self.detect_objects_in_image(img_for_detection)
                         if len(detections) > 0:
-                            self.log(f"DETECTIONS: {detections.__str__()}")
+                            log_dict['detections'] = detections
                     else:
                         detections = []
                     if self.view:
@@ -85,12 +88,12 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)
                 new_width = self.encoder_decoder.decode(symbol=symbol)
-                self.log(
-                    f"Frame # {frame_id}: Setting next frame width = {new_width}")
+                log_dict['next_width'] = new_width
                 cam.Width.set(new_width)
                 self.data_validator.add_trasnmitted_data(new_width)
                 self.shape_changed = True
-
+            
+            self.log(log_dict)
             cam.queue_frame(frame)
 
     def cleanup(self, cam: Camera) -> None:

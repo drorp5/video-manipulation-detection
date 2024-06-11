@@ -47,4 +47,4 @@ class GigeHandler(ABC):
             raise ValueError(f"Invalid log level: {log_level}")
     
     def cleanup(self, cam: Camera) -> None:
-        self.log('Handler Cleanup')
+        self.log('Handler Cleanup', log_level=logging.DEBUG)

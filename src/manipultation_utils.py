@@ -175,7 +175,7 @@ class GigELink:
         msg += f"\tCP {self.cp_ip}({self.gvcp_src_port}) ---> Camera {self.camera_ip}({Ports.GVCP_DST.value})\n"
         msg += "GVSP:\n"
         msg += f"\tCamera {self.camera_ip}({Ports.GVSP_SRC.value}) ---> CP {self.cp_ip}({self.gvsp_dst_port})"
-        self.log(msg)
+        self.log(msg, log_level=logging.DEBUG)
 
     def _get_writereg_cmd(self, address: int, value: int, ack_required: bool = False):
         flags = 0x01 if ack_required else 0x00
@@ -250,7 +250,7 @@ class GigELink:
             return self.gvsp_dst_port != -1 and self.gvcp_src_port != -1
 
         # sniff for ports
-        self.log("sniffing")
+        self.log("Sniffing port numbers", log_level=logging.DEBUG)
         sniff(
             iface=self.interface,
             prn=pkt_callback,
@@ -272,7 +272,7 @@ class GigELink:
             and pkt[Layers.IP.value].src == self.camera_ip
         ):
             self.last_block_id = pkt[Layers.GVSP.value].BlockID
-            self.log(f"Found GVSP packet for block {pkt[Layers.GVSP.value].BlockID} and packet {pkt[Layers.GVSP.value].PacketID}")
+            self.log(f"Found GVSP packet for block {pkt[Layers.GVSP.value].BlockID} and packet {pkt[Layers.GVSP.value].PacketID}", log_level=logging.DEBUG)
             return True
         return False
     
@@ -309,7 +309,7 @@ class GigELink:
                 offset += 1
     
         frame_duration = 1/fps
-        self.log(f"Sending pcap frames at rate {fps}")
+        self.log(f"Sending pcap frames at rate {fps}", log_level=logging.DEBUG)
         for frame in frames:
             start_time = time.time()
             sendp(frame, iface=self.interface, verbose=False)
@@ -328,7 +328,7 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        self.log("Aliasing")
+        self.log("Aliasing", log_level=logging.DEBUG)
         gvsp_packets = rdpcap(frame_pcap_path)
         for packet in gvsp_packets:
             packet[Layers.UDP.value].dport = self.gvsp_dst_port
@@ -338,9 +338,9 @@ class GigELink:
         self.last_block_id = gvsp_packets[0][Layers.GVSP.value].BlockID
 
     def stop_and_replace_with_image(self, img_path, timeout=2):
-        self.log("Stopping acquisition")
+        self.log("Stopping acquisition", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
-        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds")
+        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds", log_level=logging.DEBUG)
         sniff(
             iface=self.interface,
             filter="udp",
@@ -349,7 +349,7 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        self.log("Aliasing")
+        self.log("Aliasing", log_level=logging.DEBUG)
         gvsp_packets = self.img_to_gvsp(img_path, block_id=self.last_block_id + 1)
         sendp(gvsp_packets, iface=self.interface, verbose=False)
         self.last_block_id = gvsp_packets[0][Layers.GVSP.value].BlockID
@@ -546,7 +546,7 @@ class GigELink:
             self.log(f"Insertion took {end_time - start_time} seconds", log_level=logging.DEBUG)
             time.sleep(max(0, waiting_time - (end_time - start_time)))
         self.log(
-            f"Stripe Attack Finished"
+            f"Stripe Attack Finished", log_level=logging.DEBUG
         )
 
     def fake_still_image(
@@ -571,7 +571,7 @@ class GigELink:
             store=0,
             timeout=timeout,
         )
-        self.log("Full Frame Injection Started")
+        self.log("Full Frame Injection Started", log_level=logging.DEBUG)
         num_frames = round(duration * min(injection_effective_frame_rate, fps))
         self.log(f"Number of fake frames = {num_frames}", log_level=logging.DEBUG)
         self.log(f"Last GVSP BlockID = {self.last_block_id}", log_level=logging.DEBUG)
@@ -590,7 +590,7 @@ class GigELink:
             time.sleep(max(0, 1 / fps - iteration_duration))
 
         injection_finished = time.time()
-        self.log("Full Frame Injection Ended")
+        self.log("Full Frame Injection Ended", log_level=logging.DEBUG)
         self.log(f"Injected for {injection_finished-injection_started} seconds",  log_level=logging.DEBUG)
         self.log(f"average iteration time = {np.average(np.array(iterations_time))}", log_level=logging.DEBUG)
 

@@ -1,4 +1,4 @@
-from time import time
+import logging
 
 from attacker import GigEAttacker
 
@@ -17,5 +17,5 @@ class GigEAttackerStripeInjection(GigEAttacker):
 
     def run_attack_stage(self) -> None:
         self.set_gige_link()
-        self.log('Starting Stripe Injection Attack')
+        self.log('Starting Stripe Injection Attack', log_level=logging.DEBUG)
         self.attack()

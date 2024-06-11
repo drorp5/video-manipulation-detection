@@ -84,7 +84,7 @@ class Experiment:
         ]
 
         # Start the subprocess
-        self.logger.info("Pcap Recording Started")
+        self.logger.debug("Pcap Recording Started")
         process = subprocess.Popen(
             tshark_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
@@ -103,7 +103,7 @@ class Experiment:
             if process.poll() is None:
                 process.terminate()
                 process.wait()
-        self.logger.info("Pcap Recording Stopped")
+        self.logger.debug("Pcap Recording Stopped")
 
     def start_pcap_recording_thread(self):
         self.pcap_shutdown_event = self.car.camera_stopped_event

@@ -1,36 +1,45 @@
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 from pathlib import Path
 import re
 import pandas as pd
+import ast
 
 from active_manipulation_detectors.validation_status import ValidationStatus
 
 
-def get_logged_frames_info(log_path: Path) -> Tuple[int, int, int]:
-    if not log_path.exists():
-        raise FileNotFoundError
+import re
+from datetime import datetime
 
-    unique_frames = set()
-    frame_id_regex = r"Frame # (\d+)"
-    with open(log_path.as_posix(), "r") as log_file:
-        for line in log_file:
-            matches = re.findall(frame_id_regex, line)
-            for match in matches:
-                unique_frames.add(int(match))
-    if len(unique_frames) == 0:
-        return 0, 0, 0
-    return min(unique_frames), max(unique_frames), len(unique_frames)
-
-
-def get_number_of_detections_frames(log_path: Path) -> int:
-    if not log_path.exists():
-        raise FileNotFoundError
-    detections = 0
-    with open(log_path.as_posix(), "r") as log_file:
-        for line in log_file:
-            if "DETECTIONS" in line:
-                detections += 1
-    return detections
+def parse_log_file(file_path: Path) -> pd.DataFrame:
+    with open(file_path.as_posix(), 'r') as file:
+        log_lines = file.readlines()
+    
+    log_pattern = r'^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (?P<level>\w+) - (?P<message>.*)$'
+    parsed_data = []
+    for line in log_lines:
+        # Extracting the timestamp, log level, and message
+        match = re.match(log_pattern, line)
+        if match:
+            log_data = match.groupdict()
+            timestamp  = datetime.strptime(log_data['timestamp'], '%Y-%m-%d %H:%M:%S,%f')
+            # Parsing INFO messages related to frames
+            if log_data['level'] == 'INFO':
+                frame_data = {'timestamp': timestamp}
+                frame_pattern = r'\{(.*?)\}'
+                frame_match = re.search(frame_pattern, log_data['message'])
+                if frame_match:
+                    frame_data_str = frame_match.group(1)
+                    
+                    # Extracting key-value pairs from the frame data
+                    key_value_pattern = r"\'(\w+)\': (\d+|\'[^\']*\'|\[\([\d, ]+\)\])"
+                    for kv_match in re.findall(key_value_pattern, frame_data_str):
+                        key, value = kv_match
+                        frame_data[key] = ast.literal_eval(value)
+                        
+                                
+                parsed_data.append(frame_data)
+    
+    return pd.DataFrame(parsed_data)
 
 
 def get_validation_results_summary(log_path: Path) -> Dict[str, int]:
@@ -49,10 +58,15 @@ def get_validation_results_summary(log_path: Path) -> Dict[str, int]:
 
 def summarize_log_file(log_path: Path) -> str:
     try:
-        first_frame, last_frame, num_frames = get_logged_frames_info(log_path)
-        detections_frames = get_number_of_detections_frames(log_path)
-        validation_summary = get_validation_results_summary(log_path)
-        
+        frames_log_df = parse_log_file(log_path)
+        first_frame = frames_log_df["frame_id"].iloc[0]
+        last_frame = frames_log_df["frame_id"].iloc[-1]
+        num_frames = len(frames_log_df)
+        if "detections" in frames_log_df:
+            detections_frames = frames_log_df["detections"].count()
+        else:
+            detections_frames = 0
+        validation_summary = dict(frames_log_df['validation_result'].value_counts())
     except FileNotFoundError:
         return "Log Not Found"
 
@@ -117,3 +131,9 @@ def extract_frame_width_data(log_path: Path):
     # Create pandas DataFrame from the extracted data
     df = pd.DataFrame(data)
     return df
+
+
+if __name__ == "__main__":
+    log_file = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_11_17_03_39_8022a5c8-baa4-4c7e-a1b4-f66b13c0de02\log_8022a5c8-baa4-4c7e-a1b4-f66b13c0de02.log")
+    res = summarize_log_file(log_file)
+    print(res)

@@ -1,4 +1,5 @@
 from logging import Logger
+import logging
 from pathlib import Path
 from typing import Optional, Tuple
 import numpy as np
@@ -32,4 +33,4 @@ class RecorderHandler(GigeHandler):
 
     def cleanup(self, cam: Camera) -> None:
         self.recorder.release()
-        self.log(self.recorder.info())
+        self.log(self.recorder.info(), log_level=logging.DEBUG)

@@ -29,7 +29,7 @@ class GigEAttacker(ABC):
             max_payload_bytes=self.config["gige"]["gvsp"]["max_payload_bytes"],
             logger=self.logger
         )
-        self.log('Sniffing link parameters')
+        self.log('Sniffing link parameters', log_level=logging.DEBUG)
         self.gige_link.sniff_link_parameters()
 
     def run_pre_attack_stage(self) -> None:
@@ -44,7 +44,7 @@ class GigEAttacker(ABC):
         raise NotImplementedError
 
     def run_attack_stage(self) -> None:
-        self.log('Starting attack stage') 
+        self.log('Starting attack stage', log_level=logging.DEBUG) 
         start_time = time()
         self.set_gige_link()
         while time() - start_time < self.config["timing"]["attack_duration_in_seconds"]:
