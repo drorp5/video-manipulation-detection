@@ -66,21 +66,21 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
                     self.log(f"Frame # {frame_id}: {width} -> {validation_result}")
 
                 if self.detector is not None or self.view or self.record:
-                    img = self.resize_for_detection(img)
+                    img_for_detection = self.resize_image(img)
                     if self.detector is not None:
-                        detections = self.detect_objects_in_image(img)
+                        detections = self.detect_objects_in_image(img_for_detection)
                         if len(detections) > 0:
                             self.log(f"DETECTIONS: {detections.__str__()}")
                     else:
                         detections = []
                     if self.view:
                         # img = add_text_box(img, f"{frame_id}")
-                        plotted_img = self.plot_detected(img, cam, detections)
+                        plotted_img = self.plot_detected(img_for_detection, cam, detections)
                     else:
-                        plotted_img = draw_bounding_boxes(img, detections)
+                        plotted_img = draw_bounding_boxes(img_for_detection, detections)
                     if self.record:
                         # plotted_img = add_text_box(plotted_img, f"{frame_id}")
-                        self.recorder.write(plotted_img, id=frame_id)
+                        self.recorder.write(img_for_detection, id=frame_id)
 
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)

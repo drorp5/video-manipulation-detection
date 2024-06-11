@@ -24,9 +24,6 @@ class SignDetectorHandler(ViewerHandler):
         ViewerHandler.__init__(self, logger=logger, downfactor=downfactor)
         self.detector = detector
 
-    def resize_for_detection(self, img: np.ndarray) -> np.ndarray:
-        return self.resize_image(img)
-
     def detect_objects_in_image(self, img: np.ndarray) -> Optional[List[np.ndarray]]:
         if self.detector is not None:
             return self.detector.detect(img)
@@ -44,7 +41,7 @@ class SignDetectorHandler(ViewerHandler):
         return img
 
     def plot(self, img: np.ndarray, cam: Camera) -> np.ndarray:
-        img = self.resize_for_detection(img)
+        img = self.resize_image(img)(img)
         detections = self.detect_objects_in_image(img)
         self._plotted_img = self.plot_detected(img, cam, detections)
         return self._plotted_img
