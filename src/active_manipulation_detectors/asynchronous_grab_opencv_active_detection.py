@@ -34,6 +34,7 @@ from icecream import ic
 import traceback
 import numpy as np
 
+from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 from gige.handlers.viewer_handler import ViewerHandler
 from gige.handlers.varying_shape_handler import VaryingShapeHandler
 from active_manipulation_detectors.side_channel.data_generator import (
@@ -146,6 +147,8 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
                 abort(
                     "Camera does not support a OpenCV compatible format natively. Abort."
                 )
+        cam.Width.set(MAX_WIDTH)
+        cam.Height.set(MAX_HEIGHT)
 
 
 def parse_args() -> Namespace:
