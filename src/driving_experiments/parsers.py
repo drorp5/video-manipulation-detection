@@ -3,12 +3,14 @@ from pathlib import Path
 import re
 import pandas as pd
 import ast
+from datetime import datetime
+import cv2
 
 from active_manipulation_detectors.validation_status import ValidationStatus
+from gige.attacked_gvsp_parser import AttackedGvspPcapParser
+from gige.gvsp_frame import gvsp_frame_to_rgb
 
 
-import re
-from datetime import datetime
 
 def parse_log_file(file_path: Path) -> pd.DataFrame:
     with open(file_path.as_posix(), 'r') as file:
@@ -98,7 +100,59 @@ def extract_frame_width_data(log_path: Path):
     return res_df_off_one
     
 
+def extract_frames_of_pcap(pcap_path: Path, log_path: Path, dst_dir: Path) -> None:
+    """
+        Extracts specific frames from a pcap file based on timestamps provided in a log file and saves them to a destination directory.
+
+        This function reads a pcap file and a log file containing timestamps, extracts the frames from the pcap file that match the timestamps in the log, and saves the extracted frames to the specified destination directory.
+
+        Parameters:
+        -----------
+        pcap_path : Path
+            The path to the pcap file from which frames will be extracted.
+        
+        log_path : Path
+            The path to the log file containing timestamps of the frames to be extracted.
+        
+        dst_dir : Path
+            The destination directory where the extracted frames will be saved.
+
+        Returns:
+        --------
+        None
+            This function does not return anything. It performs the extraction and saving of frames as a side effect.
+    """
+
+    pcap_parser = AttackedGvspPcapParser(pcap_path)
+    frames_df = parse_log_file(log_path)
+    if not dst_dir.exists():
+        dst_dir.mkdir(parents=True)
+
+    saved_frames = 0
+    current_row = 0
+    curernt_timestamp = frames_df['timestamp'].iloc[current_row]
+    current_id = frames_df["frame_id"].iloc[current_row]
+    for frame in pcap_parser.frames:
+        while current_row < len(frames_df)-1 and frame.timestamp > curernt_timestamp:
+            current_row += 1
+            curernt_timestamp = frames_df['timestamp'].iloc[current_row]
+            current_id = frames_df["frame_id"].iloc[current_row]
+        if frame.timestamp == curernt_timestamp:
+            # save frame
+            dst_path = dst_dir / f"frame_{current_id}_BlockID_{frame.id}.png"
+            img = cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
+            cv2.imwrite(dst_path.as_posix(), img)
+            saved_frames += 1
+            
+            current_row += 1
+            if current_row < len(frames_df):
+                curernt_timestamp = frames_df['timestamp'].iloc[current_row]
+                current_id = frames_df["frame_id"].iloc[current_row]
+    print(f"{saved_frames} frames saved")
+
+
 if __name__ == "__main__":
-    log_file = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_11_17_03_39_8022a5c8-baa4-4c7e-a1b4-f66b13c0de02\log_8022a5c8-baa4-4c7e-a1b4-f66b13c0de02.log")
-    res = summarize_log_file(log_file)
-    print(res)
+    log_path = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_12_10_46_11_24088764-7371-41b3-a243-348b39d8b078\log_24088764-7371-41b3-a243-348b39d8b078.log")
+    pcap_path = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_12_10_46_11_24088764-7371-41b3-a243-348b39d8b078\24088764-7371-41b3-a243-348b39d8b078.pcap")
+    dst_dir = log_path.parent / "pcap_frames"
+    extract_frames_of_pcap(pcap_path, log_path, dst_dir)
