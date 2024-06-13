@@ -27,8 +27,8 @@ class Experiment:
         config: dict,
         logger: logging.Logger,
         car: Car,
-        attacker: GigEAttacker,
         base_results_dir: Path,
+        attacker: Optional[GigEAttacker] = None,
         id: Optional[str] = None,
     ) -> None:
         self.logger = logger
@@ -68,13 +68,14 @@ class Experiment:
 
     def _start_pcap_recording(self) -> None:
         self.pcap_path = self.base_results_dir / f"{self.id}.pcap"
-        cp_ip = self.attacker.cp_ip
-        camera_ip = self.attacker.camera_ip
+        cp_ip = self.config["attacker"]["gige"]["cp"]["ip"]
+        camera_ip = self.config["attacker"]["gige"]["camera"]["ip"]
+        interface = self.config["attacker"]["gige"]["interface"]
         gvsp_gvcp_filter = f"((src host {camera_ip}) and (dst host {cp_ip})) or ((dst host {camera_ip}) and (src host {cp_ip}))"
         tshark_command = [
             "tshark",
             "-i",
-            self.attacker.interface,
+            interface,
             "-w",
             self.pcap_path.absolute().as_posix(),
             "-f",
@@ -115,17 +116,18 @@ class Experiment:
         if self.config["experiment"]["record_pcap"]:
             tshark_thread = self.start_pcap_recording_thread()
         car_thread = run_thread(self.car.run)
-        attacker_thread = run_thread(self.attacker.run)
-
-        threading.Timer(
-            self.config["experiment"]["duration"], self.attacker.shutdown_event.set
-        ).start()
+        if self.attacker is not None:
+            attacker_thread = run_thread(self.attacker.run)
+            threading.Timer(
+                self.config["experiment"]["duration"], self.attacker.shutdown_event.set
+            ).start()
         threading.Timer(
             self.config["experiment"]["duration"], self.car.shutdown_event.set
         ).start()
 
         # Join threads
-        attacker_thread.join()
+        if self.attacker is not None:
+            attacker_thread.join()
         car_thread.join()
         if self.config["experiment"]["record_pcap"]:
             tshark_thread.join()

@@ -163,11 +163,14 @@ def run_experiment(experiment_config: dict) -> Experiment:
     # attacker
     fill_attacker_config(experiment_config)
     attack_type = experiment_config["attacker"]["attack_type"]
-    attacker = Attackers[attack_type](
-        experiment_config["attacker"],
-        logger=logger,
-        initialization_event=camera_started_event,
-    )
+    if attack_type is None:
+        attacker = None
+    else:
+        attacker = Attackers[attack_type](
+            experiment_config["attacker"],
+            logger=logger,
+            initialization_event=camera_started_event,
+        )
 
     # set experiment
     experiment = Experiment(

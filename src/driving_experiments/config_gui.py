@@ -33,6 +33,7 @@ TIME_OF_DAY_OPTIONS = ["day", "night"]
 ROAD_TYPE_OPTIONS = ["urban", "highway"]
 RECORDER_OPTIONS = ["video", "frames", None]
 DETECTOR_OPTIONS = ["Haar", "Yolo", "MobileNet", None]
+ATTACK_TYPES = list(Attackers.keys()) + [None]
 
 
 
@@ -162,9 +163,8 @@ class ConfigGUI:
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
                 elif key == "attack_type":
-                    options = list(Attackers.keys())
                     var = tk.StringVar(value=value)
-                    combobox = ttk.Combobox(frame, textvariable=var, values=options)
+                    combobox = ttk.Combobox(frame, textvariable=var, values=ATTACK_TYPES)
                     combobox.pack(side="top", fill="x", expand=True, anchor="w")
                     self.entries[current_key] = var
                 elif key in ["record_pcap", "viewer"]:
