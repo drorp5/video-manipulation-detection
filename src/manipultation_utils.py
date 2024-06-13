@@ -14,23 +14,17 @@ from scapy.all import (
     rdpcap,
     Raw,
     PcapWriter,
-    PacketListField,
-    StrNullField,
-    ConditionalField,
-    Padding,
 )
 from scapy.all import hexdump
 import time
-from enum import IntEnum, Enum
+from enum import Enum
 import argparse
 from pathlib import Path
-import sys
 import random
 
 from gige.constansts import *
 from gige.gige_constants import *
-from gige.utils import img_to_packets_payload, bgr_img_to_packets_payload
-from utils.image_processing import bgr_to_bayer_rg
+from gige.utils import bgr_img_to_packets_payload
 from utils.injection import get_stripe, insert_stripe_to_img
 from utils.detection_utils import Rectangle
 
@@ -163,6 +157,8 @@ class GigELink:
         self.gvcp_src_port = -1
         self.last_block_id = default_block_id - 1
         self.logger = logger
+        self.last_timestamp = 1
+        self.last_timestamp_block_id = None
 
     def set_gvsp_dst_port(self, gvsp_dst_port):
         self.gvsp_dst_port = gvsp_dst_port
@@ -267,6 +263,12 @@ class GigELink:
         return False
 
     def callback_update_block_id(self, pkt) -> bool:
+        if (
+            pkt.haslayer(Layers.GVSP_LEADER.value)
+            and pkt[Layers.IP.value].src == self.camera_ip
+        ):
+            self.last_timestamp = pkt[Layers.GVSP_LEADER.value].Timestamp
+            self.last_timestamp_block_id = pkt[Layers.GVSP.value].BlockID
         if (
             pkt.haslayer(Layers.GVSP.value)
             and pkt[Layers.IP.value].src == self.camera_ip
@@ -582,12 +584,15 @@ class GigELink:
             itertation_started = time.time()
             for pkt in gvsp_fake_packets:
                 pkt[Layers.GVSP.value].BlockID = self.last_block_id + 1
-            self.last_block_id += 1
+            if self.last_timestamp_block_id is not None:
+                time_elapsed_of_last_recorded_timestamp = (self.last_block_id + 1 - self.last_timestamp_block_id) *1/fps
+                gvsp_fake_packets[0][Layers.GVSP_LEADER.value].Timestamp = int(self.last_timestamp + time_elapsed_of_last_recorded_timestamp * 1_000_000_000)
             sendp(gvsp_fake_packets, iface=self.interface, verbose=False)
+            self.last_block_id += 1
             iteration_ended = time.time()
             iteration_duration = iteration_ended - itertation_started
             iterations_time.append(iteration_duration)
-            time.sleep(max(0, 1 / fps - iteration_duration))
+            time.sleep(max(0, 1/fps - iteration_duration))
 
         injection_finished = time.time()
         self.log("Full Frame Injection Ended", log_level=logging.DEBUG)
