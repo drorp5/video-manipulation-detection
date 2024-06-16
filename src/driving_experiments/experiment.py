@@ -147,3 +147,6 @@ class Experiment:
         summary = f"# Expected Frames = {expected_number_of_frames}\n"
         summary += log_summary
         return summary
+
+    def evaluate_success_rate(self) -> float:
+        return evaluate_success_recording_rate(self.log_path)
