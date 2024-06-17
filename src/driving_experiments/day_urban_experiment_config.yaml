@@ -1,6 +1,6 @@
 experiment:
   duration: 30
-  results_directory: ../OUTPUT/driving_experiments
+  results_directory: ../OUTPUT/results
   record_pcap: True
   log_type: [file]
   road_type: urban
@@ -12,8 +12,8 @@ car:
     fps: 5
   actions:
     viewer: False
-    detector: None
-    recorder: None
+    detector: null
+    recorder: null
   variation:
     key: key
     num_widths: 8
@@ -21,7 +21,7 @@ car:
     num_symbols: 1
     max_delay: 1
 attacker:
-  attack_type: None
+  attack_type: null
   timing:
     pre_attack_duration_in_seconds: 10
     attack_duration_in_seconds: 5

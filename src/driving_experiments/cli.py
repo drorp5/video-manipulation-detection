@@ -9,9 +9,9 @@ sys.path.append(".")
 from driving_experiments.run_experiment import run_experiment
 
 
-SUCCESS_SOUND_PATH = Path(r"../INPUT/success.mp3")
-FAILURE_SOUND_PATH = Path(r"../INPUT/failure.mp3")
-BASE_CONFIG_PATH = Path(r"driving_experiments/day_urban_experiment_config.py")
+SUCCESS_SOUND_PATH = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\INPUT\success.mp3")
+FAILURE_SOUND_PATH = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\INPUT\failure.mp3")
+BASE_CONFIG_PATH = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\src\driving_experiments\day_urban_experiment_config.yaml")
 
 
 def run_experiment_iterarion_wrapper(
@@ -19,11 +19,12 @@ def run_experiment_iterarion_wrapper(
 ) -> bool:
     with open(BASE_CONFIG_PATH.as_posix(), "r") as f:
         experiment_config = yaml.safe_load(stream=f)
-    experiment_config["car"]["variation"]["num_widths"] = num_widths
+    experiment_config["car"]["variation"]["num_widths"] = num_widths    
     experiment_config["attacker"]["attack_type"] = attack_type
 
     experiment = run_experiment(experiment_config)
     success_rate = experiment.evaluate_success_rate()
+    print(f"Success Rate = {success_rate}")
     success_flag = success_rate >= success_rate_th
 
     if success_flag:
@@ -41,7 +42,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--attack_type", help="type of injection attack", type=str, default=None
     )
-    args = parser.parse_args()
+    args = parser.parse_args()    
     return args
 
 
@@ -53,7 +54,8 @@ def main():
             attack_type=args.attack_type,
             success_rate_th=0.9,
         )
-    except:
+    except Exception as e:
+        print(e)
         return False
 
 

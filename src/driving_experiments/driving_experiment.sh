@@ -10,7 +10,7 @@ num_iters=10
 max_retries=2
 
 # Sleep before stating the experiment
-sleep 0
+sleep 30
 
 
 # Loop from start to stop with the specified jump
