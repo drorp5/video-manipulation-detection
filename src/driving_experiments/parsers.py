@@ -7,7 +7,7 @@ from datetime import datetime
 import cv2
 
 from active_manipulation_detectors.validation_status import ValidationStatus
-from gige.attacked_gvsp_parser import AttackedGvspPcapParser
+from gige.attacked_gvsp_parser import AttackedGvspPcapParser, GvspPcapParser
 from gige.gvsp_frame import gvsp_frame_to_rgb
 
 
@@ -121,7 +121,7 @@ def extract_frames_of_pcap(pcap_path: Path, log_path: Path, dst_dir: Path) -> No
         This function does not return anything. It performs the extraction and saving of frames as a side effect.
     """
 
-    pcap_parser = AttackedGvspPcapParser(pcap_path)
+    pcap_parser = GvspPcapParser(pcap_path, completed_only=True)
     frames_df = parse_log_file(log_path)
     if not dst_dir.exists():
         dst_dir.mkdir(parents=True)
@@ -131,6 +131,8 @@ def extract_frames_of_pcap(pcap_path: Path, log_path: Path, dst_dir: Path) -> No
     curernt_timestamp = frames_df["timestamp"].iloc[current_row]
     current_id = frames_df["frame_id"].iloc[current_row]
     for frame in pcap_parser.frames:
+        if not frame.success_status:
+            continue
         while current_row < len(frames_df) - 1 and frame.timestamp > curernt_timestamp:
             current_row += 1
             curernt_timestamp = frames_df["timestamp"].iloc[current_row]
