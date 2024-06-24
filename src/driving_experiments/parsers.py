@@ -137,13 +137,14 @@ def extract_frames_of_pcap(pcap_path: Path, log_path: Path, dst_dir: Path) -> No
             current_row += 1
             curernt_timestamp = frames_df["timestamp"].iloc[current_row]
             current_id = frames_df["frame_id"].iloc[current_row]
+        if current_row >= len(frames_df):
+            break
         if frame.timestamp == curernt_timestamp:
             # save frame
             dst_path = dst_dir / f"frame_{current_id}_BlockID_{frame.id}.png"
             img = cv2.cvtColor(gvsp_frame_to_rgb(frame), cv2.COLOR_RGB2BGR)
             cv2.imwrite(dst_path.as_posix(), img)
             saved_frames += 1
-
             current_row += 1
             if current_row < len(frames_df):
                 curernt_timestamp = frames_df["timestamp"].iloc[current_row]

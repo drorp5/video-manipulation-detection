@@ -15,6 +15,10 @@ class Rectangle:
     def num_rows(self) -> int:
         return self.ymax - self.ymin
 
+    @property
+    def num_columns(self) -> int:
+        return self.xmax - self.xmin
+
     def resize(self, width_factor: float = 1, height_factor: float = 1) -> None:
         self.xmin = int(self.xmin * width_factor)
         self.ymin = int(self.ymin * height_factor)
