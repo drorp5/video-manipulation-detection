@@ -6,7 +6,6 @@ import re
 import ast
 from typing import Tuple
 import pandas as pd
-from sklearn import base
 from tqdm import tqdm
 import yaml
 
@@ -151,6 +150,7 @@ class DetectionEvaluator:
 if __name__ == "__main__":
     base_dir = Path(r"D:\Thesis\video-manipulation-detection\driving_experiments")
 
+    true_0_distribution = {2: 0.57333, 4: 0.28, 8: 0.12666666}
     with open(base_dir / "evaluation.txt", "w") as f:
 
         for num_widths in [2, 4, 8]:
@@ -176,4 +176,9 @@ if __name__ == "__main__":
             f.write(
                 f"detection_probability = {total_attacked.invalid / total_attacked.total}\n"
             )
-            f.write(f"expected_detection_probability = {(1-1/num_widths)**2}\n")
+            f.write(
+                f"theoretical_expected_detection_probability = {(1-1/num_widths)**2}\n"
+            )
+            f.write(
+                f"true_expected_detection_probability = {(1-true_0_distribution[num_widths])**2}\n"
+            )
