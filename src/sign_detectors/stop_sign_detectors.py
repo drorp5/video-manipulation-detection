@@ -1,11 +1,11 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List
 import cv2
 import numpy as np
 from pathlib import Path
 
-from detectors_evaluation.bootstrapper import DST_SHAPE
-from utils.detection_utils import sliding_window
+from utils.detection_utils import sliding_window, DetectedObject, non_maximal_supression
 
 MAX_PIXEL_VALUE = 255
 NUM_CHANNELS = 3
@@ -16,9 +16,9 @@ INPUT_SIZE = (484, 304)  # width, height
 
 
 class StopSignDetector(ABC):
-    @abstractmethod
-    def detect(self, img: np.ndarray) -> List[np.ndarray]:
-        raise NotImplementedError
+    def __init__(self, confidence_th=0.5, nms_th=0.4):
+        self.confidence_th = confidence_th
+        self.nms_th = nms_th
 
     @property
     @abstractmethod
@@ -26,34 +26,59 @@ class StopSignDetector(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _detect(self, img: np.ndarray) -> List[np.ndarray]:
+    def _detect(self, img: np.ndarray) -> List[DetectedObject]:
         raise NotImplementedError
 
-    def detect(self, img: np.ndarray) -> List[np.ndarray]:
+    def detect(self, img: np.ndarray) -> List[DetectedObject]:
         # sliding window detection
         window_size = INPUT_SIZE
         step_size = None  # no overlap
 
         # Process each window
         all_detections = []
-        for x, y, window in sliding_window(img, window_size, step_size):
+        for window_x, window_y, window in sliding_window(img, window_size, step_size):
             window_detections = self._detect(window)
             for detection in window_detections:
-                all_detections.append(
-                    (x + detection[0], y + detection[1], detection[2], detection[3])
-                )
-        return all_detections
+                all_detections.append(detection.offset_by(window_x, window_y))
+        supressed_detections = non_maximal_supression(
+            detections=all_detections,
+            confidence_th=self.confidence_th,
+            nms_th=self.nms_th,
+        )
+        return supressed_detections
 
 
-def draw_bounding_boxes(img: np.ndarray, bounding_boxes: List[np.ndarray]) -> np.ndarray:
-    for x, y, w, h in bounding_boxes:
+def draw_detections(
+    img: np.ndarray, detections: List[DetectedObject], with_confidence: bool = False
+) -> np.ndarray:
+    for detection in detections:
         cv2.rectangle(
             img,
-            (x, y),
-            (x + w, y + h),
-            (MAX_PIXEL_VALUE, MAX_PIXEL_VALUE, 0),
+            detection.get_upper_left_corner(),
+            detection.get_lower_right_corner(),
+            (0, MAX_PIXEL_VALUE, MAX_PIXEL_VALUE),
             NUM_CHANNELS,
         )
+        if with_confidence:
+            confidence_text = f"{detection.confidence:.2f}"
+            text_position = (
+                max(detection.get_lower_right_corner()[0] - detection.width + 5, 0),
+                min(
+                    detection.get_upper_left_corner()[1] + detection.height - 5,
+                    img.shape[0],
+                ),
+            )
+            cv2.putText(
+                img,
+                confidence_text,
+                text_position,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,  # Font scale
+                (0, MAX_PIXEL_VALUE, MAX_PIXEL_VALUE),  # Font color (yellow in BGR)
+                1,  # Thickness
+                cv2.LINE_AA,
+            )
+
     return img
 
 
@@ -75,7 +100,8 @@ def get_detector(detector_name: str) -> StopSignDetector:
 
 
 class HaarDetector(StopSignDetector):
-    def __init__(self, grayscale=False, blur=False):
+    def __init__(self, confidence_th=0, nms_th=0, grayscale=False, blur=False):
+        super().__init__(confidence_th, nms_th)
         self.config_path = MODELS_DIR / "stop_sign_classifier_2.xml"
         self.config_path = self.config_path.as_posix()
         self.detector = cv2.CascadeClassifier(self.config_path)
@@ -83,7 +109,7 @@ class HaarDetector(StopSignDetector):
         self.blur = blur
         self.input_size = INPUT_SIZE
 
-    def _detect(self, img: np.ndarray) -> List[np.ndarray]:
+    def _detect(self, img: np.ndarray) -> List[DetectedObject]:
         if self.blur:
             img = cv2.GaussianBlur(img, (5, 5), 0)
         if self.grayscale:
@@ -91,7 +117,7 @@ class HaarDetector(StopSignDetector):
         stop_signs = self.detector.detectMultiScale(
             img, scaleFactor=1.05, minNeighbors=15, minSize=(30, 30)
         )
-        return stop_signs
+        return [DetectedObject(bounding_box) for bounding_box in stop_signs]
 
     @property
     def name(self):
@@ -100,6 +126,7 @@ class HaarDetector(StopSignDetector):
 
 class YoloDetector(StopSignDetector):
     def __init__(self, confidence_th=0.5, nms_th=0.4):
+        super().__init__(confidence_th, nms_th)
         coco_names_path = MODELS_DIR / "coco.names"
         with open(coco_names_path.as_posix(), "r") as f:
             self.classes = f.read().strip().split("\n")
@@ -112,20 +139,16 @@ class YoloDetector(StopSignDetector):
         ln = self.detector.getLayerNames()
         self.ln = [ln[i - 1] for i in self.detector.getUnconnectedOutLayers()]
         self.inference_shape = INPUT_SIZE
-        self.confidence_th = confidence_th
-        self.nms_th = nms_th
 
-    def _detect(self, img: np.ndarray) -> List[np.ndarray]:
+    def _detect(self, img: np.ndarray) -> List[DetectedObject]:
         blob = cv2.dnn.blobFromImage(
             img, 1 / MAX_PIXEL_VALUE, self.inference_shape, swapRB=True, crop=False
         )
         self.detector.setInput(blob)
         outputs = self.detector.forward(self.ln)
 
-        boxes = []
-        confidences = []
         h, w = img.shape[:2]
-
+        detections = []
         for output in outputs:
             for detection in output:
                 scores = detection[5:]
@@ -137,15 +160,16 @@ class YoloDetector(StopSignDetector):
                         (centerX, centerY, width, height) = box.astype("int")
                         x = int(centerX - (width / 2))
                         y = int(centerY - (height / 2))
-                        box = [x, y, int(width), int(height)]
-                        boxes.append(box)
-                        confidences.append(float(confidence))
-        # boxes = np.array(boxes)
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_th, self.nms_th)
-        # if len(indices) > 0:
-        # indices = indices.squeeze()
-        boxes = [boxes[i] for i in indices]
-        return boxes
+                        detections.append(
+                            (
+                                DetectedObject(
+                                    bounding_box=[x, y, int(width), int(height)],
+                                    confidence=float(confidence),
+                                )
+                            )
+                        )
+
+        return detections
 
     @property
     def name(self):
@@ -153,11 +177,12 @@ class YoloDetector(StopSignDetector):
 
 
 class MobileNetDetector(StopSignDetector):
-    def __init__(self, confidence_th=0.5):
+    def __init__(self, confidence_th=0.5, nms_th=0.4):
+        super().__init__(confidence_th, nms_th)
         coco_names_path = MODELS_DIR / "coco.names"
         with open(coco_names_path.as_posix(), "r") as f:
             self.classes = f.read().strip().split("\n")
-        self.target_class = [10, 11, 13]
+        self.target_class = [13]  # 10 is traffic light, I dont know what is 11
         self.config_path = MODELS_DIR / "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
         self.weights_path = (
             MODELS_DIR / "ssd_mobilenet_v3_largefrozen_inference_graph.pb"
@@ -174,23 +199,22 @@ class MobileNetDetector(StopSignDetector):
             (MAX_PIXEL_VALUE / 2, MAX_PIXEL_VALUE / 2, MAX_PIXEL_VALUE / 2)
         )
         self.detector.setInputSwapRB(True)
-        self.confidence_th = confidence_th
 
-    def _detect(self, img: np.ndarray) -> List[np.ndarray]:
-        boxes = []
+    def _detect(self, img: np.ndarray) -> List[DetectedObject]:
+        detections = []
         detections_class_index, detections_confidence, detections_bbox = (
             self.detector.detect(img, confThreshold=self.confidence_th)
         )
         if len(detections_class_index) == 0:
-            return boxes
+            return detections
         for class_ind, confidence, detection_box in zip(
             detections_class_index.flatten(),
             detections_confidence.flatten(),
             detections_bbox,
         ):
             if class_ind in self.target_class and confidence >= self.confidence_th:
-                boxes.append(detection_box)
-        return boxes
+                detections.append(DetectedObject(detection_box, confidence))
+        return detections
 
     @property
     def name(self):

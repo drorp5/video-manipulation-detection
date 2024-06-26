@@ -4,9 +4,8 @@ from sign_detectors.stop_sign_detectors import (
     YoloDetector,
     HaarDetector,
     StopSignDetector,
-)
-from sign_detectors.stop_sign_detectors import (
-    draw_bounding_boxes,
+    draw_detections,
     get_detector,
     get_detectors_dict,
+    draw_detections,
 )
