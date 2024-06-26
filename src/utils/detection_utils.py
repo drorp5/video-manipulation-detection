@@ -100,6 +100,18 @@ def sliding_window(
     if step_size is None:
         step_size = window_size
     step_x, step_y = step_size
-    for y in range(0, image.shape[0] - window_height + 1, step_y):
-        for x in range(0, image.shape[1] - window_width + 1, step_x):
-            yield (x, y, image[y : y + window_height, x : x + window_width])
+
+    for y in range(0, image.shape[0], step_y):
+        for x in range(0, image.shape[1], step_x):
+            # Calculate the end coordinates of the window
+            end_x = min(x + window_width, image.shape[1])
+            end_y = min(y + window_height, image.shape[0])
+            # Calculate the start coordinates to ensure the window is the correct size
+            start_x = end_x - window_width
+            start_y = end_y - window_height
+            # Adjust start coordinates if they are negative
+            if start_x < 0:
+                start_x = 0
+            if start_y < 0:
+                start_y = 0
+            yield (start_x, start_y, image[start_y:end_y, start_x:end_x])
