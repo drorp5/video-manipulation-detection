@@ -11,9 +11,8 @@ import matplotlib.pyplot as plt
 import random
 
 
-from detectors_evaluation.bootstrapper import DST_SHAPE
 from detectors_evaluation.manipulator import RectangularPatchInjector
-from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
+from sign_detectors import StopSignDetector, get_detector, draw_detections
 from gige.utils import payload_gvsp_bytes_to_raw_image
 from gige.utils import bgr_img_to_packets_payload
 from utils.image_processing import bggr_to_rggb
@@ -38,11 +37,12 @@ stop_sign_images_path = list(stop_sign_images_directory.glob("*"))
 
 # Sign Detector
 detector = get_detector("MobileNet")
+detector.confidence_th = 0
 
 
 # Output directory
 injections_images_directory = Path(
-    r"D:\Thesis\video-manipulation-detection\driving_experiments_injections\patch"
+    r"D:\Thesis\video-manipulation-detection\driving_experiments_injections\patch_roc"
 )
 if not injections_images_directory.exists():
     injections_images_directory.mkdir(parents=True)
@@ -56,7 +56,7 @@ experiments_directory = Path(
 )
 
 
-def evaluate_frames_pair(frame_path_pair: Tuple[Path, Path]) -> List[dict]:
+def evaluate_frames_pair(frame_path_pair: Tuple[Path, Path]) -> dict:
     frame_1_path, frame_2_path = frame_path_pair
     # read frames
     frame_1_bgr = cv2.imread(frame_1_path.as_posix())
@@ -114,7 +114,6 @@ def evaluate_frames_pair(frame_path_pair: Tuple[Path, Path]) -> List[dict]:
     )
     rows_per_packet = max_payload_bytes / frame_2_bgr.shape[1]
     affected_rows = int(np.ceil(len(stripe_packets_ids) * rows_per_packet))
-
     gt_stripe = Rectangle(
         (0, target_row),
         (frame_2_bgr.shape[1], target_row + affected_rows),
@@ -137,63 +136,71 @@ def evaluate_frames_pair(frame_path_pair: Tuple[Path, Path]) -> List[dict]:
     raw_image = bggr_to_rggb(raw_image)
     assigned_pixels = bggr_to_rggb(assigned_pixels)
     injected_img = cv2.cvtColor(raw_image, cv2.COLOR_BayerRG2RGB)
+    injected_img_bgr = cv2.cvtColor(injected_img, cv2.COLOR_RGB2BGR)
 
     # save image
     experiment_id = frame_2_path.parent.parent.stem.split("_")[-1]
     dst_name = f"experiment_{experiment_id}_{frame_2_path.stem}_injected_{img_key}_widths_{frame_1_width}_{frame_2_width}"
     dst_path_original = injections_images_directory / f"{dst_name}.jpg"
-    cv2.imwrite(
-        dst_path_original.as_posix(), cv2.cvtColor(injected_img, cv2.COLOR_RGB2BGR)
-    )
+    cv2.imwrite(dst_path_original.as_posix(), injected_img_bgr)
 
     # detect in injected
-    results = []
     config_path = frame_2_path.parent.parent / f"config_{experiment_id}.yaml"
     num_widths, time_of_day, road_type, _ = extract_metadata_key_of_config_path(
         config_path
     )
-
-    for confidence_th in [0.1, 0.25, 0.5]:
-        detector.confidence_th = confidence_th
-        detections = detector.detect(injected_img)
-
-        # filter only detection which intersect the stripe
-        valid_detections = []
-        for detection in detections:
-            x, y, w, h = detection
-            pred_detection = Rectangle((x, y), (x + w, y + h))
-            iou = calculate_iou(pred_detection, gt_stripe)
-            if iou > 0:
-                valid_detections.append(detection)
-
-        if len(valid_detections) > 0:
-            img_with_detections = draw_bounding_boxes(injected_img, valid_detections)
-            dst_path = (
-                injections_images_directory / f"{dst_name}_detected_{confidence_th}.jpg"
-            )
-            cv2.imwrite(
-                dst_path.as_posix(),
-                cv2.cvtColor(img_with_detections, cv2.COLOR_RGB2BGR),
-            )
-
-        results.append(
-            {
-                "experiemnt": experiment_id,
-                "num_widths": num_widths,
-                "time_of_day": time_of_day,
-                "road_type": road_type,
-                "first_frame": frame_1_path.stem,
-                "second_frame": frame_2_path.stem,
-                "injected_img_key": img_key,
-                "frame_1_width": frame_1_width,
-                "frame_2_width": frame_2_width,
-                "saved_path": dst_path_original,
-                "confidence_th": confidence_th,
-                "detected": len(valid_detections) > 0,
-            }
+    detections = detector.detect(injected_img_bgr)
+    # filter only detection which intersect the stripe
+    valid_detections = []
+    valid_ious = []
+    for detection in detections:
+        pred_detection = Rectangle(
+            detection.get_upper_left_corner(), detection.get_lower_right_corner()
         )
+        gt_stripe_detection = Rectangle(
+            (pred_detection.xmin, gt_stripe.ymin), (pred_detection.xmax, gt_stripe.ymax)
+        )
+        iou = calculate_iou(pred_detection, gt_stripe_detection)
+        if iou > 0:
+            valid_detections.append(detection)
+            valid_ious.append(iou)
 
-    return results
+    max_confidence = 0
+    selected_iou = 0
+    if len(valid_detections) > 0:
+        selected_detection = None
+        for detection, iou in zip(valid_detections, valid_ious):
+            if detection.confidence > max_confidence:
+                max_confidence = detection.confidence
+                selected_detection = detection
+                selected_iou = iou
+
+        valid_detections = [selected_detection]
+        valid_ious = [selected_iou]
+
+        img_with_detections = draw_detections(
+            injected_img_bgr, valid_detections, with_confidence=True
+        )
+        dst_path = injections_images_directory / f"{dst_name}_detected.jpg"
+        cv2.imwrite(dst_path.as_posix(), img_with_detections)
+    else:
+        max_confidence = 0
+        selected_iou = 0
+
+    return {
+        "experiemnt": experiment_id,
+        "num_widths": num_widths,
+        "time_of_day": time_of_day,
+        "road_type": road_type,
+        "first_frame": frame_1_path.stem,
+        "second_frame": frame_2_path.stem,
+        "injected_img_key": img_key,
+        "frame_1_width": frame_1_width,
+        "frame_2_width": frame_2_width,
+        "saved_path": dst_path_original,
+        "detection_confidence": max_confidence,
+        "detection_iou": selected_iou,
+    }
 
 
 if __name__ == "__main__":
@@ -246,12 +253,12 @@ if __name__ == "__main__":
     #     res = evaluate_frames_pair(frames_path_pair)
 
     all_res = []
-    with multiprocessing.Pool(10) as pool:
+    with multiprocessing.Pool(6) as pool:
         for res in tqdm(
             pool.imap(evaluate_frames_pair, frames_path_pairs),
             total=len(frames_path_pairs),
         ):
-            all_res.extend(res)
+            all_res.append(res)
 
     results_df = pd.DataFrame(all_res)
     csv_path = injections_images_directory / "results.csv"
