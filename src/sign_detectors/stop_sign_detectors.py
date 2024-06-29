@@ -51,9 +51,10 @@ class StopSignDetector(ABC):
 def draw_detections(
     img: np.ndarray, detections: List[DetectedObject], with_confidence: bool = False
 ) -> np.ndarray:
+    out_img = img.copy()
     for detection in detections:
         cv2.rectangle(
-            img,
+            out_img,
             detection.get_upper_left_corner(),
             detection.get_lower_right_corner(),
             (0, MAX_PIXEL_VALUE, MAX_PIXEL_VALUE),
@@ -69,7 +70,7 @@ def draw_detections(
                 ),
             )
             cv2.putText(
-                img,
+                out_img,
                 confidence_text,
                 text_position,
                 cv2.FONT_HERSHEY_SIMPLEX,
@@ -79,7 +80,7 @@ def draw_detections(
                 cv2.LINE_AA,
             )
 
-    return img
+    return out_img
 
 
 def list_detectors() -> List[str]:
