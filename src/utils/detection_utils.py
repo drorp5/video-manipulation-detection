@@ -111,10 +111,10 @@ class DetectedObject:
         """
         return DetectedObject(
             bounding_box=(
-                self.bounding_box[0] + dx,
-                self.bounding_box[1] + dy,
-                self.width,
-                self.height,
+                int(self.bounding_box[0] + dx),
+                int(self.bounding_box[1] + dy),
+                int(self.width),
+                int(self.height),
             ),
             confidence=self.confidence,
         )
@@ -222,11 +222,13 @@ def non_maximal_supression(
             result.append(detection)
         else:
             boxes.append(detection.bounding_box)
-            confidences.append(detection.confidence)
-
-    indices = cv2.dnn.NMSBoxes(boxes, confidences, confidence_th, nms_th)
-    for index in indices:
-        result.append(
+            confidences.append(float(detection.confidence))
+    
+    if len(boxes) > 0:        
+        indices = cv2.dnn.NMSBoxes(boxes, confidences, confidence_th, nms_th)
+        indices = indices.flatten()
+        for index in indices:
+            result.append(
             DetectedObject(bounding_box=boxes[index], confidence=confidences[index])
-        )
+            )
     return result
