@@ -106,7 +106,7 @@ def main():
         attack_tool.inject_stripe_consecutive_frames(
             img_path=args.path,
             first_row=0,  # Adjust as needed
-            num_rows=10,  # Adjust as needed
+            num_rows=100,  # Adjust as needed
             fps=fps,
             injection_duration=args.duration,
         )
