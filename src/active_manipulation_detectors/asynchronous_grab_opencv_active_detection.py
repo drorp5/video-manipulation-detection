@@ -24,6 +24,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+
 import sys
 from typing import Optional
 from vimba import *
@@ -31,35 +32,48 @@ import argparse
 from argparse import Namespace
 from icecream import ic
 import traceback
+import numpy as np
 
-from gige.handlers import ViewerHandler
-from active_manipulation_detectors.side_channel.varying_shape_handler import VaryingShapeHandler
-from active_manipulation_detectors.side_channel.data_generator import RandomBitsGeneratorRC4, SequentialBitsGenerator
-from active_manipulation_detectors.side_channel.validation import DataValidatorKSymbols, DataValidatorKSymbolsDelayed
+from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
+from gige.handlers.viewer_handler import ViewerHandler
+from gige.handlers.varying_shape_handler import VaryingShapeHandler
+from active_manipulation_detectors.side_channel.data_generator import (
+    RandomBitsGeneratorRC4,
+    SequentialBitsGenerator,
+)
+from active_manipulation_detectors.side_channel.validation import (
+    DataValidatorKSymbols,
+    DataValidatorKSymbolsDelayed,
+)
 from sign_detectors.stop_sign_detectors import get_detector, get_detectors_dict
 
 
 def print_preamble():
-    print('///////////////////////////////////////////////////////')
-    print('/// Vimba API Asynchronous Grab with OpenCV Example ///')
-    print('///////////////////////////////////////////////////////\n')
+    print("///////////////////////////////////////////////////////")
+    print("/// Vimba API Asynchronous Grab with OpenCV Example ///")
+    print("///////////////////////////////////////////////////////\n")
+
 
 def print_usage():
-    print('Usage:')
-    print('    python asynchronous_grab_opencv.py [camera_id]')
-    print('    python asynchronous_grab_opencv.py [/h] [-h]')
+    print("Usage:")
+    print("    python asynchronous_grab_opencv.py [camera_id]")
+    print("    python asynchronous_grab_opencv.py [/h] [-h]")
     print()
-    print('Parameters:')
-    print('    camera_id   ID of the camera to use (using first camera if not specified)')
+    print("Parameters:")
+    print(
+        "    camera_id   ID of the camera to use (using first camera if not specified)"
+    )
     print()
 
+
 def abort(reason: str, return_code: int = 1, usage: bool = False):
-    print(reason + '\n')
+    print(reason + "\n")
 
     if usage:
         print_usage()
 
     sys.exit(return_code)
+
 
 def get_camera(camera_id: Optional[str] = None) -> Camera:
     with Vimba.get_instance() as vimba:
@@ -68,26 +82,30 @@ def get_camera(camera_id: Optional[str] = None) -> Camera:
                 return vimba.get_camera_by_id(camera_id)
 
             except VimbaCameraError:
-                abort('Failed to access Camera \'{}\'. Abort.'.format(camera_id))
+                abort("Failed to access Camera '{}'. Abort.".format(camera_id))
 
         else:
             cams = vimba.get_all_cameras()
             if not cams:
-                abort('No Cameras accessible. Abort.')
+                abort("No Cameras accessible. Abort.")
 
             return cams[0]
+
 
 def setup_camera(cam: Camera, fps_val: Optional[int] = None):
     with cam:
         # Enable auto exposure time setting if camera supports it
         try:
-            cam.ExposureAuto.set('Continuous')
+            if fps_val is not None:
+                max_exposure_time_in_microseconds = int(1 / fps_val * 1e6)
+                cam.ExposureAutoMax.set(max_exposure_time_in_microseconds)
+            cam.ExposureAuto.set("Continuous")
         except (AttributeError, VimbaFeatureError):
-                pass
-        
+            pass
+
         # Enable white balancing if camera supports it
         try:
-            cam.BalanceWhiteAuto.set('Continuous')
+            cam.BalanceWhiteAuto.set("Continuous")
 
         except (AttributeError, VimbaFeatureError):
             pass
@@ -104,7 +122,6 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
 
         # Set constant frame rate if specified
         if fps_val is not None:
-            ic(fps_val)
             try:
                 cam.TriggerMode.set("Off")
                 cam.AcquisitionFrameRateAbs.set(fps_val)
@@ -119,7 +136,7 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
 
         if color_fmts:
             seleted_frame_format = color_fmts[0]
-            cam.set_pixel_format(seleted_frame_format)            
+            cam.set_pixel_format(seleted_frame_format)
         else:
             mono_fmts = intersect_pixel_formats(cv_fmts, MONO_PIXEL_FORMATS)
             if mono_fmts:
@@ -127,18 +144,33 @@ def setup_camera(cam: Camera, fps_val: Optional[int] = None):
                 cam.set_pixel_format(seleted_frame_format)
 
             else:
-                abort('Camera does not support a OpenCV compatible format natively. Abort.')
+                abort(
+                    "Camera does not support a OpenCV compatible format natively. Abort."
+                )
+        cam.Width.set(MAX_WIDTH)
+        cam.Height.set(MAX_HEIGHT)
+
 
 def parse_args() -> Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--camera_id", help="camera ID for direct access")
-    parser.add_argument("--duration", help="duration of streaming [seconds]. -1 infinite", type=float, default=None)
+    parser.add_argument(
+        "--duration",
+        help="duration of streaming [seconds]. -1 infinite",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--buffer_count", help="streaming buffer", type=int, default=1)
-    parser.add_argument("--fps", help="frame rate [frames per second]", type=int, default=1)
-    parser.add_argument("--detector", choices=get_detectors_dict(), help="detection method")
-    
+    parser.add_argument(
+        "--fps", help="frame rate [frames per second]", type=int, default=1
+    )
+    parser.add_argument(
+        "--detector", choices=get_detectors_dict(), help="detection method"
+    )
+
     args = parser.parse_args()
     return args
+
 
 def main_script():
     print_preamble()
@@ -146,22 +178,32 @@ def main_script():
     # args.duration = 20
     args.buffer_count = 1
     start_async_grab(args)
-    
+
+
 def start_async_grab(args):
     with Vimba.get_instance():
         with get_camera(args.camera_id) as cam:
             setup_camera(cam, fps_val=args.fps)
-                        
-            random_bits_generator = RandomBitsGeneratorRC4(key=b'key', num_bits_per_iteration=2)
-            # random_bits_generator = SequentialBitsGenerator(key=b'key', num_bits_per_iteration=2)
-            data_validator = DataValidatorKSymbolsDelayed(bits_in_symbol=2, symbols_for_detection=2, max_delay=1)
+
+            num_symbols = 8
+            bits_per_symbol = int(np.ceil(np.log2(num_symbols)))
+            random_bits_generator = RandomBitsGeneratorRC4(
+                key=b"key", num_bits_per_iteration=bits_per_symbol
+            )
+            # random_bits_generator = SequentialBitsGenerator(key=b'key', num_bits_per_iteration=bits_per_symbol)
+
+            data_validator = DataValidatorKSymbolsDelayed(
+                symbols_for_detection=2, max_delay=1, data_holder_type="list"
+            )
             sign_detector = get_detector(args.detector)
 
-            handler = VaryingShapeHandler(random_bits_generator=random_bits_generator, 
-                                        data_validator=data_validator,
-                                        num_levels=4,
-                                        increment=2,
-                                        sign_detector=sign_detector)
+            handler = VaryingShapeHandler(
+                random_bits_generator=random_bits_generator,
+                data_validator=data_validator,
+                num_levels=num_symbols,
+                increment=2,
+                sign_detector=sign_detector,
+            )
             # Start Streaming with a custom frames buffer
             try:
                 cam.start_streaming(handler=handler, buffer_count=args.buffer_count)
@@ -169,7 +211,9 @@ def start_async_grab(args):
             except Exception as e:
                 print(e)
             finally:
+                handler.cleanup(cam)
                 cam.stop_streaming()
-              
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     main_script()

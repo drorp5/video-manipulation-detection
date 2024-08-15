@@ -1,0 +1,24 @@
+timing:
+  pre_attack_duration_in_seconds: null
+  attack_duration_in_seconds: null
+  ampiric_frame_time_in_seconds: 0.13
+gige:
+  interface: "Ethernet 6"
+  camera:
+    mac: "00:0f:31:03:67:c4"
+    ip: "192.168.10.150"
+  cp:
+    mac: "00:18:7d:c8:e6:31"
+    ip: "192.168.1.100"
+  gvsp:
+    width: 1936
+    height: 1216
+    max_payload_bytes: 8963
+injection:
+  fake_path: null
+  fake_dir: null
+  stripe:
+    first_row: null
+    num_rows: null
+    future_id_diff: 1
+    count: 5

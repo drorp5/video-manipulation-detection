@@ -3,21 +3,37 @@ from active_manipulation_detectors.side_channel.validation import DataValidatorK
 
 
 class DataValidatorKSymbolsDelayed(DataValidatorKSymbols):
-    def __init__(self, bits_in_symbol: int, symbols_for_detection: int, max_delay: int = 0) -> None:
-        super().__init__(bits_in_symbol=bits_in_symbol, symbols_for_detection=symbols_for_detection)
+    def __init__(
+        self,
+        symbols_for_detection: int,
+        data_holder_type: str,
+        data_unit: int = 1,
+        max_delay: int = 0,
+    ) -> None:
+        super().__init__(symbols_for_detection, data_holder_type, data_unit)
         self.max_delay = max_delay
-        self.search_window = (max_delay+symbols_for_detection) * bits_in_symbol
+        self.search_window = max_delay + self.symbols_for_detection
         self.detected_delay = None
 
-    def _validate(self) -> ValidationStatus:        
-        if len(self.received_data) < self.search_window:
+    def _validate(self) -> ValidationStatus:
+        if len(self.transmitted_data) < self.search_window:
             return ValidationStatus.Incomplete
-        
-        target =  self.transmitted_data[:self.bits_for_detection]
-        for delay in range(self.max_delay+1):
-            delayed_received_pattern = self.received_data[delay*self.bits_in_symbol: delay*self.bits_in_symbol + self.bits_for_detection]
-            if delayed_received_pattern == target:
+
+        for delay in range(self.max_delay, -1, -1):
+            offset = len(self.transmitted_data) - self.symbols_for_detection - delay
+            delayed_trasnmitted_pattern = self.transmitted_data[
+                offset : offset + self.symbols_for_detection
+            ]
+
+            if delayed_trasnmitted_pattern == self.received_data:
                 self.detected_delay = delay
                 return ValidationStatus.Valid
         self.detected_delay = None
         return ValidationStatus.Invalid
+
+    def clean(self, result: ValidationStatus) -> None:
+        if len(self.received_data) == self.symbols_for_detection:
+            self.received_data = self.received_data[1:]
+        if result == ValidationStatus.Incomplete:
+            return
+        self.transmitted_data = self.transmitted_data[1:]

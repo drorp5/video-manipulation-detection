@@ -1,0 +1,51 @@
+experiment:
+  duration: 30
+  results_directory: ../OUTPUT/results
+  record_pcap: True
+  log_type: [file]
+  road_type: urban
+  time_of_day: day
+car:
+  duration: 30
+  camera:
+    streaming_buffer: 1
+    fps: 5
+  actions:
+    viewer: False
+    detector: null
+    recorder: null
+  variation:
+    key: key
+    num_widths: 8
+  validator:
+    num_symbols: 1
+    max_delay: 1
+attacker:
+  attack_type: null
+  timing:
+    pre_attack_duration_in_seconds: 10
+    attack_duration_in_seconds: 5
+    ampiric_frame_time_in_seconds: 0.13
+  gige:
+    interface: "Ethernet 6"
+    camera:
+      mac: "00:0f:31:03:67:c4"
+      ip: "192.168.10.150"
+    cp:
+      mac: "00:18:7d:c8:e6:31"
+      ip: "192.168.1.100"
+    gvsp:
+      width: 1936 
+      height: 1216
+      max_payload_bytes: 8963
+  injection:
+    fake_path: ../INPUT/stop_sign_road_resized.jpg
+    dataset:
+      name: mtsd
+      images_dir: "../datasets/mtsd_v2_fully_annotated/MobileNet_detections"
+      annotations_dir: "../datasets/mtsd_v2_fully_annotated/annotations"
+    stripe:
+      first_row: 450
+      num_rows: 150
+      future_id_diff: 1
+      count: 1
