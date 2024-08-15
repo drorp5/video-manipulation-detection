@@ -5,7 +5,8 @@ import numpy as np
 from vimba import Camera, Frame
 
 from gige.handlers.viewer_handler import ViewerHandler
-from sign_detectors.stop_sign_detectors import StopSignDetector, draw_bounding_boxes
+from sign_detectors.stop_sign_detectors import StopSignDetector, draw_detections
+from utils.detection_utils import DetectedObject
 
 
 StopSignDetector
@@ -24,7 +25,9 @@ class SignDetectorHandler(ViewerHandler):
         ViewerHandler.__init__(self, logger=logger, downfactor=downfactor)
         self.detector = detector
 
-    def detect_objects_in_image(self, img: np.ndarray) -> Optional[List[np.ndarray]]:
+    def detect_objects_in_image(
+        self, img: np.ndarray
+    ) -> Optional[List[DetectedObject]]:
         if self.detector is not None:
             return self.detector.detect(img)
 
@@ -32,10 +35,10 @@ class SignDetectorHandler(ViewerHandler):
         self,
         img: np.ndarray,
         cam: Camera,
-        detections: Optional[List[np.ndarray]] = None,
+        detections: Optional[List[DetectedObject]] = None,
     ) -> np.ndarray:
         if detections is not None:
-            img = draw_bounding_boxes(img, detections)
+            img = draw_detections(img, detections)
         window_name = f"{self.start_time}: Press <Enter> to stop stream."
         cv2.imshow(window_name, img)
         return img

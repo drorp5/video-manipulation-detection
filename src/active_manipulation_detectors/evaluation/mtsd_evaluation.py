@@ -10,7 +10,7 @@ import random
 
 
 from detectors_evaluation.bootstrapper import DST_SHAPE
-from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
+from sign_detectors import StopSignDetector, get_detector, draw_detections
 from gige.utils import payload_gvsp_bytes_to_raw_image
 from utils.image_processing import bggr_to_rggb
 from utils.detection_utils import Rectangle, calculate_iou
@@ -162,16 +162,14 @@ if __name__ == "__main__":
             # filter only detection which intersect the stripe
             valid_detections = []
             for detection in detections:
-                x, y, w, h = detection
+                x, y, w, h = detection.bounding_box
                 pred_detection = Rectangle((x, y), (x + w, y + h))
                 iou = calculate_iou(pred_detection, gt_stripe)
                 if iou > 0:
                     valid_detections.append(detection)
 
             if debug:
-                img_with_detections = draw_bounding_boxes(
-                    injected_img, valid_detections
-                )
+                img_with_detections = draw_detections(injected_img, valid_detections)
                 plt.figure()
                 plt.imshow(img_with_detections)
                 plt.title("Injected")
@@ -180,7 +178,7 @@ if __name__ == "__main__":
                 original_detections = detector.detect(
                     cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
                 )
-                original_img_with_detections = draw_bounding_boxes(
+                original_img_with_detections = draw_detections(
                     cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB), original_detections
                 )
 

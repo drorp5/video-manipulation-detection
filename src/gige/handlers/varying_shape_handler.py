@@ -15,7 +15,7 @@ from gige.handlers.sign_detector_handler import SignDetectorHandler
 from gige.handlers.recorder_handler import RecorderHandler
 from recorders import Recorder
 from utils.view import add_text_box
-from sign_detectors.stop_sign_detectors import StopSignDetector, draw_bounding_boxes
+from sign_detectors.stop_sign_detectors import StopSignDetector, draw_detections
 from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 
@@ -32,12 +32,12 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
         view: bool = True,
         recorder: Optional[Recorder] = None,
     ) -> None:
-        SignDetectorHandler.__init__(self, logger=logger, downfactor=downfactor, detector=sign_detector)
+        SignDetectorHandler.__init__(
+            self, logger=logger, downfactor=downfactor, detector=sign_detector
+        )
         self.record = recorder is not None
         if self.record:
-            RecorderHandler.__init__(
-                self, recorder=recorder, logger=logger
-            )
+            RecorderHandler.__init__(self, recorder=recorder, logger=logger)
 
         self.height_values = [MAX_HEIGHT - increment * ind for ind in range(num_levels)]
         self.width_values = [MAX_WIDTH - increment * ind for ind in range(num_levels)]
@@ -59,28 +59,30 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
             if img is not None:
                 frame_id = frame.get_id()
                 timestamp = frame.get_timestamp()
-                log_dict = {'frame_id': frame_id, 'timestamp': timestamp}
+                log_dict = {"frame_id": frame_id, "timestamp": timestamp}
                 # read data of current image
                 if self.shape_changed:
                     # height = frame.get_height()
                     width = frame.get_width()
                     validation_result = self.data_validator.validate(width)
-                    log_dict['width'] = width
-                    log_dict['validation_result'] = validation_result.name
+                    log_dict["width"] = width
+                    log_dict["validation_result"] = validation_result.name
 
                 if self.detector is not None or self.view or self.record:
                     img_for_detection = self.resize_image(img)
                     if self.detector is not None:
                         detections = self.detect_objects_in_image(img_for_detection)
                         if len(detections) > 0:
-                            log_dict['detections'] = detections
+                            log_dict["detections"] = detections
                     else:
                         detections = []
                     if self.view:
                         # img = add_text_box(img, f"{frame_id}")
-                        plotted_img = self.plot_detected(img_for_detection, cam, detections)
+                        plotted_img = self.plot_detected(
+                            img_for_detection, cam, detections
+                        )
                     else:
-                        plotted_img = draw_bounding_boxes(img_for_detection, detections)
+                        plotted_img = draw_detections(img_for_detection, detections)
                     if self.record:
                         # plotted_img = add_text_box(plotted_img, f"{frame_id}")
                         self.recorder.write(img_for_detection, id=frame_id)
@@ -88,11 +90,11 @@ class VaryingShapeHandler(SignDetectorHandler, RecorderHandler):
                 # change shape for next frame
                 symbol = next(self.random_bits_generator)
                 new_width = self.encoder_decoder.decode(symbol=symbol)
-                log_dict['next_width'] = new_width
+                log_dict["next_width"] = new_width
                 cam.Width.set(new_width)
                 self.data_validator.add_trasnmitted_data(new_width)
                 self.shape_changed = True
-            
+
             self.log(log_dict)
             cam.queue_frame(frame)
 
