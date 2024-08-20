@@ -25,6 +25,10 @@ import random
 from gige.constansts import *
 from gige.gige_constants import *
 from gige.gige_constants import Layers
+from gige.gige_packets import GvcpCmd
+from gige.gige_packets import GvspLeader
+from gige.gige_packets import GvspTrailer
+from gige.gige_packets import Gvsp
 from gige.utils import bgr_img_to_packets_payload
 from utils.injection import get_stripe, insert_stripe_to_img
 from utils.detection_utils import Rectangle
@@ -72,69 +76,6 @@ default_request_id = 1
 default_block_id = 1
 
 gvcp_excluded_ports = [58732]
-
-
-class GvcpCmd(Packet):
-    # TODO split to sub commands according to the command value
-    name = Layers.GVCP.value
-    fields_desc = [
-        XBitField("MessageKeyCode", 0x42, BYTE),
-        XBitField("Flags", 0x01, BYTE),
-        XShortEnumField(
-            "Command", None, {v.value: k for k, v in GvcpCommands._member_map_.items()}
-        ),
-        ShortField("PayloadLength", 0x0008),
-        ShortField("RequestID", 1),
-        XBitField("RegisterAddress", 0x000130F4, 4 * BYTE),
-        IntField("value", None),
-    ]
-
-
-bind_layers(UDP, GvcpCmd, dport=Ports.GVCP_DST.value)
-bind_layers(UDP, GvcpCmd, sport=Ports.GVCP_DST.value)
-
-
-class GvspLeader(Packet):
-    name = Layers.GVSP_LEADER.value
-    fields_desc = [
-        ShortField("FieldInfo", 0),
-        ShortField("PayloadType", 0x0001),
-        XBitField("Timestamp", 1, 8 * BYTE),
-        XBitField("PixelFormat", 0x01080009, 4 * BYTE),
-        IntField("SizeX", img_width),
-        IntField("SizeY", img_height),
-        IntField("OffsetX", 0),
-        IntField("OffsetY", 0),
-        ShortField("PaddingX", 0),
-        ShortField("PaddingY", 0),
-    ]
-
-
-class GvspTrailer(Packet):
-    name = Layers.GVSP_TRAILER.value
-    fields_desc = [
-        ShortField("FieldInfo", 0),
-        ShortField("PayloadType", 0x0001),
-        IntField("SizeY", img_height),
-    ]
-    # ShortField("UnknownPadding", 0x5555)] #TODO check why originally there is padding 5555 for the UDP
-
-
-class Gvsp(Packet):
-    name = Layers.GVSP.value
-    fields_desc = [
-        XBitField("Status", 0x0000, 2 * BYTE),
-        ShortField("BlockID", 0),
-        XByteEnumField(
-            "Format", None, {v.value: k for k, v in GvspFormat._member_map_.items()}
-        ),
-        XBitField("PacketID", 0x000000, 3 * BYTE),
-    ]
-
-
-bind_layers(UDP, Gvsp, sport=Ports.GVSP_SRC.value)
-bind_layers(Gvsp, GvspLeader, Format=GvspFormat.LEADER.value)
-bind_layers(Gvsp, GvspTrailer, Format=GvspFormat.TRAILER.value)
 
 
 class GigELink:

@@ -6,10 +6,9 @@ from scapy.all import PacketList
 import sys
 from dataclasses import dataclass
 
-from manipultation_utils import (
+from gige.gige_packets import GvspLeader, GvspTrailer
+from gige.gige_packets import (
     Gvsp,
-    GvspLeader,
-    GvspTrailer,
 )  # TODO: change location of modules
 from gige.constansts import CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
 from gige.utils import packet_id_to_payload_indices
