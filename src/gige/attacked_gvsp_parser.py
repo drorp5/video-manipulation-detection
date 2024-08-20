@@ -5,9 +5,10 @@ from tqdm import tqdm
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from gige.constansts import Layers
+from gige.gige_constants import Layers
 from gige.gvsp_frame import MockFrame
 from gige.gvsp_transmission import GvspPcapParser
+
 
 class AttackedGvspPcapParser(GvspPcapParser):
     def __init__(
@@ -17,7 +18,7 @@ class AttackedGvspPcapParser(GvspPcapParser):
     ):
         super().__init__(pcap_path, max_frames=max_frames)
         self.max_frames = max_frames
-        
+
     def _next(self) -> Optional[MockFrame]:
         # Find leader packet
         frame_id = None
@@ -29,7 +30,7 @@ class AttackedGvspPcapParser(GvspPcapParser):
                 return None
             if pkt.haslayer(Layers.GVSP_LEADER.value):
                 frame_id = pkt.BlockID if pkt.BlockID != 0 else None
-            
+
         # Construct frame packets
         frame_packets = [pkt]
         try:
@@ -48,5 +49,3 @@ class AttackedGvspPcapParser(GvspPcapParser):
                 break
         self.last_packet = pkt
         return MockFrame(PacketList(frame_packets))
-
-    

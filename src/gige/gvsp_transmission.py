@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from gige.gvsp_frame import MockFrame, MissingLeaderError, gvsp_frame_to_rgb
-from gige.constansts import Layers
+from gige.gige_constants import Layers
 from gige.pcap import PcapParser
 from gige.gige_constants import GvspFormat
 from gige.frames_statistics import FramesStatistics

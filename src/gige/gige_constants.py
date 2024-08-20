@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import Enum, IntEnum
 
 
 class GigERegisters(IntEnum):
@@ -31,3 +31,12 @@ class GvspFormat(IntEnum):
 BYTES_PER_PIXEL = 1
 MAX_HEIGHT = 1216
 MAX_WIDTH = 1936
+
+
+class Layers(Enum):
+    IP = "IP"
+    UDP = "UDP"
+    GVSP = "GVSP"
+    GVSP_LEADER = "GVSP_LEADER"
+    GVSP_TRAILER = "GVSP_TRAILER"
+    GVCP = "GVCP_CMD"
