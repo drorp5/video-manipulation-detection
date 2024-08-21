@@ -1,7 +1,4 @@
 import sys
-
-from scipy.fft import dst
-
 sys.path.append("./src")
 from pathlib import Path
 import cv2
@@ -9,7 +6,7 @@ from tqdm import tqdm
 import multiprocessing
 from functools import partial
 import pandas as pd
-from manipulation_detectors.image_processing import (
+from passive_manipulation_detectors.image_processing import (
     OpticalFlowDetector,
     MSEImageDetector,
     HueSaturationHistogramDetector,

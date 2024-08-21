@@ -7,7 +7,7 @@ import pandas as pd
 import multiprocessing
 from tqdm import tqdm
 from functools import partial
-from manipulation_detectors.image_processing import OpticalFlowDetector, MSEImageDetector, HueSaturationHistogramDetector
+from passive_manipulation_detectors.image_processing import OpticalFlowDetector, MSEImageDetector, HueSaturationHistogramDetector
 
 REAL_LABEL = 0
 FAKE_LABEL = 1

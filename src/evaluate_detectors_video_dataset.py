@@ -7,7 +7,7 @@ import pandas as pd
 import multiprocessing
 from tqdm import tqdm
 from functools import partial
-from manipulation_detectors.image_processing import OpticalFlowDetector, MSEImageDetector, HueSaturationHistogramDetector
+from passive_manipulation_detectors.image_processing import OpticalFlowDetector, MSEImageDetector, HueSaturationHistogramDetector
 from sign_detectors.stop_sign_detectors import draw_bounding_boxes, get_detector
 
 REAL_LABEL = 0

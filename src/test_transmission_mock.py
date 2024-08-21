@@ -2,7 +2,7 @@ import cv2
 from matplotlib import pyplot as plt
 from icecream import ic
 from gige.gvsp_transmission import GvspPcapParser
-from manipulation_detectors.utils import gvsp_frame_to_rgb
+from passive_manipulation_detectors.utils import gvsp_frame_to_rgb
 from pathlib import Path
 
 if __name__ == "__main__":

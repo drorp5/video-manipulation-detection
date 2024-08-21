@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Callable, Dict, Tuple
 from dataclasses import dataclass
 from enum import Enum
-from manipulation_detectors.image_processing.abstract_image_processing_detector import ImageProcessingDetector
+from passive_manipulation_detectors.image_processing.abstract_image_processing_detector import ImageProcessingDetector
 from detectors_evaluation.manipulator import Injector
 
 class Label(Enum):
