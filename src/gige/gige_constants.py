@@ -1,5 +1,5 @@
 from enum import Enum, IntEnum
-
+import cv2
 from vimba import PixelFormat
 
 
