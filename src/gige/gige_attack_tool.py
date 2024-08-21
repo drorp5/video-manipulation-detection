@@ -35,7 +35,7 @@ from utils.injection import get_stripe, insert_stripe_to_img
 import cv2
 import numpy as np
 from scapy.all import PcapWriter, Raw, rdpcap, sendp, sniff
-from scapy.fields import Callable, List, Optional, Packet, time
+from scapy.fields import Callable, List, Optional, time
 from scapy.layers.inet import IP, UDP, Ether
 from scapy.packet import Packet
 from scapy.plist import PacketList

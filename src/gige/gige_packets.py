@@ -30,7 +30,6 @@ from gige.gige_constants import (
 
 from scapy.fields import (
     IntField,
-    Packet,
     ShortField,
     XBitField,
     XByteEnumField,
