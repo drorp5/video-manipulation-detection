@@ -6,9 +6,9 @@ from scapy.all import PacketList
 import sys
 from dataclasses import dataclass
 
-from gige.constansts import CV2_CONVERSIONS, INT_TO_PIXEL_FORMAT
+from gige.gige_constants import CV2_CONVERSIONS
 from gige.utils import packet_id_to_payload_indices
-from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH, Layers
+from gige.gige_constants import INT_TO_PIXEL_FORMAT, MAX_HEIGHT, MAX_WIDTH, Layers
 
 
 class MissingLeaderError(Exception):

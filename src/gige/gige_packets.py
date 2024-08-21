@@ -17,7 +17,6 @@ parse and build these packets in network traffic.
 Note: This module requires the gige_constants module for various enumeration values.
 """
 
-from gige.constansts import BYTE
 from gige.gige_constants import (
     GvcpCommands,
     GvspFormat,
@@ -26,6 +25,7 @@ from gige.gige_constants import (
     MAX_HEIGHT,
     MAX_WIDTH,
     Ports,
+    BYTE,
 )
 
 from scapy.fields import (

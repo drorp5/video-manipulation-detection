@@ -34,7 +34,7 @@ from vimba import *
 from sign_detectors import stop_sign_detectors as detectors
 import time
 import argparse
-from gige.constansts import CV2_CONVERSIONS
+from gige.gige_constants import CV2_CONVERSIONS
 import json
 from datetime import datetime
 import subprocess

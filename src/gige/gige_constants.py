@@ -1,5 +1,7 @@
 from enum import Enum, IntEnum
 
+from vimba import PixelFormat
+
 
 class GigERegisters(IntEnum):
     ACQUISITION = 0x000130F4
@@ -28,13 +30,6 @@ class GvspFormat(IntEnum):
     PAYLOAD = 0x03
 
 
-BYTES_PER_PIXEL = 1
-MAX_HEIGHT = 1216
-MAX_WIDTH = 1936
-DEFAULT_BLOCK_ID = 1
-GVCP_EXCLUDED_PORTS = [58732]
-
-
 class Layers(Enum):
     IP = "IP"
     UDP = "UDP"
@@ -42,3 +37,13 @@ class Layers(Enum):
     GVSP_LEADER = "GVSP_LEADER"
     GVSP_TRAILER = "GVSP_TRAILER"
     GVCP = "GVCP_CMD"
+
+
+BYTES_PER_PIXEL = 1
+MAX_HEIGHT = 1216
+MAX_WIDTH = 1936
+DEFAULT_BLOCK_ID = 1
+GVCP_EXCLUDED_PORTS = [58732]
+BYTE = 8
+INT_TO_PIXEL_FORMAT = {0x1080009: PixelFormat.BayerRG8}
+CV2_CONVERSIONS = {PixelFormat.BayerRG8: cv2.COLOR_BayerRG2RGB}
