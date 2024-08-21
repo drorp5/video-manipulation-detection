@@ -4,7 +4,7 @@ import threading
 import logging
 from typing import Optional
 
-from gige.gige_attack_tool import GigEVisionAttackTool
+from attack_tool.gige_attack_tool import GigEVisionAttackTool
 
 
 class GigEAttacker(ABC):

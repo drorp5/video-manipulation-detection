@@ -19,14 +19,14 @@ Options:
     --help            Show this help message and exit
 
 Example:
-    python attack_tool_main.py -m full_frame_injection -p /path/to/image.jpg -d 10 -r 30 --setup WINDOWS_VIMBA
+    python attack_tool/attack_tool_main.py -m full_frame_injection -p /path/to/image.jpg -d 10 -r 30 --setup WINDOWS_VIMBA
 """
 
 import argparse
 import logging
 
-from gige.gige_attack_tool import GigEVisionAttackTool
-from gige_attack_config import Setup, get_config
+from attack_tool.gige_attack_tool import GigEVisionAttackTool
+from attack_tool.gige_attack_config import Setup, get_config
 
 # Configure logging
 logging.basicConfig(
