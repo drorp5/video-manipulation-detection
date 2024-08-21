@@ -24,6 +24,8 @@ class GigEAttacker(ABC):
             interface=self.config["gige"]["interface"],
             cp_ip=self.cp_ip,
             camera_ip=self.camera_ip,
+            cp_mac=self.cp_mac,
+            camera_mac=self.camera_mac,
             img_width=self.config["gige"]["gvsp"]["width"],
             img_height=self.config["gige"]["gvsp"]["height"],
             max_payload_bytes=self.config["gige"]["gvsp"]["max_payload_bytes"],
@@ -65,6 +67,14 @@ class GigEAttacker(ABC):
     @property
     def camera_ip(self) -> str:
         return self.config["gige"]["camera"]["ip"]
+
+    @property
+    def cp_mac(self) -> str:
+        return self.config["gige"]["cp"]["mac"]
+
+    @property
+    def camera_mac(self) -> str:
+        return self.config["gige"]["camera"]["mac"]
 
     @property
     def interface(self) -> str:
