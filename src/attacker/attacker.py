@@ -4,7 +4,7 @@ import threading
 import logging
 from typing import Optional
 
-from manipultation_utils import GigELink
+from gige.gige_attack_tool import GigEVisionAttackTool
 
 
 class GigEAttacker(ABC):
@@ -12,7 +12,7 @@ class GigEAttacker(ABC):
         self,
         config: dict,
         logger: Optional[logging.Logger] = None,
-        initialization_event: Optional[threading.Event] = None
+        initialization_event: Optional[threading.Event] = None,
     ) -> None:
         self.config = config
         self.shutdown_event = threading.Event()
@@ -20,23 +20,26 @@ class GigEAttacker(ABC):
         self.initialization_event = initialization_event
 
     def set_gige_link(self) -> None:
-        self.gige_link = GigELink(
+        self.gige_link = GigEVisionAttackTool(
             interface=self.config["gige"]["interface"],
             cp_ip=self.cp_ip,
             camera_ip=self.camera_ip,
             img_width=self.config["gige"]["gvsp"]["width"],
             img_height=self.config["gige"]["gvsp"]["height"],
             max_payload_bytes=self.config["gige"]["gvsp"]["max_payload_bytes"],
-            logger=self.logger
+            logger=self.logger,
         )
-        self.log('Sniffing link parameters', log_level=logging.DEBUG)
+        self.log("Sniffing link parameters", log_level=logging.DEBUG)
         self.gige_link.sniff_link_parameters()
 
     def run_pre_attack_stage(self) -> None:
         if self.initialization_event is not None:
             self.initialization_event.wait()
         waiting_time = self.config["timing"]["pre_attack_duration_in_seconds"]
-        self.log(f'Attacking Pre stage - waiting for {waiting_time} seconds', log_level=logging.DEBUG)
+        self.log(
+            f"Attacking Pre stage - waiting for {waiting_time} seconds",
+            log_level=logging.DEBUG,
+        )
         sleep(waiting_time)
 
     @abstractmethod
@@ -44,11 +47,11 @@ class GigEAttacker(ABC):
         raise NotImplementedError
 
     def run_attack_stage(self) -> None:
-        self.log('Starting attack stage', log_level=logging.DEBUG) 
+        self.log("Starting attack stage", log_level=logging.DEBUG)
         start_time = time()
         self.set_gige_link()
         while time() - start_time < self.config["timing"]["attack_duration_in_seconds"]:
-            self.log('Attacking', log_level=logging.DEBUG)
+            self.log("Attacking", log_level=logging.DEBUG)
             self.attack()
 
     def run(self):
@@ -66,7 +69,7 @@ class GigEAttacker(ABC):
     @property
     def interface(self) -> str:
         return self.config["gige"]["interface"]
-    
+
     def log(self, msg, log_level=logging.INFO):
         if self.logger is None:
             print(msg)
@@ -83,4 +86,3 @@ class GigEAttacker(ABC):
             self.logger.critical(msg)
         else:
             raise ValueError(f"Invalid log level: {log_level}")
-

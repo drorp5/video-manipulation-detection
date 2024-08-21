@@ -31,6 +31,8 @@ class GvspFormat(IntEnum):
 BYTES_PER_PIXEL = 1
 MAX_HEIGHT = 1216
 MAX_WIDTH = 1936
+DEFAULT_BLOCK_ID = 1
+GVCP_EXCLUDED_PORTS = [58732]
 
 
 class Layers(Enum):
