@@ -3,6 +3,15 @@ import cv2
 
 
 def bgr_to_bayer_rg(img_bgr: np.ndarray) -> np.ndarray:
+    """
+    Convert a BGR image to Bayer RG format.
+
+    Args:
+        img_bgr (np.ndarray): Input BGR image.
+
+    Returns:
+        np.ndarray: Image in Bayer RG format.
+    """
     # note: in open cv I need to read the image as bayer BG to convert it correctly
     (B, G, R) = cv2.split(img_bgr)
 
@@ -18,6 +27,15 @@ def bgr_to_bayer_rg(img_bgr: np.ndarray) -> np.ndarray:
 
 
 def bggr_to_rggb(bggr_pixels: np.ndarray) -> np.ndarray:
+    """
+    Convert a Bayer BGGR image to RGGB format.
+
+    Args:
+        bggr_pixels (np.ndarray): Input Bayer BGGR image.
+
+    Returns:
+        np.ndarray: Image in Bayer RGGB format.
+    """
     rggb_pixels = np.empty(bggr_pixels.shape, np.uint8)
     rggb_pixels = np.copy(bggr_pixels)
     # strided slicing for this pattern:
