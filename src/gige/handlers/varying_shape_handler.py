@@ -4,13 +4,13 @@ from typing import List, Optional
 from vimba import Camera, Frame, FrameStatus
 import cv2
 
-from active_manipulation_detectors.side_channel.bits_encoder import (
+from active_detectors.side_channel.bits_encoder import (
     IntBitsEncoderDecoder,
 )
-from active_manipulation_detectors.side_channel.data_generator import (
+from active_detectors.side_channel.data_generator import (
     RandomBitsGenerator,
 )
-from active_manipulation_detectors.side_channel.validation import DataValidator
+from active_detectors.side_channel.validation import DataValidator
 from gige.handlers.sign_detector_handler import SignDetectorHandler
 from gige.handlers.recorder_handler import RecorderHandler
 from recorders import Recorder

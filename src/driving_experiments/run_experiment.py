@@ -12,22 +12,22 @@ import uuid
 import vimba
 
 from car.changing_shape_defense_car import ShapeVaryingLogicCar
-from active_manipulation_detectors.side_channel.data_generator import (
+from active_detectors.side_channel.data_generator import (
     RandomBitsGeneratorRC4,
 )
-from active_manipulation_detectors.side_channel.validation import (
+from active_detectors.side_channel.validation import (
     DataValidatorKSymbolsDelayed,
 )
-from active_manipulation_detectors.side_channel.validation import (
+from active_detectors.side_channel.validation import (
     DataValidatorKSymbolsDelayedChanged,
 )
 from attacker import GigEAttackerStripeInjection, GigEAttackerFrameInjection, Attackers
 from driving_experiments.experiment import Experiment
-from active_manipulation_detectors.evaluation.mtsd_evaluation import (
+from active_detectors.evaluation.mtsd_evaluation import (
     get_largest_bounding_box,
     resize_bounding_box,
 )
-from active_manipulation_detectors.evaluation.metadata import DATASET_TO_TARGET_OBJECT
+from active_detectors.evaluation.metadata import DATASET_TO_TARGET_OBJECT
 from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 from recorders import VideoReocrder, FramesRecorder
 
