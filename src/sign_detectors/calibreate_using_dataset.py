@@ -12,7 +12,7 @@ import multiprocessing
 from dataclasses import dataclass
 
 
-from detectors_evaluation.bootstrapper import DST_SHAPE
+from passive_detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import get_detector, draw_detections
 from utils.datasets import get_largest_bounding_box, resize_bounding_box
 from utils.detection_utils import Rectangle, calculate_iou, DetectedObject

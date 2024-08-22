@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import random
 
 
-from detectors_evaluation.bootstrapper import DST_SHAPE
+from passive_detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_detections
 from gige.utils import payload_gvsp_bytes_to_raw_image
 from utils.image_processing import bggr_to_rggb

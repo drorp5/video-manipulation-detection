@@ -8,7 +8,7 @@ import cv2
 from active_manipulation_detectors.evaluation.labels_parsing_utils import (
     parse_voc_xml,
 )
-from detectors_evaluation.bootstrapper import DST_SHAPE
+from passive_detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import get_detector, draw_bounding_boxes
 
 

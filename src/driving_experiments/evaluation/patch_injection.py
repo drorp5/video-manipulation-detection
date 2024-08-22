@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import random
 
 
-from detectors_evaluation.manipulator import RectangularPatchInjector
+from passive_detectors_evaluation.manipulator import RectangularPatchInjector
 from sign_detectors import StopSignDetector, get_detector, draw_detections
 from gige.utils import payload_gvsp_bytes_to_raw_image
 from gige.utils import bgr_img_to_packets_payload

@@ -10,14 +10,14 @@ from tqdm import tqdm
 import multiprocessing
 from functools import partial
 import pandas as pd
-from detectors_evaluation import (
+from passive_detectors_evaluation import (
     Evaluator,
     EvaluationDataset,
     Label,
     evaluate_pair,
     Injector,
 )
-import detectors_evaluation.bootstrapper as bootstrapper
+import passive_detectors_evaluation.bootstrapper as bootstrapper
 
 
 class InjectorType(Enum):

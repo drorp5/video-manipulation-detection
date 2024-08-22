@@ -11,7 +11,7 @@ import shutil
 import multiprocessing
 from functools import partial
 
-from detectors_evaluation.bootstrapper import DST_SHAPE
+from passive_detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
 from utils.detection_utils import calculate_iou, Rectangle
 from utils.image_processing import bgr_to_bayer_rg

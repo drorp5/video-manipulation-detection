@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 import random
 
 
-from detectors_evaluation.bootstrapper import DST_SHAPE
+from passive_detectors_evaluation.bootstrapper import DST_SHAPE
 from sign_detectors import StopSignDetector, get_detector, draw_bounding_boxes
 from gige.utils import payload_gvsp_bytes_to_raw_image
 from utils.image_processing import bggr_to_rggb
 from utils.detection_utils import Rectangle, calculate_iou
 from utils.injection import get_stripe_gvsp_payload_bytes
 from gige.utils import bgr_img_to_packets_payload
-from detectors_evaluation.manipulator import RectangularPatchInjector
+from passive_detectors_evaluation.manipulator import RectangularPatchInjector
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")
