@@ -1,13 +1,15 @@
 import cv2
 from typing import List
 from pathlib import Path
-from injectors.full_frame_injector import FullFrameInjector
-from injectors.injector import Injector
-from injectors.stop_sign_injector import SignPatchInjector
-from injectors.stripe_injector import StripeInjector
-from injectors.rectangular_patch_injector import (
+from injectors import (
+    Injector,
+    FullFrameInjector,
+    StripeInjector,
+    SignPatchInjector,
     RectangularPatchInjector,
 )
+
+
 from passive_detectors_evaluation.datasets import (
     EvaluationDataset,
     FramesDirectoryDataset,
@@ -24,7 +26,7 @@ from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 DST_SHAPE = (MAX_WIDTH, MAX_HEIGHT)
 
-VIDEOS_PATH = Path(r"Datasets/BDD100K/bdd100k_videos_test_00/bdd100k/videos/test")
+VIDEOS_PATH = Path(r"../Datasets/BDD100K/bdd100k_videos_test_00/bdd100k/videos/test")
 
 
 def get_stop_sign_injector(injector_type: str) -> Injector:
@@ -41,16 +43,16 @@ def get_stop_sign_injector(injector_type: str) -> Injector:
         ValueError: If an invalid injector_type is provided.
     """
     if injector_type == "full_frame":
-        stop_sign_road = cv2.imread(r"INPUT/stop_sign_road_2.jpg")
+        stop_sign_road = cv2.imread(r"../INPUT/stop_sign_road_2.jpg")
         stop_sign_road = cv2.cvtColor(stop_sign_road, cv2.COLOR_BGR2RGB)
         return FullFrameInjector(fake_img=stop_sign_road, dst_shape=DST_SHAPE)
     elif injector_type == "stripe":
-        stop_sign_road = cv2.imread(r"INPUT/stop_sign_road_2.jpg")
+        stop_sign_road = cv2.imread(r"../INPUT/stop_sign_road_2.jpg")
         stop_sign_road = cv2.resize(stop_sign_road, DST_SHAPE)
         stop_sign_road = cv2.cvtColor(stop_sign_road, cv2.COLOR_BGR2RGB)
         return StripeInjector(fake_img=stop_sign_road, first_row=354, last_row=489)
     elif injector_type == "patch":
-        stop_sign = cv2.imread(r"INPUT/stop_sign_road_2_resized_cropped.jpg")
+        stop_sign = cv2.imread(r"../INPUT/stop_sign_road_2_resized_cropped.jpg")
         sign_img = cv2.cvtColor(stop_sign, cv2.COLOR_BGR2RGB)
         side_length = 108
         first_row = 4
@@ -78,7 +80,7 @@ def get_red_light_injector(injector_type: str) -> Injector:
     Raises:
         ValueError: If an invalid injector_type is provided.
     """
-    red_light_path = r"INPUT/red_light.jpg"
+    red_light_path = r"../INPUT/red_light.jpg"
     red_light_img = cv2.imread(red_light_path)
     red_light_img = cv2.cvtColor(red_light_img, cv2.COLOR_BGR2RGB)
 
@@ -124,7 +126,7 @@ def get_dataset(data_source: str) -> EvaluationDataset:
         ValueError: If an invalid data_source is provided.
     """
     if data_source == "experiment":
-        frames_dir = Path(r"OUTPUT/drive_around_uni_frames/")
+        frames_dir = Path(r"../OUTPUT/drive_around_uni_frames/")
         dataset_name = "drive_around_uni"
         min_frame_id = 1800
         return FramesDirectoryDataset(

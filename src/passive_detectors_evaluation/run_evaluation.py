@@ -10,7 +10,7 @@ from tqdm import tqdm
 import multiprocessing
 from functools import partial
 import pandas as pd
-from injectors.injector import Injector
+from injectors import Injector, InjectorType
 from passive_detectors_evaluation import (
     Evaluator,
     EvaluationDataset,
@@ -18,12 +18,6 @@ from passive_detectors_evaluation import (
     evaluate_pair,
 )
 import passive_detectors_evaluation.bootstrapper as bootstrapper
-
-
-class InjectorType(Enum):
-    FULL_FRAME = "full_frame"
-    STRIPE = "stripe"
-    PATCH = "patch"
 
 
 class ManipulationObject(Enum):
@@ -60,14 +54,14 @@ def run_evaluation(
                     [detector_res.real, detector_res.fake]
                 )
 
-        # save results
-        for detector in evaluator.detectors:
-            df = pd.DataFrame(res_by_detector[detector.name])
-            dst_path = (
-                dst_dir_path
-                / f"{dataset.name}_{evaluator.injector.name}_{detector.name}.csv"
-            )
-            df.to_csv(dst_path)
+    # save results
+    for detector in evaluator.detectors:
+        df = pd.DataFrame(res_by_detector[detector.name])
+        dst_path = (
+            dst_dir_path
+            / f"{dataset.name}_{evaluator.injector.name}_{detector.name}.csv"
+        )
+        df.to_csv(dst_path)
 
 
 def save_example_frame(
@@ -110,7 +104,7 @@ def get_injector(injector_type: InjectorType, manipulation_object: ManipulationO
 
 
 def main():
-    base_dir = Path("OUTPUT")
+    base_dir = Path("../OUTPUT")
     project_name = "video_manipulation_detection"
     save_example_only = False
     data_sources = ["BDD"]  # Can be expanded to include "experiment"
