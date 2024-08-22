@@ -16,7 +16,7 @@ from utils.image_processing import bggr_to_rggb
 from utils.detection_utils import Rectangle, calculate_iou
 from utils.injection import get_stripe_gvsp_payload_bytes
 from gige.utils import bgr_img_to_packets_payload
-from passive_detectors_evaluation.manipulator import RectangularPatchInjector
+from injectors.rectangular_patch_injector import RectangularPatchInjector
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")

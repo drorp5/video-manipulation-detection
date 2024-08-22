@@ -1,8 +1,8 @@
-from passive_detectors_evaluation.manipulator import (
-    Injector,
-    FullFrameInjector,
-    StripeInjector,
-    SignPatchInjector,
+from injectors.full_frame_injector import FullFrameInjector
+from injectors.injector import Injector
+from injectors.stop_sign_injector import SignPatchInjector
+from injectors.stripe_injector import StripeInjector
+from injectors.rectangular_patch_injector import (
     RectangularPatchInjector,
 )
 from passive_detectors_evaluation.evaluator import (

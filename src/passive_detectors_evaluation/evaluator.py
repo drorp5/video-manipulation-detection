@@ -6,7 +6,7 @@ from enum import Enum
 from passive_detectors.image_processing.abstract_image_processing_detector import (
     ImageProcessingDetector,
 )
-from passive_detectors_evaluation.manipulator import Injector
+from injectors.injector import Injector
 
 
 class Label(Enum):

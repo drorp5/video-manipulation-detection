@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Tuple
 import numpy as np
 from utils.detection_utils import Rectangle
@@ -48,3 +49,15 @@ def get_stripe_gvsp_payload_bytes(
             gvsp_packets_ids.append(ind + 1)
 
     return gvsp_packets_ids, gvsp_payload_stripe
+
+
+@dataclass
+class RectangularBoundaries:
+    """
+    Data class to store the boundaries of a rectangular region in an image.
+    """
+
+    top_row: int
+    bottom_row: int
+    left_col: int
+    right_col: int

@@ -1,12 +1,12 @@
 import cv2
 from typing import List
 from pathlib import Path
-from passive_detectors_evaluation.manipulator import (
-    FullFrameInjector,
-    StripeInjector,
-    SignPatchInjector,
+from injectors.full_frame_injector import FullFrameInjector
+from injectors.injector import Injector
+from injectors.stop_sign_injector import SignPatchInjector
+from injectors.stripe_injector import StripeInjector
+from injectors.rectangular_patch_injector import (
     RectangularPatchInjector,
-    Injector,
 )
 from passive_detectors_evaluation.datasets import (
     EvaluationDataset,
