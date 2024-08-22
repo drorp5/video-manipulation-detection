@@ -24,8 +24,22 @@ from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
 
 DST_SHAPE = (MAX_WIDTH, MAX_HEIGHT)
 
+VIDEOS_PATH = Path(r"Datasets/BDD100K/bdd100k_videos_test_00/bdd100k/videos/test")
+
 
 def get_stop_sign_injector(injector_type: str) -> Injector:
+    """
+    Create and return a stop sign injector based on the specified type.
+
+    Args:
+        injector_type (str): Type of injector ('full_frame', 'stripe', or 'patch').
+
+    Returns:
+        Injector: An injector object of the specified type.
+
+    Raises:
+        ValueError: If an invalid injector_type is provided.
+    """
     if injector_type == "full_frame":
         stop_sign_road = cv2.imread(r"INPUT/stop_sign_road_2.jpg")
         stop_sign_road = cv2.cvtColor(stop_sign_road, cv2.COLOR_BGR2RGB)
@@ -52,6 +66,18 @@ def get_stop_sign_injector(injector_type: str) -> Injector:
 
 
 def get_red_light_injector(injector_type: str) -> Injector:
+    """
+    Create and return a red light injector based on the specified type.
+
+    Args:
+        injector_type (str): Type of injector ('full_frame', 'stripe', or 'patch').
+
+    Returns:
+        Injector: An injector object of the specified type.
+
+    Raises:
+        ValueError: If an invalid injector_type is provided.
+    """
     red_light_path = r"INPUT/red_light.jpg"
     red_light_img = cv2.imread(red_light_path)
     red_light_img = cv2.cvtColor(red_light_img, cv2.COLOR_BGR2RGB)
@@ -73,12 +99,30 @@ def get_red_light_injector(injector_type: str) -> Injector:
 
 
 def get_image_processing_detectors() -> List[ImageProcessingDetector]:
+    """
+    Create and return a list of image processing detectors.
+
+    Returns:
+        List[ImageProcessingDetector]: A list containing histogram and optical flow detectors.
+    """
     hist_detector = HueSaturationHistogramDetector(0)
     optical_flow_detector = OpticalFlowDetector(0)
     return [hist_detector, optical_flow_detector]
 
 
 def get_dataset(data_source: str) -> EvaluationDataset:
+    """
+    Create and return a dataset based on the specified data source.
+
+    Args:
+        data_source (str): Source of the dataset ('experiment' or 'BDD').
+
+    Returns:
+        EvaluationDataset: A dataset object of the specified type.
+
+    Raises:
+        ValueError: If an invalid data_source is provided.
+    """
     if data_source == "experiment":
         frames_dir = Path(r"OUTPUT/drive_around_uni_frames/")
         dataset_name = "drive_around_uni"
@@ -87,13 +131,10 @@ def get_dataset(data_source: str) -> EvaluationDataset:
             frames_dir=frames_dir, name=dataset_name, min_frame_id=min_frame_id
         )
     elif data_source == "BDD":
-        videos_path = Path(
-            r"D:\Thesis\video-manipulation-detection\Datasets\BDD100K\bdd100k_videos_test_00\bdd100k\videos\test"
-        )
         num_frames = 100
         flip = True
         return VideosDirectoryDataset(
-            videos_dir=videos_path,
+            videos_dir=VIDEOS_PATH,
             name="BDD",
             num_frames=num_frames,
             flip=flip,

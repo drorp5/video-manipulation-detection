@@ -1,33 +1,50 @@
-import sys
-sys.path.append("./src")
+"""
+This script runs an evaluation of passive video manipulation detection methods on different datasets.
+It supports various injector types and can save examples of manipulated frames.
+"""
+
+from enum import Enum
 from pathlib import Path
 import cv2
 from tqdm import tqdm
 import multiprocessing
 from functools import partial
 import pandas as pd
-from passive_manipulation_detectors.image_processing import (
-    OpticalFlowDetector,
-    MSEImageDetector,
-    HueSaturationHistogramDetector,
-)
 from detectors_evaluation import (
-    FullFrameInjector,
-    StripeInjector,
-    SignPatchInjector,
     Evaluator,
-    EvaluationResult,
     EvaluationDataset,
-    FramesDirectoryDataset,
     Label,
     evaluate_pair,
-    VideoDataset,
-    VideosDirectoryDataset,
+    Injector,
 )
 import detectors_evaluation.bootstrapper as bootstrapper
 
 
-def run(evaluator: Evaluator, dataset: EvaluationDataset, dst_dir_path: Path):
+class InjectorType(Enum):
+    FULL_FRAME = "full_frame"
+    STRIPE = "stripe"
+    PATCH = "patch"
+
+
+class ManipulationObject(Enum):
+    STOP_SIGN = "stop_sign"
+    RED_LIGHT = "red_light"
+
+
+def run_evaluation(
+    evaluator: Evaluator, dataset: EvaluationDataset, dst_dir_path: Path
+):
+    """
+    Run the evaluation process on a given dataset using the specified evaluator.
+
+    Args:
+        evaluator (Evaluator): The evaluator object containing detectors and injector.
+        dataset (EvaluationDataset): The dataset to evaluate on.
+        dst_dir_path (Path): The directory to save results.
+
+    Returns:
+        None
+    """
     res_by_detector = {
         detector.name: {"score": [], "label": []} for detector in evaluator.detectors
     }
@@ -36,19 +53,12 @@ def run(evaluator: Evaluator, dataset: EvaluationDataset, dst_dir_path: Path):
     with multiprocessing.Pool(6) as pool:
         for res in tqdm(pool.imap(helper, dataset), total=len(dataset)):
             for detector_res in res:
-                res_by_detector[detector_res.detector]["label"].append(Label.REAL.value)
-                res_by_detector[detector_res.detector]["score"].append(
-                    detector_res.real
+                res_by_detector[detector_res.detector]["label"].extend(
+                    [Label.REAL.value, Label.FAKE.value]
                 )
-                res_by_detector[detector_res.detector]["label"].append(Label.FAKE.value)
-                res_by_detector[detector_res.detector]["score"].append(
-                    detector_res.fake
+                res_by_detector[detector_res.detector]["score"].extend(
+                    [detector_res.real, detector_res.fake]
                 )
-
-        # all_res = []
-        # for (frame_1, frame_2) in tqdm(dataset):
-        #     res = evaluator.evaluate(frame_1, frame_2)
-        #     all_res.append(res)
 
         # save results
         for detector in evaluator.detectors:
@@ -60,35 +70,79 @@ def run(evaluator: Evaluator, dataset: EvaluationDataset, dst_dir_path: Path):
             df.to_csv(dst_path)
 
 
-if __name__ == "__main__":
+def save_example_frame(
+    dataset: EvaluationDataset, injector: Injector, dst_path: Path
+) -> None:
+    """
+    Save an example of a manipulated frame.
+
+    Args:
+        dataset (EvaluationDataset): The dataset to take the example from.
+        injector (Injector): The injector to use for manipulation.
+        dst_path (Path): The path to save the example frame.
+
+    Returns:
+        None
+    """
+    fake_frame = injector.inject(frame_1=dataset[0][0], frame_2=dataset[0][1])
+    fake_frame_bgr = cv2.cvtColor(fake_frame, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(dst_path.as_posix(), fake_frame_bgr)
+    print(f"Example frame saved in {dst_path}")
+
+
+def get_injector(injector_type: InjectorType, manipulation_object: ManipulationObject):
+    """
+    Get the appropriate injector based on the injector type and manipulation object.
+
+    Args:
+        injector_type (InjectorType): The type of injector to use.
+        manipulation_object (ManipulationObject): The object to inject (stop sign or red light).
+
+    Returns:
+        Injector: The selected injector object.
+    """
+    if manipulation_object == ManipulationObject.STOP_SIGN:
+        return bootstrapper.get_stop_sign_injector(injector_type.value)
+    elif manipulation_object == ManipulationObject.RED_LIGHT:
+        return bootstrapper.get_red_light_injector(injector_type.value)
+    else:
+        raise ValueError(f"Unknown manipulation object: {manipulation_object}")
+
+
+def main():
     base_dir = Path("OUTPUT")
-    only_save_example = False
-    name = "fake_red_light"
+    project_name = "video_manipulation_detection"
+    save_example_only = False
+    data_sources = ["BDD"]  # Can be expanded to include "experiment"
+    injector_types = [InjectorType.FULL_FRAME, InjectorType.STRIPE, InjectorType.PATCH]
+    manipulation_object = (
+        ManipulationObject.RED_LIGHT
+    )  # Can be changed to ManipulationObject.STOP_SIGN
 
-    dst_dir = base_dir / name
-    if not dst_dir.exists():
-        dst_dir.mkdir(parents=True)
+    dst_dir = base_dir / project_name
+    dst_dir.mkdir(parents=True, exist_ok=True)
 
-    # set detectors
     detectors = bootstrapper.get_image_processing_detectors()
 
-    for data_source in ["BDD"]:  # "experiment" ,"BDD"]:
-        for injector_type in ["full_frame", "stripe", "patch"]:
-            print(f"running {injector_type} on {data_source}")
-            # set dataset
+    for data_source in data_sources:
+        for injector_type in injector_types:
+            print(f"Running {injector_type.value} on {data_source}")
+
             dataset = bootstrapper.get_dataset(data_source)
-            # injector = bootstrapper.get_stop_sign_injector(injector_type)
-            injector = bootstrapper.get_red_light_injector(injector_type)
-            # run
-            if only_save_example:
-                # save example
-                dst_path = dst_dir / f"fake_{data_source}_{injector.name}.jpg"
-                fake_frame = injector.inject(
-                    frame_1=dataset[0][0], frame_2=dataset[0][1]
+            injector = get_injector(injector_type, manipulation_object)
+
+            if save_example_only:
+                dst_path = (
+                    dst_dir
+                    / f"fake_{data_source}_{injector.name}_{manipulation_object.value}.jpg"
                 )
-                fake_frame_bgr = cv2.cvtColor(fake_frame, cv2.COLOR_RGB2BGR)
-                cv2.imwrite(dst_path.as_posix(), fake_frame_bgr)
-                print(f"saved in {dst_path}")
+                save_example_frame(dataset, injector, dst_path)
             else:
                 evaluator = Evaluator(detectors=detectors, injector=injector)
-                run(evaluator=evaluator, dataset=dataset, dst_dir_path=dst_dir)
+                run_evaluation(
+                    evaluator=evaluator, dataset=dataset, dst_dir_path=dst_dir
+                )
+
+
+if __name__ == "__main__":
+    main()
