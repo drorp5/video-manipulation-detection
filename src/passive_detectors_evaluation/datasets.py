@@ -100,6 +100,8 @@ class EvaluationDataset(ABC):
         Args:
             name (str): The name of the dataset.
         """
+        self._index = 0
+        self._name = name
 
     def __iter__(self):
         """
@@ -138,7 +140,7 @@ class EvaluationDataset(ABC):
         Returns:
             Tuple[np.ndarray, np.ndarray]: A pair of frames from the dataset.
         """
-        ...
+        pass
 
     @abstractmethod
     def __len__(self) -> int:
@@ -148,7 +150,7 @@ class EvaluationDataset(ABC):
         Returns:
             int: The number of items in the dataset.
         """
-        ...
+        pass
 
     @property
     def name(self) -> str:
