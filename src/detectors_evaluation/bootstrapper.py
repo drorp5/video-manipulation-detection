@@ -15,7 +15,7 @@ from detectors_evaluation.datasets import (
     VideosDirectoryDataset,
 )
 
-from passive_manipulation_detectors.image_processing import (
+from passive_detectors.image_processing import (
     OpticalFlowDetector,
     HueSaturationHistogramDetector,
     ImageProcessingDetector,

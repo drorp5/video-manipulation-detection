@@ -1,17 +1,17 @@
 from gige.gvsp_transmission import GvspPcapParser
 from gige.gvsp_frame import gvsp_frame_to_rgb
-from passive_manipulation_detectors.metadata import (
+from passive_detectors.metadata import (
     ConstantMetadataDetector,
     FrameIDDetector,
     TimestampDetector,
     TimestampRateDetector,
 )
-from passive_manipulation_detectors.image_processing import (
+from passive_detectors.image_processing import (
     OpticalFlowDetector,
     MSEImageDetector,
     HueSaturationHistogramDetector,
 )
-from passive_manipulation_detectors.combined import CombinedDetector
+from passive_detectors.combined import CombinedDetector
 from sign_detectors.stop_sign_detectors import (
     StopSignDetector,
     draw_detections,
