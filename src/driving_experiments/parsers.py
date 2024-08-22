@@ -6,7 +6,7 @@ import ast
 from datetime import datetime
 import cv2
 
-from active_detectors.validation_status import ValidationStatus
+from active_manipulation_detectors.validation_status import ValidationStatus
 from gige.attacked_gvsp_parser import AttackedGvspPcapParser, GvspPcapParser
 from gige.gvsp_frame import gvsp_frame_to_rgb
 

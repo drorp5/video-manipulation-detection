@@ -10,7 +10,7 @@ from tqdm import tqdm
 import yaml
 
 
-from active_detectors.validation_status import ValidationStatus
+from active_manipulation_detectors.validation_status import ValidationStatus
 from driving_experiments.tags import TimeOfDay, RoadType
 
 

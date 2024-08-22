@@ -7,7 +7,7 @@ from vimba import *
 
 
 from car import Car
-from active_detectors.asynchronous_grab_opencv_active_detection import (
+from active_manipulation_detectors.asynchronous_grab_opencv_active_detection import (
     get_camera,
     setup_camera,
 )
@@ -16,10 +16,10 @@ from gige.handlers.gige_handler import GigeHandler
 from gige.handlers.varying_shape_handler import (
     VaryingShapeHandler,
 )
-from active_detectors.side_channel.data_generator import (
+from active_manipulation_detectors.side_channel.data_generator import (
     RandomBitsGenerator,
 )
-from active_detectors.side_channel.validation import DataValidator
+from active_manipulation_detectors.side_channel.validation import DataValidator
 from sign_detectors.stop_sign_detectors import get_detector
 from recorders import Recorder 
 
