@@ -60,58 +60,6 @@ class EvaluationDataset(ABC):
         """
         return self
 
-
-def to_batches(l: List, batch_size: int) -> List:
-    """
-    Split a list into batches of a specified size.
-
-    Args:
-        l (List): The input list to be split.
-        batch_size (int): The size of each batch.
-
-    Returns:
-        List: A list of batches, where each batch is a sublist of the input list.
-    """
-
-
-def read_frame(frame_path: Path) -> np.ndarray:
-    """
-    Read an RGB image from the specified path.
-
-    Args:
-        frame_path (Path): The path to the image file.
-
-    Returns:
-        np.ndarray: The image as a NumPy array in RGB format.
-    """
-
-
-class EvaluationDataset(ABC):
-    """
-    Abstract base class for evaluation datasets.
-
-    This class defines the interface for datasets used in the evaluation process.
-    """
-
-    def __init__(self, name: str):
-        """
-        Initialize the EvaluationDataset.
-
-        Args:
-            name (str): The name of the dataset.
-        """
-        self._index = 0
-        self._name = name
-
-    def __iter__(self):
-        """
-        Return an iterator for the dataset.
-
-        Returns:
-            Iterator: An iterator for the dataset.
-        """
-        return self
-
     def __next__(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get the next item in the dataset.
@@ -193,9 +141,7 @@ class FramesDirectoryDataset(EvaluationDataset):
         all_frames_path = []
         for frame_path in self.frames_dir.glob("*.jpg"):
             id = int(frame_path.stem.split("_")[1])
-            if id < self.min_frame_id:
-                pass
-            else:
+            if id >= self.min_frame_id:
                 all_frames_path.append(frame_path)
         return sorted(all_frames_path, key=lambda x: int(x.stem.split("_")[1]))
 
@@ -374,12 +320,13 @@ class VideosDirectoryDataset(EvaluationDataset):
 
     def __len__(self) -> int:
         """
-        Get the number of videos in the dataset.
+        Get the number of frames across all videos.
+        Assuming all videos has at least num_frames.
 
         Returns:
-            int: The number of videos.
+            int: The number frames in dataset.
         """
-        return len(self.videos_path)
+        return len(self.videos_path) * self.num_frames
 
     def __iter__(self):
         return self
@@ -394,22 +341,21 @@ class VideosDirectoryDataset(EvaluationDataset):
         Raises:
             StopIteration: When there are no more frames in any video.
         """
-        if self._video_index < len(self):
-            try:
-                val = self.video_dataset.__next__()
-                return val
-            except StopIteration:
-                self.video_dataset.release()
-                self._video_index += 1
-                self._set_cur_dataset()
-                return self.__next__()
-            except Exception as e:
-                print(
-                    f"Error loading video from {self.videos_path[self._video_index]}: {e}"
-                )
-                self.video_dataset.release()
-                self._video_index += 1
-                self._set_cur_dataset()
-                return self.__next__()
-        else:
+        if self._video_index >= len(self.videos_path):
             raise StopIteration
+        try:
+            val = self.video_dataset.__next__()
+            return val
+        except StopIteration:
+            self.video_dataset.release()
+            self._video_index += 1
+            self._set_cur_dataset()
+            return self.__next__()
+        except Exception as e:
+            print(
+                f"Error loading video from {self.videos_path[self._video_index]}: {e}"
+            )
+            self.video_dataset.release()
+            self._video_index += 1
+            self._set_cur_dataset()
+            return self.__next__()
