@@ -7,26 +7,67 @@ from dataclasses import dataclass
 
 
 class Injector(ABC):
+    """
+    Abstract base class for frame injectors.
+    """
+
     @abstractmethod
-    def inject(self, frame_1: np.ndarray, frame_2: np.ndarray) -> np.ndarray: ...
+    def inject(self, frame_1: np.ndarray, frame_2: np.ndarray) -> np.ndarray:
+        """
+        Inject content into a frame.
+
+        Args:
+            frame_1 (np.ndarray): The first frame.
+            frame_2 (np.ndarray): The second frame.
+
+        Returns:
+            np.ndarray: The manipulated frame.
+        """
+        pass
 
     @property
     @abstractmethod
-    def name(self) -> str: ...
+    def name(self) -> str:
+        """
+        Get the name of the injector.
+
+        Returns:
+            str: The name of the injector.
+        """
+        pass
 
 
 class FullFrameInjector(Injector):
-    """Manipulation method is replacing the entire frame with a new one."""
+    """
+    Manipulation method that replaces the entire frame with a new one.
+    """
 
     def __init__(
         self, fake_img: np.ndarray, dst_shape: Optional[Tuple[int, int]] = None
     ):
+        """
+        Initialize the FullFrameInjector.
+
+        Args:
+            fake_img (np.ndarray): The fake image to inject.
+            dst_shape (Optional[Tuple[int, int]]): The desired shape of the output frame.
+        """
         self.fake_img = fake_img
         self.dst_shape = dst_shape
         if dst_shape is not None:
             self.fake_img = cv2.resize(self.fake_img, dst_shape)
 
     def inject(self, frame_1: np.ndarray, frame_2: np.ndarray) -> np.ndarray:
+        """
+        Replace the entire frame with the fake image.
+
+        Args:
+            frame_1 (np.ndarray): The first frame (unused in this injector).
+            frame_2 (np.ndarray): The second frame (unused in this injector).
+
+        Returns:
+            np.ndarray: The fake frame resized to match the input frame dimensions.
+        """
         assert frame_1.shape == frame_2.shape, "SHAPE ERROR: frames must be same size"
         return cv2.resize(self.fake_img, (frame_1.shape[1], frame_1.shape[0]))
 
@@ -36,7 +77,9 @@ class FullFrameInjector(Injector):
 
 
 class StripeInjector(Injector):
-    """Manipulation method is replacing stipe of the upper part of the frame."""
+    """
+    Manipulation method that replaces a stripe in the upper part of the frame.
+    """
 
     def __init__(
         self,
@@ -45,6 +88,15 @@ class StripeInjector(Injector):
         last_row: int,
         dst_shape: Optional[Tuple[int, int]] = None,
     ):
+        """
+        Initialize the StripeInjector.
+
+        Args:
+            fake_img (np.ndarray): The fake image to inject.
+            first_row (int): The first row of the stripe.
+            last_row (int): The last row of the stripe.
+            dst_shape (Optional[Tuple[int, int]]): The desired shape of the output frame.
+        """
         self.fake_img = fake_img
         self.first_row = first_row
         self.last_row = last_row
@@ -56,6 +108,17 @@ class StripeInjector(Injector):
     def _resize(
         self, img: np.ndarray, dst_width: int, dst_height: int
     ) -> Tuple[np.ndarray, int, int]:
+        """
+        Resize the image and adjust the stripe boundaries.
+
+        Args:
+            img (np.ndarray): The image to resize.
+            dst_width (int): The desired width.
+            dst_height (int): The desired height.
+
+        Returns:
+            Tuple[np.ndarray, int, int]: The resized image and new stripe boundaries.
+        """
         if img.shape[1] == dst_width and img.shape[1] == dst_height:
             return img, self.first_row, self.last_row
         resized = cv2.resize(img, (dst_width, dst_height))
@@ -65,6 +128,16 @@ class StripeInjector(Injector):
         return resized, first_row, last_row
 
     def inject(self, frame_1: np.ndarray, frame_2: np.ndarray) -> np.ndarray:
+        """
+        Inject a stripe of the fake image into the frame.
+
+        Args:
+            frame_1 (np.ndarray): The first frame (unused in this injector).
+            frame_2 (np.ndarray): The second frame to manipulate.
+
+        Returns:
+            np.ndarray: The manipulated frame with the injected stripe.
+        """
         assert frame_1.shape == frame_2.shape, "SHAPE ERROR: frames must be same size"
         if self.fake_img.shape != frame_1.shape:
             fake_img, first_row, last_row = self._resize(
@@ -87,6 +160,10 @@ class StripeInjector(Injector):
 
 @dataclass
 class RectangularBoundaries:
+    """
+    Data class to store the boundaries of a rectangular region in an image.
+    """
+
     top_row: int
     bottom_row: int
     left_col: int
@@ -94,7 +171,9 @@ class RectangularBoundaries:
 
 
 class PatchInjector(Injector):
-    """Manipulation method is inserting patch of in the upper part of the second frame and fill the stripe with the previous one."""
+    """
+    Base class for injectors that insert a patch into a frame.
+    """
 
     def __init__(
         self,
@@ -104,6 +183,16 @@ class PatchInjector(Injector):
         first_col: int = 0,
         last_col: Optional[int] = None,
     ):
+        """
+        Initialize the PatchInjector.
+
+        Args:
+            patch_img (np.ndarray): The patch image to inject.
+            first_row (int): The first row of the patch.
+            last_row (Optional[int]): The last row of the patch.
+            first_col (int): The first column of the patch.
+            last_col (Optional[int]): The last column of the patch.
+        """
         if last_col is None:
             last_col = patch_img.shape[1] - 1
 
@@ -125,11 +214,24 @@ class PatchInjector(Injector):
 
     @property
     def mask(self) -> np.ndarray:
+        """
+        Set the mask for the patch. To be implemented by subclasses.
+        """
         return self._mask
 
     def _inject_patch(
         self, frame: np.ndarray, boundaries: RectangularBoundaries
     ) -> np.ndarray:
+        """
+        Inject the patch into a frame.
+
+        Args:
+            frame (np.ndarray): The frame to inject the patch into.
+            boundaries (RectangularBoundaries): The boundaries of the injection area.
+
+        Returns:
+            np.ndarray: The frame with the injected patch.
+        """
         dst_frame = frame.copy()
         frame_cropped = frame[
             boundaries.top_row : boundaries.bottom_row,
@@ -150,6 +252,16 @@ class PatchInjector(Injector):
     def _get_injection_boundaries(
         self, frame: np.ndarray, destination_center=None
     ) -> RectangularBoundaries:
+        """
+        Calculate the boundaries for patch injection.
+
+        Args:
+            frame (np.ndarray): The frame to inject into.
+            destination_center (Optional[Tuple[int, int]]): The center point for injection.
+
+        Returns:
+            RectangularBoundaries: The calculated boundaries for injection.
+        """
         if destination_center is None:
             destination_center = (
                 self.num_rows // 2,
@@ -167,6 +279,16 @@ class PatchInjector(Injector):
         )
 
     def inject(self, frame_1: np.ndarray, frame_2: np.ndarray) -> np.ndarray:
+        """
+        Inject the patch into the frame.
+
+        Args:
+            frame_1 (np.ndarray): The first frame.
+            frame_2 (np.ndarray): The second frame.
+
+        Returns:
+            np.ndarray: The manipulated frame with the injected patch.
+        """
         assert frame_1.shape == frame_2.shape, "SHAPE ERROR: frames must be same size"
         boundaries = self._get_injection_boundaries(frame_1)
         frame_1_injected = self._inject_patch(frame=frame_1, boundaries=boundaries)
@@ -178,7 +300,9 @@ class PatchInjector(Injector):
 
 
 class SignPatchInjector(PatchInjector):
-    """Manipulation method is inserting patch of sign in the upper part of the second frame and fill the stripe with the previous one."""
+    """
+    Injector that inserts a sign patch in the upper part of the second frame.
+    """
 
     def __init__(
         self,
@@ -189,6 +313,17 @@ class SignPatchInjector(PatchInjector):
         first_col: int = 0,
         last_col: Optional[int] = None,
     ):
+        """
+        Initialize the SignPatchInjector.
+
+        Args:
+            sign_img (np.ndarray): The sign image to inject.
+            side_length (int): The side length of the octagon.
+            first_row (int): The first row of the patch.
+            last_row (Optional[int]): The last row of the patch.
+            first_col (int): The first column of the patch.
+            last_col (Optional[int]): The last column of the patch.
+        """
         assert sign_img.shape[0] == sign_img.shape[1], "sign image must be square"
         super().__init__(
             patch_img=sign_img,
@@ -201,7 +336,9 @@ class SignPatchInjector(PatchInjector):
         self.set_mask()
 
     def set_mask(self) -> None:
-        """creates octagon mask."""
+        """
+        Create an octagon mask for the sign patch.
+        """
         mask = np.zeros_like(self.patch_img)
         octagon_color = 255
         angle_offset = np.pi / 8
@@ -222,7 +359,9 @@ class SignPatchInjector(PatchInjector):
 
 
 class RectangularPatchInjector(PatchInjector):
-    """Manipulation method is inserting rectangular patch in the upper part of the second frame and fill the stripe with the previous one."""
+    """
+    Injector that inserts a rectangular patch in the upper part of the second frame.
+    """
 
     def __init__(
         self,
@@ -232,6 +371,16 @@ class RectangularPatchInjector(PatchInjector):
         first_col: int = 0,
         last_col: Optional[int] = None,
     ):
+        """
+        Initialize the RectangularPatchInjector.
+
+        Args:
+            patch_img (np.ndarray): The patch image to inject.
+            first_row (int): The first row of the patch.
+            last_row (Optional[int]): The last row of the patch.
+            first_col (int): The first column of the patch.
+            last_col (Optional[int]): The last column of the patch.
+        """
         super().__init__(
             patch_img=patch_img,
             first_row=first_row,
@@ -242,7 +391,9 @@ class RectangularPatchInjector(PatchInjector):
         self.set_mask()
 
     def set_mask(self) -> None:
-        """creates rectangular mask"""
+        """
+        Create a rectangular mask for the patch.
+        """
         self._mask = np.ones_like(self.patch_img) * 255
 
     @property
