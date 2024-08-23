@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import yaml
 
-from driving_experiments.run_experiment import run_experiment
+from active_detection_experiments.run_experiment import run_experiment
 from attacker import Attackers
-from driving_experiments.experiment import Experiment
+from active_detection_experiments.experiment import Experiment
 from gige.frames_statistics import FramesStatistics
 from gige.attacked_gvsp_parser import AttackedGvspPcapParser
 

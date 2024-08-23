@@ -22,7 +22,7 @@ from active_manipulation_detectors.side_channel.validation import (
     DataValidatorKSymbolsDelayedChanged,
 )
 from attacker import GigEAttackerStripeInjection, GigEAttackerFrameInjection, Attackers
-from driving_experiments.experiment import Experiment
+from active_detection_experiments.experiment import Experiment
 from active_manipulation_detectors.evaluation.mtsd_evaluation import (
     get_largest_bounding_box,
     resize_bounding_box,

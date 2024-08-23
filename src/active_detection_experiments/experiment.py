@@ -12,7 +12,7 @@ import sys
 
 from attacker import GigEAttacker
 from car import Car
-from driving_experiments.parsers import *
+from active_detection_experiments.parsers import *
 
 
 def run_thread(func):

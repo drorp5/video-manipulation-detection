@@ -6,7 +6,7 @@ from pathlib import Path
 from playsound import playsound
 
 sys.path.append(".")
-from driving_experiments.run_experiment import run_experiment
+from active_detection_experiments.run_experiment import run_experiment
 
 
 SUCCESS_SOUND_PATH = Path(r"C:\Users\user\Desktop\Dror\video-manipulation-detection\INPUT\success.mp3")

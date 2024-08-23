@@ -12,8 +12,8 @@ import yaml
 
 
 # from driving_experiments.tags import TimeOfDay, RoadType
-from driving_experiments.evaluation.detection import parse_log_file
-from driving_experiments.evaluation.experiments_summary import (
+from active_detection_experiments.evaluation.detection import parse_log_file
+from active_detection_experiments.evaluation.experiments_summary import (
     extract_metadata_key_of_config_path,
 )
 

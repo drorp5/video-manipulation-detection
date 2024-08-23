@@ -11,7 +11,7 @@ import yaml
 
 
 from active_manipulation_detectors.validation_status import ValidationStatus
-from driving_experiments.tags import TimeOfDay, RoadType
+from active_detection_experiments.tags import TimeOfDay, RoadType
 
 
 injection_started_log_line = "Full Frame Injection Started"

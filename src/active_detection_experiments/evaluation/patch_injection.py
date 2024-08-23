@@ -19,11 +19,11 @@ from utils.image_processing import bggr_to_rggb
 from utils.detection_utils import Rectangle, calculate_iou
 from utils.injection import get_stripe_gvsp_payload_bytes
 from utils.datasets import get_largest_bounding_box, resize_bounding_box
-from driving_experiments.evaluation.experiments_summary import (
+from active_detection_experiments.evaluation.experiments_summary import (
     get_normal_completed_pcap_frames_ids,
     extract_metadata_key_of_config_path,
 )
-from driving_experiments.evaluation.experiments_summary import parse_log_file
+from active_detection_experiments.evaluation.experiments_summary import parse_log_file
 
 
 # MTSD dataset

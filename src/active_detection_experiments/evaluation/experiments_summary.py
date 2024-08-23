@@ -5,9 +5,9 @@ from pathlib import Path
 from functools import partial
 
 from attacker import Attackers
-from driving_experiments.parsers import evaluate_success_recording_rate
-from driving_experiments.tags import RoadType, TimeOfDay
-from driving_experiments.evaluation.detection import parse_log_file
+from active_detection_experiments.parsers import evaluate_success_recording_rate
+from active_detection_experiments.tags import RoadType, TimeOfDay
+from active_detection_experiments.evaluation.detection import parse_log_file
 
 
 def attack_type_to_name(attack_type: Optional[str]) -> str:
