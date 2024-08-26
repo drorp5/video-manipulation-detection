@@ -1,17 +1,13 @@
-from dataclasses import dataclass
-from math import log
+"""
+This module calculates expected detection probabilities based on experimental data.
+It processes log files from GigE Vision experiments and computes statistics on frame widths
+and successful attacks.
+"""
+
 from pathlib import Path
-from datetime import datetime
-import re
-import ast
-from typing import Tuple
-import pandas as pd
-from sklearn import base
 from tqdm import tqdm
-import yaml
 
 
-# from driving_experiments.tags import TimeOfDay, RoadType
 from active_detection_experiments.evaluation.detection import parse_log_file
 from active_detection_experiments.evaluation.experiments_summary import (
     extract_metadata_key_of_config_path,
@@ -19,7 +15,7 @@ from active_detection_experiments.evaluation.experiments_summary import (
 
 
 if __name__ == "__main__":
-    base_dir = Path(r"D:\Thesis\video-manipulation-detection\driving_experiments")
+    base_dir = Path()
 
     counters = {
         2: {"total": 0, "full_width": 0, "total_delayed": 0, "successfull_attacks": 0},

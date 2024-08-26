@@ -1,3 +1,8 @@
+"""
+This module simulates stripe injection attacks on GigE Vision frames.
+It processes individual frames, injects stop sign stripes, and evaluates detection results.
+"""
+
 import multiprocessing
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -40,9 +45,7 @@ detector.confidence_th = 0
 
 
 # Output directory
-injections_images_directory = Path(
-    r"D:\Thesis\video-manipulation-detection\driving_experiments_injections\stripe_roc"
-)
+injections_images_directory = Path()
 if not injections_images_directory.exists():
     injections_images_directory.mkdir(parents=True)
 
@@ -50,9 +53,7 @@ if not injections_images_directory.exists():
 max_payload_bytes = 8963
 
 # experiments directory
-experiments_directory = Path(
-    r"D:\Thesis\video-manipulation-detection\driving_experiments"
-)
+experiments_directory = Path()
 
 
 def evaluate_frame(frame_path: Path) -> dict:

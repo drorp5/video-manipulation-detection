@@ -1,3 +1,9 @@
+"""
+This module provides functionality for summarizing GigE Vision experiment results.
+It includes functions for extracting metadata from configuration files, processing log files,
+and aggregating results across different experimental conditions.
+"""
+
 from typing import Any, Callable, List, Optional, Tuple
 from tqdm import tqdm
 import yaml
@@ -11,6 +17,18 @@ from active_detection_experiments.evaluation.detection import parse_log_file
 
 
 def attack_type_to_name(attack_type: Optional[str]) -> str:
+    """
+    Convert an attack type to a standardized name.
+
+    Args:
+        attack_type (Optional[str]): The attack type to convert.
+
+    Returns:
+        str: The standardized name of the attack type.
+
+    Raises:
+        ValueError: If the attack type is not recognized.
+    """
     if attack_type is None:
         return "None"
     if attack_type not in list(Attackers.keys()):
@@ -19,6 +37,12 @@ def attack_type_to_name(attack_type: Optional[str]) -> str:
 
 
 def initialize_empty_data_structure() -> dict:
+    """
+    Initialize an empty nested dictionary structure for storing experiment results.
+
+    Returns:
+        dict: An empty nested dictionary organized by experiment parameters.
+    """
     extracted_data = {}
     for num_widths in [2, 4, 8]:
         extracted_data[num_widths] = {}
@@ -34,6 +58,16 @@ def initialize_empty_data_structure() -> dict:
 
 
 def access_nested_dict(nested_dict: dict, key: Tuple[Any, ...]) -> Any:
+    """
+    Access a nested dictionary using a tuple of keys.
+
+    Args:
+        nested_dict (dict): The nested dictionary to access.
+        key (Tuple[Any, ...]): A tuple of keys to navigate the nested structure.
+
+    Returns:
+        Any: The value at the specified nested location.
+    """
     current_level = nested_dict
     for k in key:
         current_level = current_level[k]
@@ -41,6 +75,15 @@ def access_nested_dict(nested_dict: dict, key: Tuple[Any, ...]) -> Any:
 
 
 def extract_metadata_key_of_config_path(config_path: Path) -> Tuple:
+    """
+    Extract metadata keys from a configuration file.
+
+    Args:
+        config_path (Path): Path to the configuration file.
+
+    Returns:
+        Tuple: A tuple containing (num_widths, time_of_day, road_type, attack_type).
+    """
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
     num_widths = config["car"]["variation"]["num_widths"]
@@ -53,9 +96,17 @@ def extract_metadata_key_of_config_path(config_path: Path) -> Tuple:
 def extact_data_of_logs(
     base_dir: Path, extraction_function: Callable[[Path], Any]
 ) -> dict:
-    extracted_data = initialize_empty_data_structure()
-    # Iterate on logs and append extract value to the extracted_data dictionary
+    """
+    Extract data from log files using a specified extraction function.
 
+    Args:
+        base_dir (Path): Base directory containing experiment logs.
+        extraction_function (Callable[[Path], Any]): Function to extract data from each log file.
+
+    Returns:
+        dict: A nested dictionary containing extracted data organized by experiment parameters.
+    """
+    extracted_data = initialize_empty_data_structure()
     for log_path in tqdm(list(base_dir.glob("*/log*"))):
         id = log_path.stem[4:]
         config_path = log_path.parent / f"config_{id}.yaml"
@@ -68,10 +119,29 @@ def extact_data_of_logs(
 def calc_number_of_experiments_success_rate_above_th(
     data: list, th: float
 ) -> Tuple[str, int]:
+    """
+    Calculate the number of experiments with a success rate above a given threshold.
+
+    Args:
+        data (list): List of success rates.
+        th (float): Threshold for success rate.
+
+    Returns:
+        Tuple[str, int]: A tuple containing a description string and the count of experiments above the threshold.
+    """
     return f"Sucess Rate Above {th}", len(list(filter(lambda x: x >= th, data)))
 
 
 def get_completed_pcap_frames_ids(log_path: Path) -> List[int]:
+    """
+    Get the IDs of completed PCAP frames from a given log file.
+
+    Args:
+        log_path (Path): Path to the log file.
+
+    Returns:
+        List[int]: A list of completed frame IDs, or None if the directory doesn't exist.
+    """
     completed_frames_directory = log_path.parent / "pcap_completed_frames"
     if not completed_frames_directory.exists():
         return None
@@ -84,6 +154,15 @@ def get_completed_pcap_frames_ids(log_path: Path) -> List[int]:
 
 
 def get_normal_completed_pcap_frames_ids(log_path: Path) -> List[int]:
+    """
+    Get the IDs of completed PCAP frames during normal operation (non-attack periods).
+
+    Args:
+        log_path (Path): Path to the log file.
+
+    Returns:
+        List[int]: A list of completed frame IDs during normal operation, or None if the directory doesn't exist.
+    """
     completed_frames_directory = log_path.parent / "pcap_completed_frames"
     if not completed_frames_directory.exists():
         return None
@@ -101,12 +180,31 @@ def get_normal_completed_pcap_frames_ids(log_path: Path) -> List[int]:
 
 
 def get_number_of_completed_frames(data: list) -> Tuple[str, int]:
+    """
+    Get the total number of completed frames across all experiments.
+
+    Args:
+        data (list): List of lists containing frame IDs for each experiment.
+
+    Returns:
+        Tuple[str, int]: A tuple containing a description string and the total number of completed frames.
+    """
     return "Number of Completed Frames", sum(
         map(len, filter(lambda x: x is not None, data))
     )
 
 
 def get_number_of_consecutive_frames(data: list) -> Tuple[str, int]:
+    """
+    Get the total number of consecutive frames across all experiments.
+
+    Args:
+        data (list): List of lists containing frame IDs for each experiment.
+
+    Returns:
+        Tuple[str, int]: A tuple containing a description string and the total number of consecutive frames.
+    """
+
     def number_of_consecutives(lst: list) -> int:
         if data is None:
             return 0
@@ -119,7 +217,7 @@ def get_number_of_consecutive_frames(data: list) -> Tuple[str, int]:
 
 
 if __name__ == "__main__":
-    base_dir = Path(r"D:\Thesis\video-manipulation-detection\driving_experiments")
+    base_dir = Path()
     extracted_sucess_rate = extact_data_of_logs(
         base_dir=base_dir, extraction_function=evaluate_success_recording_rate
     )

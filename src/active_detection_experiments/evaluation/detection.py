@@ -1,3 +1,9 @@
+"""
+This module provides functionality for evaluating detection results in GigE Vision experiments.
+It includes classes and functions for parsing log files, calculating detection statistics,
+and summarizing results across different experimental conditions.
+"""
+
 from dataclasses import dataclass
 from math import log
 from pathlib import Path
@@ -19,6 +25,16 @@ injection_ended_log_line = "Full Frame Injection Ended"
 
 
 def parse_log_file(file_path: Path, during_attack: bool) -> pd.DataFrame:
+    """
+    Parse a log file and extract relevant information into a DataFrame.
+
+    Args:
+        file_path (Path): Path to the log file.
+        during_attack (bool): Flag indicating whether to parse data during an attack.
+
+    Returns:
+        pd.DataFrame: DataFrame containing parsed log data.
+    """
     with open(file_path.as_posix(), "r") as file:
         log_lines = file.readlines()
 
@@ -61,6 +77,16 @@ def parse_log_file(file_path: Path, during_attack: bool) -> pd.DataFrame:
 
 @dataclass
 class DetectionEvaluationResult:
+    """
+    Represents the results of a detection evaluation.
+
+    Attributes:
+        total (int): Total number of frames evaluated.
+        valid (int): Number of valid detections.
+        invalid (int): Number of invalid detections.
+        incomplete (int): Number of incomplete detections.
+    """
+
     total: int = 0
     valid: int = 0
     invalid: int = 0
@@ -90,6 +116,13 @@ class DetectionEvaluationResult:
 
 
 class DetectionEvaluator:
+    """
+    Evaluates detection results for GigE Vision experiments.
+
+    This class provides methods to evaluate log files and summarize detection results
+    across different experimental conditions.
+    """
+
     def __init__(
         self,
         base_dir: Path,
@@ -148,7 +181,7 @@ class DetectionEvaluator:
 
 
 if __name__ == "__main__":
-    base_dir = Path(r"D:\Thesis\video-manipulation-detection\driving_experiments")
+    base_dir = Path()
 
     true_0_distribution = {2: 0.57333, 4: 0.28, 8: 0.12666666}
     with open(base_dir / "evaluation.txt", "w") as f:

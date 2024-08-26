@@ -1,4 +1,8 @@
-import copy
+"""
+This module simulates patch injection attacks on GigE Vision frames.
+It processes pairs of frames, injects stop sign patches, and evaluates detection results.
+"""
+
 import multiprocessing
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -41,9 +45,7 @@ detector.confidence_th = 0
 
 
 # Output directory
-injections_images_directory = Path(
-    r"D:\Thesis\video-manipulation-detection\driving_experiments_injections\patch_roc"
-)
+injections_images_directory = Path()
 if not injections_images_directory.exists():
     injections_images_directory.mkdir(parents=True)
 
@@ -51,9 +53,7 @@ if not injections_images_directory.exists():
 max_payload_bytes = 8963
 
 # experiments directory
-experiments_directory = Path(
-    r"D:\Thesis\video-manipulation-detection\driving_experiments"
-)
+experiments_directory = Path()
 
 
 def evaluate_frames_pair(frame_path_pair: Tuple[Path, Path]) -> dict:
