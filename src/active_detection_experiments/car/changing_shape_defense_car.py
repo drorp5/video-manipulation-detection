@@ -1,6 +1,4 @@
 import logging
-from logging import config
-from pathlib import Path
 import threading
 from typing import Optional
 from vimba import *
@@ -11,7 +9,6 @@ from active_manipulation_detectors.asynchronous_grab_opencv_active_detection imp
     get_camera,
     setup_camera,
 )
-from gige.gige_constants import MAX_WIDTH, MAX_HEIGHT
 from gige.handlers.gige_handler import GigeHandler
 from gige.handlers.varying_shape_handler import (
     VaryingShapeHandler,
@@ -21,10 +18,17 @@ from active_manipulation_detectors.side_channel.data_generator import (
 )
 from active_manipulation_detectors.side_channel.validation import DataValidator
 from sign_detectors.stop_sign_detectors import get_detector
-from recorders import Recorder 
+from recorders import Recorder
 
 
 class ShapeVaryingLogicCar(Car):
+    """
+    A car implementation with shape-varying logic for defense against attacks.
+
+    This class extends the Car base class and implements a defense mechanism
+    that varies the shape of captured images to detect potential manipulations.
+    """
+
     def __init__(
         self,
         config: dict,
@@ -33,8 +37,20 @@ class ShapeVaryingLogicCar(Car):
         logger: Optional[logging.Logger] = None,
         camera_started_event: Optional[threading.Event] = None,
         camera_stopped_event: Optional[threading.Event] = None,
-        recorder : Optional[Recorder] = None
+        recorder: Optional[Recorder] = None,
     ) -> None:
+        """
+        Initialize the ShapeVaryingLogicCar.
+
+        Args:
+            config (dict): Configuration dictionary for the car.
+            random_bits_generator (RandomBitsGenerator): Generator for random bits.
+            data_validator (DataValidator): Validator for the generated data.
+            logger (Optional[logging.Logger]): Logger object for logging messages.
+            camera_started_event (Optional[threading.Event]): Event to signal camera start.
+            camera_stopped_event (Optional[threading.Event]): Event to signal camera stop.
+            recorder (Optional[Recorder]): Recorder object for saving data.
+        """
         super().__init__(
             logger=logger,
             camera_started_event=camera_started_event,
@@ -46,6 +62,12 @@ class ShapeVaryingLogicCar(Car):
         self.recorder = recorder
 
     def get_handler(self) -> GigeHandler:
+        """
+        Get the GigE handler for the car with shape-varying logic.
+
+        Returns:
+            GigeHandler: The VaryingShapeHandler for the car.
+        """
         sign_detector = get_detector(self.config["actions"]["detector"])
         downfactor = 4
         handler = VaryingShapeHandler(
@@ -62,6 +84,12 @@ class ShapeVaryingLogicCar(Car):
         return handler
 
     def _run(self) -> None:
+        """
+        Run the main logic for the shape-varying defense car.
+
+        This method sets up the camera, starts streaming with the shape-varying handler,
+        and manages the camera lifecycle.
+        """
         handler = self.get_handler()
         with Vimba.get_instance():
             with get_camera() as cam:
