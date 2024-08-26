@@ -1,11 +1,32 @@
+"""
+experiment.py - Experiment Class for Active Detection
+
+This module defines the Experiment class, which encapsulates the logic for running
+active detection experiments. It handles experiment configuration, logging, pcap
+recording, and result evaluation.
+
+Key Components:
+- Experiment: Main class for setting up and running experiments
+- run_thread: Utility function to run a function in a separate thread
+
+Key Methods:
+- __init__: Initialize the experiment
+- run: Run the experiment
+- evaluate_success_rate: Evaluate the success rate of the experiment
+- summarize_log_file: Summarize the experiment log file
+
+Dependencies:
+- yaml: For loading and saving configuration files
+- logging: For experiment logging
+- threading: For running components in parallel
+"""
+
 import math
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
-import time
 import threading
 import subprocess
-from datetime import datetime
 import yaml
 import logging
 import sys
@@ -16,12 +37,25 @@ from active_detection_experiments.parsers import *
 
 
 def run_thread(func):
+    """
+    Run a function in a separate thread.
+
+    Args:
+        func (callable): The function to run in a thread.
+
+    Returns:
+        threading.Thread: The created thread object.
+    """
     thread = threading.Thread(target=func)
     thread.start()
     return thread
 
 
 class Experiment:
+    """
+    Encapsulates the logic for running active detection experiments.
+    """
+
     def __init__(
         self,
         config: dict,
@@ -31,6 +65,17 @@ class Experiment:
         attacker: Optional[GigEAttacker] = None,
         id: Optional[str] = None,
     ) -> None:
+        """
+        Initialize the Experiment instance.
+
+        Args:
+            config (dict): Experiment configuration.
+            logger (logging.Logger): Logger instance for the experiment.
+            car (Car): Car instance for the experiment.
+            base_results_dir (Path): Base directory for storing results.
+            attacker (Optional[GigEAttacker]): Attacker instance, if any. Defaults to None.
+            id (Optional[str]): Experiment ID. If None, a new UUID will be generated.
+        """
         self.logger = logger
         self.attacker = attacker
         self.car = car
@@ -67,6 +112,9 @@ class Experiment:
             self.logger.addHandler(file_handler)
 
     def _start_pcap_recording(self) -> None:
+        """
+        Start recording network traffic in pcap format.
+        """
         self.pcap_path = self.base_results_dir / f"{self.id}.pcap"
         cp_ip = self.config["attacker"]["gige"]["cp"]["ip"]
         camera_ip = self.config["attacker"]["gige"]["camera"]["ip"]
@@ -107,12 +155,21 @@ class Experiment:
         self.logger.debug("Pcap Recording Stopped")
 
     def start_pcap_recording_thread(self):
+        """
+        Start the pcap recording in a separate thread.
+
+        Returns:
+            threading.Thread: The created thread for pcap recording.
+        """
         self.pcap_shutdown_event = self.car.camera_stopped_event
         thread = threading.Thread(target=self._start_pcap_recording)
         thread.start()
         return thread
 
     def run(self):
+        """
+        Run the experiment, including car simulation, attacker (if any), and pcap recording.
+        """
         if self.config["experiment"]["record_pcap"]:
             tshark_thread = self.start_pcap_recording_thread()
         car_thread = run_thread(self.car.run)
@@ -133,6 +190,12 @@ class Experiment:
             tshark_thread.join()
 
     def summarize_log_file(self) -> str:
+        """
+        Summarize the experiment log file.
+
+        Returns:
+            str: A summary of the log file.
+        """
         try:
             log_summary = summarize_log_file(self.log_path)
         except FileNotFoundError:
@@ -149,4 +212,10 @@ class Experiment:
         return summary
 
     def evaluate_success_rate(self) -> float:
+        """
+        Evaluate the success rate of the experiment.
+
+        Returns:
+            float: The success rate of the experiment.
+        """
         return evaluate_success_recording_rate(self.log_path)

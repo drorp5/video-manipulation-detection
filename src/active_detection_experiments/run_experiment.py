@@ -1,8 +1,33 @@
+"""
+run_experiment.py - Main Script for Running Active Detection Experiments
+
+This module contains the main logic for setting up and running active detection
+experiments. It handles configuration loading, experiment setup, and execution.
+
+Key Functions:
+- run_experiment_using_config_path: Runs an experiment using a config file path
+- fill_attacker_config: Fills in missing attacker configuration details
+- run_experiment: Main function to set up and run an experiment
+
+Key Components:
+- Experiment setup: Configures the car, attacker, and other experiment parameters
+- Logging: Sets up logging for the experiment
+- Recording: Configures video or frame recording based on experiment settings
+
+Usage:
+This script can be run directly or imported to use its functions in other scripts.
+
+Dependencies:
+- yaml: For loading configuration files
+- vimba: For camera control
+- active_manipulation_detectors: For data generation and validation
+- attacker: For simulating attacks
+"""
+
 from datetime import datetime
 import json
 import logging
 import threading
-from typing import Optional
 import yaml
 from pathlib import Path
 import numpy as np
@@ -33,12 +58,27 @@ from recorders import VideoReocrder, FramesRecorder
 
 
 def run_experiment_using_config_path(config_path: Path) -> None:
+    """
+    Run an experiment using a configuration file specified by its path.
+
+    Args:
+        config_path (Path): Path to the YAML configuration file.
+    """
     with open(config_path.as_posix(), "r") as f:
         experiment_config = yaml.safe_load(stream=f)
     run_experiment(experiment_config)
 
 
 def fill_attacker_config(config: dict) -> None:
+    """
+    Fill in missing attacker configuration details.
+
+    This function updates the attacker configuration with default values,
+    calculates timing parameters, and selects a random fake image if necessary.
+
+    Args:
+        config (dict): The complete experiment configuration dictionary.
+    """
     config["attacker"]["timing"]["fps"] = config["car"]["camera"]["fps"]
     if config["attacker"]["timing"]["pre_attack_duration_in_seconds"] is None:
         config["attacker"]["timing"]["pre_attack_duration_in_seconds"] = 0
@@ -86,6 +126,22 @@ def fill_attacker_config(config: dict) -> None:
 
 
 def run_experiment(experiment_config: dict) -> Experiment:
+    """
+    Set up and run an active detection experiment.
+
+    This function handles the entire experiment setup process, including:
+    - Generating an experiment ID
+    - Setting up logging
+    - Configuring the car and attacker
+    - Setting up recording (if enabled)
+    - Creating and running the Experiment instance
+
+    Args:
+        experiment_config (dict): The experiment configuration dictionary.
+
+    Returns:
+        Experiment: The completed Experiment instance.
+    """
     # generte experiment id
     experiment_id = str(uuid.uuid4())
     experiment_config["experiment"]["id"] = experiment_id
@@ -109,7 +165,6 @@ def run_experiment(experiment_config: dict) -> Experiment:
     logger = logging.getLogger(experiment_id)
     log_level = logging.DEBUG
     logger.setLevel(log_level)
-    
 
     # car
     car_config = experiment_config["car"]
@@ -137,18 +192,19 @@ def run_experiment(experiment_config: dict) -> Experiment:
         car_config["actions"]["video_path"] = video_path.absolute().as_posix()
         video_shape = (MAX_WIDTH // downfactor, MAX_HEIGHT // downfactor)
         recorder = VideoReocrder(
-                video_path=video_path,
-                fps=car_config["camera"]["fps"],
-                video_shape=video_shape,
-            )
+            video_path=video_path,
+            fps=car_config["camera"]["fps"],
+            video_shape=video_shape,
+        )
     elif car_config["actions"]["recorder"] == "frames":
-        frames_dir =  Path(experiment_config["experiment"]["results_directory"]) / "frames"
+        frames_dir = (
+            Path(experiment_config["experiment"]["results_directory"]) / "frames"
+        )
         recorder = FramesRecorder(frames_dir)
-    elif car_config["actions"]["recorder"]  is not None :
+    elif car_config["actions"]["recorder"] is not None:
         raise ValueError("recorder type not valid")
     else:
         recorder = None
-
 
     car_logic = ShapeVaryingLogicCar(
         config=experiment_config["car"],
@@ -157,7 +213,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
         logger=logger,
         camera_started_event=camera_started_event,
         camera_stopped_event=camera_stopped_event,
-        recorder=recorder
+        recorder=recorder,
     )
 
     # attacker
@@ -189,5 +245,7 @@ def run_experiment(experiment_config: dict) -> Experiment:
 
 if __name__ == "__main__":
     # experiment configuration
-    experiment_configuration_path = r"driving_experiments/experiment_config.yaml"
+    experiment_configuration_path = (
+        r"active_detection_experiments/experiment_config.yaml"
+    )
     run_experiment_using_config_path(config_path=experiment_configuration_path)

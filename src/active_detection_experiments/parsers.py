@@ -12,6 +12,15 @@ from gige.gvsp_frame import gvsp_frame_to_rgb
 
 
 def parse_log_file(file_path: Path) -> pd.DataFrame:
+    """
+    Parse a log file and extract relevant information into a DataFrame.
+
+    Args:
+        file_path (Path): Path to the log file.
+
+    Returns:
+        pd.DataFrame: DataFrame containing parsed log data.
+    """
     with open(file_path.as_posix(), "r") as file:
         log_lines = file.readlines()
 
@@ -43,6 +52,18 @@ def parse_log_file(file_path: Path) -> pd.DataFrame:
 
 
 def get_validation_results_summary(log_path: Path) -> Dict[str, int]:
+    """
+    Summarize validation results from a log file.
+
+    Args:
+        log_path (Path): Path to the log file.
+
+    Returns:
+        Dict[str, int]: Dictionary containing validation result counts.
+
+    Raises:
+        FileNotFoundError: If the log file doesn't exist.
+    """
     if not log_path.exists():
         raise FileNotFoundError
     res = {name: 0 for name in ValidationStatus._member_names_}
@@ -57,6 +78,15 @@ def get_validation_results_summary(log_path: Path) -> Dict[str, int]:
 
 
 def summarize_log_file(log_path: Path) -> str:
+    """
+    Generate a summary of the log file contents.
+
+    Args:
+        log_path (Path): Path to the log file.
+
+    Returns:
+        str: Summary of the log file.
+    """
     try:
         frames_log_df = parse_log_file(log_path)
         first_frame = frames_log_df["frame_id"].iloc[0]
@@ -100,25 +130,12 @@ def extract_frame_width_data(log_path: Path):
 
 def extract_frames_of_pcap(pcap_path: Path, log_path: Path, dst_dir: Path) -> None:
     """
-    Extracts specific frames from a pcap file based on timestamps provided in a log file and saves them to a destination directory.
+    Extract specific frames from a pcap file based on timestamps in a log file.
 
-    This function reads a pcap file and a log file containing timestamps, extracts the frames from the pcap file that match the timestamps in the log, and saves the extracted frames to the specified destination directory.
-
-    Parameters:
-    -----------
-    pcap_path : Path
-        The path to the pcap file from which frames will be extracted.
-
-    log_path : Path
-        The path to the log file containing timestamps of the frames to be extracted.
-
-    dst_dir : Path
-        The destination directory where the extracted frames will be saved.
-
-    Returns:
-    --------
-    None
-        This function does not return anything. It performs the extraction and saving of frames as a side effect.
+    Args:
+        pcap_path (Path): Path to the pcap file.
+        log_path (Path): Path to the log file with timestamps.
+        dst_dir (Path): Destination directory for extracted frames.
     """
 
     pcap_parser = GvspPcapParser(pcap_path, completed_only=True)
@@ -153,19 +170,17 @@ def extract_frames_of_pcap(pcap_path: Path, log_path: Path, dst_dir: Path) -> No
 
 
 def evaluate_success_recording_rate(log_path: Path) -> float:
+    """
+    Calculate the success rate of frame recording.
+
+    Args:
+        log_path (Path): Path to the log file.
+
+    Returns:
+        float: Success rate of frame recording.
+    """
     frames_log_df = parse_log_file(log_path)
     first_frame = frames_log_df["frame_id"].iloc[0]
     last_frame = frames_log_df["frame_id"].iloc[-1]
     num_frames = len(frames_log_df)
     return num_frames / (last_frame - first_frame + 1)
-
-
-if __name__ == "__main__":
-    log_path = Path(
-        r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_12_10_46_11_24088764-7371-41b3-a243-348b39d8b078\log_24088764-7371-41b3-a243-348b39d8b078.log"
-    )
-    pcap_path = Path(
-        r"C:\Users\user\Desktop\Dror\video-manipulation-detection\OUTPUT\tmp\2024_06_12_10_46_11_24088764-7371-41b3-a243-348b39d8b078\24088764-7371-41b3-a243-348b39d8b078.pcap"
-    )
-    dst_dir = log_path.parent / "pcap_frames"
-    extract_frames_of_pcap(pcap_path, log_path, dst_dir)

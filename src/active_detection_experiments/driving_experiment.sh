@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to your Python script
-python_script="driving_experiments\cli.py"
+python_script="active_detection_experiments\cli.py"
 
 # Define nuumber of iterations for every setup
 num_iters=10
