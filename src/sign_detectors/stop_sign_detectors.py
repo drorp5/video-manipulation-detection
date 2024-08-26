@@ -1,3 +1,30 @@
+"""
+stop_sign_detectors.py - Stop Sign Detection Module
+
+This module provides classes and functions for detecting stop signs in images using
+various detection methods including Haar Cascades, YOLO, and MobileNet.
+
+Key Components:
+- StopSignDetector: Abstract base class for stop sign detectors
+- HaarDetector: Detector using Haar Cascades
+- YoloDetector: Detector using YOLO (You Only Look Once)
+- MobileNetDetector: Detector using MobileNet
+- draw_detections: Function to visualize detections on an image
+
+Dependencies:
+- opencv-python (cv2): For image processing and detection algorithms
+- numpy: For numerical operations
+
+Usage:
+Import the desired detector class or use the get_detector() function to instantiate
+a detector based on its name. Then use the detect() method to find stop signs in an image.
+
+Example:
+    detector = get_detector("MobileNet")
+    detections = detector.detect(image)
+    visualized_image = draw_detections(image, detections)
+"""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List
@@ -16,20 +43,59 @@ INPUT_SIZE = (484, 304)  # width, height
 
 
 class StopSignDetector(ABC):
+    """
+    Abstract base class for stop sign detectors.
+
+    Attributes:
+        confidence_th (float): Confidence threshold for detections.
+        nms_th (float): Non-maximum suppression threshold.
+    """
+
     def __init__(self, confidence_th=0.5, nms_th=0.4):
+        """
+        Initialize the StopSignDetector.
+
+        Args:
+            confidence_th (float): Confidence threshold for detections.
+            nms_th (float): Non-maximum suppression threshold.
+        """
         self.confidence_th = confidence_th
         self.nms_th = nms_th
 
     @property
     @abstractmethod
     def name(self):
+        """
+        Abstract property for the detector's name.
+
+        Returns:
+            str: The name of the detector.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def _detect(self, img: np.ndarray) -> List[DetectedObject]:
+        """
+        Abstract method for detection implementation.
+
+        Args:
+            img (np.ndarray): Input image.
+
+        Returns:
+            List[DetectedObject]: List of detected objects.
+        """
         raise NotImplementedError
 
     def detect(self, img: np.ndarray) -> List[DetectedObject]:
+        """
+        Detect stop signs in the given image using sliding window approach.
+
+        Args:
+            img (np.ndarray): Input image.
+
+        Returns:
+            List[DetectedObject]: List of detected stop signs after non-maximum suppression.
+        """
         # sliding window detection
         window_size = INPUT_SIZE
         step_size = None  # no overlap
@@ -51,6 +117,17 @@ class StopSignDetector(ABC):
 def draw_detections(
     img: np.ndarray, detections: List[DetectedObject], with_confidence: bool = False
 ) -> np.ndarray:
+    """
+    Draw bounding boxes and optionally confidence scores on the image.
+
+    Args:
+        img (np.ndarray): Input image.
+        detections (List[DetectedObject]): List of detected objects.
+        with_confidence (bool): Whether to draw confidence scores.
+
+    Returns:
+        np.ndarray: Image with drawn detections.
+    """
     out_img = img.copy()
     for detection in detections:
         cv2.rectangle(
@@ -84,14 +161,38 @@ def draw_detections(
 
 
 def list_detectors() -> List[str]:
+    """
+    List all available detector names.
+
+    Returns:
+        List[str]: List of detector names.
+    """
     return list(get_detectors_dict().keys())
 
 
 def get_detectors_dict():
+    """
+    Get a dictionary mapping detector names to their respective classes.
+
+    Returns:
+        dict: Dictionary of detector names and classes.
+    """
     return {"Haar": HaarDetector, "Yolo": YoloDetector, "MobileNet": MobileNetDetector}
 
 
 def get_detector(detector_name: str) -> StopSignDetector:
+    """
+    Get a detector instance by its name.
+
+    Args:
+        detector_name (str): Name of the detector.
+
+    Returns:
+        StopSignDetector: Instance of the requested detector.
+
+    Raises:
+        ValueError: If the detector name is not recognized.
+    """
     if detector_name is None:
         return None
     detectors_dict = get_detectors_dict()
@@ -101,7 +202,20 @@ def get_detector(detector_name: str) -> StopSignDetector:
 
 
 class HaarDetector(StopSignDetector):
+    """
+    Haar Cascade-based stop sign detector.
+    """
+
     def __init__(self, confidence_th=0, nms_th=0, grayscale=False, blur=False):
+        """
+        Initialize the HaarDetector.
+
+        Args:
+            confidence_th (float): Confidence threshold.
+            nms_th (float): Non-maximum suppression threshold.
+            grayscale (bool): Whether to convert image to grayscale.
+            blur (bool): Whether to apply Gaussian blur.
+        """
         super().__init__(confidence_th, nms_th)
         self.config_path = MODELS_DIR / "stop_sign_classifier_2.xml"
         self.config_path = self.config_path.as_posix()
@@ -111,6 +225,15 @@ class HaarDetector(StopSignDetector):
         self.input_size = INPUT_SIZE
 
     def _detect(self, img: np.ndarray) -> List[DetectedObject]:
+        """
+        Detect stop signs using Haar Cascade classifier.
+
+        Args:
+            img (np.ndarray): Input image.
+
+        Returns:
+            List[DetectedObject]: List of detected stop signs.
+        """
         if self.blur:
             img = cv2.GaussianBlur(img, (5, 5), 0)
         if self.grayscale:
@@ -126,7 +249,18 @@ class HaarDetector(StopSignDetector):
 
 
 class YoloDetector(StopSignDetector):
+    """
+    YOLO-based stop sign detector.
+    """
+
     def __init__(self, confidence_th=0.5, nms_th=0.4):
+        """
+        Initialize the YoloDetector.
+
+        Args:
+            confidence_th (float): Confidence threshold.
+            nms_th (float): Non-maximum suppression threshold.
+        """
         super().__init__(confidence_th, nms_th)
         coco_names_path = MODELS_DIR / "coco.names"
         with open(coco_names_path.as_posix(), "r") as f:
@@ -142,6 +276,15 @@ class YoloDetector(StopSignDetector):
         self.inference_shape = INPUT_SIZE
 
     def _detect(self, img: np.ndarray) -> List[DetectedObject]:
+        """
+        Detect stop signs using YOLO.
+
+        Args:
+            img (np.ndarray): Input image.
+
+        Returns:
+            List[DetectedObject]: List of detected stop signs.
+        """
         blob = cv2.dnn.blobFromImage(
             img, 1 / MAX_PIXEL_VALUE, self.inference_shape, swapRB=True, crop=False
         )
@@ -178,7 +321,18 @@ class YoloDetector(StopSignDetector):
 
 
 class MobileNetDetector(StopSignDetector):
+    """
+    MobileNet-based stop sign detector.
+    """
+
     def __init__(self, confidence_th=0.5, nms_th=0.4):
+        """
+        Initialize the MobileNetDetector.
+
+        Args:
+            confidence_th (float): Confidence threshold.
+            nms_th (float): Non-maximum suppression threshold.
+        """
         super().__init__(confidence_th, nms_th)
         coco_names_path = MODELS_DIR / "coco.names"
         with open(coco_names_path.as_posix(), "r") as f:
@@ -202,6 +356,15 @@ class MobileNetDetector(StopSignDetector):
         self.detector.setInputSwapRB(True)
 
     def _detect(self, img: np.ndarray) -> List[DetectedObject]:
+        """
+        Detect stop signs using MobileNet.
+
+        Args:
+            img (np.ndarray): Input image.
+
+        Returns:
+            List[DetectedObject]: List of detected stop signs.
+        """
         detections = []
         detections_class_index, detections_confidence, detections_bbox = (
             self.detector.detect(img, confThreshold=self.confidence_th)

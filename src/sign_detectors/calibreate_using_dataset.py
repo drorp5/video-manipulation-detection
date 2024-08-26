@@ -1,21 +1,46 @@
+"""
+calibrate_using_dataset.py - Calibration Script for Stop Sign Detector
+
+This module calibrates a stop sign detector using a dataset of annotated images.
+It processes both positive (containing stop signs) and negative (without stop signs) 
+images to generate a calibration dataset.
+
+Key Components:
+- DatasetImage: Class to handle image loading and resizing
+- process_positive_annotation: Function to process images with stop signs
+- process_negative_annotation: Function to process images without stop signs
+- get_all_annotations: Function to load all image annotations
+- split_annotations: Function to separate annotations into target and non-target
+
+Dependencies:
+- opencv-python (cv2): For image processing
+- pandas: For data manipulation and CSV output
+- tqdm: For progress bars
+- multiprocessing: For parallel processing of images
+
+Usage:
+Run this script directly to generate a calibration dataset. The resulting CSV file
+will contain confidence scores for both positive and negative samples.
+
+Note: Ensure that the dataset directory structure and paths are correctly set up
+before running the script.
+"""
+
 from typing import List, Tuple, Optional
 from pathlib import Path
 import pandas as pd
 from tqdm.auto import tqdm
 import json
 import random
-import numpy as np
 import cv2
-from IPython.display import display, Image
-from pprint import pprint
 import multiprocessing
 from dataclasses import dataclass
 
 
 from passive_detectors_evaluation.bootstrapper import DST_SHAPE
-from sign_detectors import get_detector, draw_detections
-from utils.datasets import get_largest_bounding_box, resize_bounding_box
-from utils.detection_utils import Rectangle, calculate_iou, DetectedObject
+from sign_detectors import get_detector
+from utils.datasets import get_largest_bounding_box
+from utils.detection_utils import Rectangle, calculate_iou
 
 
 dataset_directory = Path("../datasets/mtsd_v2_fully_annotated")
@@ -33,6 +58,15 @@ iou_th = 0.3
 
 
 def load_annotation_from_path(annotation_path: Path) -> dict:
+    """
+    Load a single annotation file from the given path.
+
+    Args:
+        annotation_path (Path): Path to the annotation JSON file.
+
+    Returns:
+        dict: Loaded annotation data with added 'image_key'.
+    """
     with open(annotation_path.as_posix(), "r") as fid:
         anno = json.load(fid)
     anno["image_key"] = annotation_path.stem
@@ -40,6 +74,15 @@ def load_annotation_from_path(annotation_path: Path) -> dict:
 
 
 def get_all_annotations(max_files: Optional[int] = None) -> List[dict]:
+    """
+    Load all annotation files from the annotations directory.
+
+    Args:
+        max_files (Optional[int]): Maximum number of files to load. If None, load all.
+
+    Returns:
+        List[dict]: List of loaded annotation dictionaries.
+    """
     all_files = list(annotations_directory.glob("*.json"))
     if max_files is not None:
         random.shuffle(all_files)
@@ -51,6 +94,16 @@ def get_all_annotations(max_files: Optional[int] = None) -> List[dict]:
 def split_annotations(
     annotations: List[dict], target_object: str
 ) -> Tuple[List[dict], List[dict]]:
+    """
+    Split annotations into target (containing the specified object) and non-target.
+
+    Args:
+        annotations (List[dict]): List of all annotation dictionaries.
+        target_object (str): The target object label to filter for.
+
+    Returns:
+        Tuple[List[dict], List[dict]]: Lists of target and non-target annotations.
+    """
     # filter only annotation of the target object
     target_annotations_files = []
     non_target_annotations = []
@@ -82,12 +135,22 @@ def split_annotations(
 
 @dataclass
 class ImageShape:
+    """Dataclass to represent image dimensions."""
+
     width: int
     height: int
 
 
 class DatasetImage:
+    """Class to handle dataset image loading and resizing."""
+
     def __init__(self, img_key: str) -> None:
+        """
+        Initialize DatasetImage with the given image key.
+
+        Args:
+            img_key (str): The key (filename without extension) of the image.
+        """
         # read
         img_path = images_directory / f"{img_key}.jpg"
         img_bgr = cv2.imread(img_path.as_posix())
@@ -114,6 +177,15 @@ class DatasetImage:
 
 
 def process_positive_annotation(annotation: dict) -> float:
+    """
+    Process a positive annotation (image containing a stop sign).
+
+    Args:
+        annotation (dict): Annotation dictionary for the image.
+
+    Returns:
+        float: Confidence score of the detection.
+    """
     image_key = annotation["image_key"]
     img = DatasetImage(image_key)
     gt_bounding_box = get_largest_bounding_box(
@@ -143,6 +215,15 @@ def process_positive_annotation(annotation: dict) -> float:
 
 
 def process_negative_annotation(annotation: dict) -> float:
+    """
+    Process a negative annotation (image not containing a stop sign).
+
+    Args:
+        annotation (dict): Annotation dictionary for the image.
+
+    Returns:
+        float: Confidence score of the highest detection (if any).
+    """
     image_key = annotation["image_key"]
     img = DatasetImage(image_key)
     detections = detector.detect(img.img)
