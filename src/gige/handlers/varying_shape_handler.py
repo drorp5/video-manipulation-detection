@@ -1,8 +1,7 @@
 import logging
 import time
 from typing import List, Optional
-from vimba import Camera, Frame, FrameStatus
-import cv2
+from vimba import Camera, Frame
 
 from active_manipulation_detectors.side_channel.bits_encoder import (
     IntBitsEncoderDecoder,
@@ -13,7 +12,7 @@ from active_manipulation_detectors.side_channel.data_generator import (
 from active_manipulation_detectors.side_channel.validation import DataValidator
 from gige.handlers.sign_detector_handler import SignDetectorHandler
 from gige.handlers.recorder_handler import RecorderHandler
-from recorders import Recorder
+from active_detection_experiments.recorders import Recorder
 from utils.view import add_text_box
 from sign_detectors.stop_sign_detectors import StopSignDetector, draw_detections
 from gige.gige_constants import MAX_HEIGHT, MAX_WIDTH
