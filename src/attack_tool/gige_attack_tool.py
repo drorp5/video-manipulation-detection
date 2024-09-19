@@ -203,12 +203,12 @@ class GigEVisionAttackTool:
 
     def send_stop_command(self, count: int = 1, ack_required: bool = False) -> None:
         """Send a command to stop acquisition (can be used for DoS)."""
-        cmd = self._get_aquisition_cmd(reg_val=0, ack_required=ack_required)
+        cmd = self._get_acquisition_cmd(reg_val=0, ack_required=ack_required)
         sendp(cmd, iface=self.interface, count=count, verbose=False)
 
     def send_start_command(self, count: int = 1, ack_required: bool = False) -> None:
         """Send a command to start acquisition (can be used for DoS)."""
-        cmd = self._get_aquisition_cmd(reg_val=1, ack_required=ack_required)
+        cmd = self._get_acquisition_cmd(reg_val=1, ack_required=ack_required)
         sendp(cmd, iface=self.interface, count=count, verbose=False)
 
     def sniff_link_parameters(self) -> None:
