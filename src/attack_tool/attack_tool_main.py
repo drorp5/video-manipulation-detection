@@ -87,11 +87,10 @@ def main():
 
     # Set the frame rate
     fps = args.fps
-    injection_frame_rate = args.rate or (1 / config["sendp_ampiric_frame_time"])
 
     if args.mode == "full_frame_injection":
         logger.info(
-            f"Injecting full frame from {args.path} for {args.duration} seconds at {frame_rate} fps"
+            f"Injecting full frame from {args.path} for {args.duration} seconds at {fps} fps"
         )
         logger.info(f"Using interface: {config['interface']}")
         attack_tool.fake_still_image(
@@ -101,7 +100,7 @@ def main():
         )
     elif args.mode == "stripe_injection":
         logger.info(
-            f"Injecting stripe from {args.path} for {args.duration} seconds at {fps} fps and injection rate of {injection_frame_rate}"
+            f"Injecting stripe from {args.path} for {args.duration} seconds at {fps} fps"
         )
         logger.info(f"Using interface: {config['interface']}")
         attack_tool.inject_stripe_consecutive_frames(
