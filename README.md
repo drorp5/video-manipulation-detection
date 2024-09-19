@@ -40,18 +40,38 @@ This project implements a comprehensive video manipulation detection system for 
 ## Usage
 
 ### Simulating Attacks
+While runninng an active GigE Vision stream use
+```console
+    python attack_tool/attack_tool_main.py -m full_frame_injection -p /path/to/image.jpg -d 10 --fps 30 --setup WINDOWS_VIMBA
+```
+
+for a full frame injection attack and
+
+```console
+    python attack_tool/attack_tool_main.py -m stripe_injection -p /path/to/image.jpg -d 10 --fps 30 --setup WINDOWS_VIMBA
+```
+
+for stripe injection attack (the numbr of injected rows is an adjustable parameter in the script).
+
+The network parameters are configured in the src\attack_tool\gige_attack_config.py file.
+
+Another option via a CLI:
 
 ```python
 from attack_tool import GigEVisionAttackTool
 
-attack_tool = GigEVisionAttackTool(interface="eth0", cp_ip="192.168.1.1", camera_ip="192.168.1.2")
+attack_tool = GigEVisionAttackTool(interface="eth0", cp_ip="192.168.1.1", camera_ip="192.168.1.2", cp_mac="00:00:00:00:00:00", camera_mac="00:00:00:00:00:01", max_payload_bytes=8963,img_width=1936, img_height=1216)
 
 # Frame injection
-attack_tool.inject_gvsp_packets(gvsp_packets, block_id=1000, count=5)
+attack_tool.fake_still_image("fake_image.png", duration=5, fps=30)
 
-# Stripe injection
-attack_tool.inject_stripe("fake_image.png", first_row=100, num_rows=50, future_id_diff=10, count=3)
+# Single Stripe injection
+attack_tool.inject_stripe("fake_image.png", first_row=100, num_rows=50, future_id_diff=1, count=1)
+
+# Consecutive Stripe injection
+attack_tool.inject_stripe("fake_image.png", first_row=100, num_rows=50, fps=30, injection_duration=5, future_id_diff=1, count=1)
 ```
+
 
 ### Running Passive Detection
 
@@ -78,12 +98,10 @@ run_experiment_using_config_path(config_path)
 
 #### Using the GUI:
 
-To launch the GUI for configuring and running experiments:
+To launch the GUI for configuring and running experiments 
 
-```python
-from GUI.app import run_gui
-
-run_gui()
+```console
+python active_detection_experiments/gui.py
 ```
 
 The GUI provides an intuitive interface for setting up experiment parameters, running experiments, and viewing results.
