@@ -138,3 +138,4 @@ TODO
 *.ipynb
 *.csv
 datasets/
+.vscode/
