@@ -692,7 +692,6 @@ class GigEVisionAttackTool:
         self,
         img_path: str,
         duration: float,
-        injection_effective_frame_rate: float,
         fps: float,
     ) -> None:
         """
@@ -701,8 +700,7 @@ class GigEVisionAttackTool:
         Args:
             img_path (str): Path to the image file to inject.
             duration (float): Duration of the injection in seconds.
-            injection_effective_frame_rate (float): Effective frame rate for the injection.
-            fps (Optional[float]): Frames per second of the original stream.
+            fps float: Frames per second of the original stream.
         """
         timeout = 1  # seconds
         self.sniff_block_id()
@@ -725,7 +723,7 @@ class GigEVisionAttackTool:
             timeout=timeout,
         )
         self.log("Full Frame Injection Started", log_level=logging.DEBUG)
-        num_frames = round(duration * min(injection_effective_frame_rate, fps))
+        num_frames = round(duration * fps)
         self.log(f"Number of fake frames = {num_frames}", log_level=logging.DEBUG)
         self.log(f"Last GVSP BlockID = {self.last_block_id}", log_level=logging.DEBUG)
         gvsp_fake_packets = self.img_to_gvsp(img_path, block_id=DEFAULT_BLOCK_ID)
@@ -749,6 +747,8 @@ class GigEVisionAttackTool:
             iteration_duration = iteration_ended - itertation_started
             iterations_time.append(iteration_duration)
             time.sleep(max(0, 1 / fps - iteration_duration))
+            if time.time() - injection_started >= duration:
+                break
 
         injection_finished = time.time()
         self.log("Full Frame Injection Ended", log_level=logging.DEBUG)

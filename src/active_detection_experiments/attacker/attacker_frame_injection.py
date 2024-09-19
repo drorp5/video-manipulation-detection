@@ -25,8 +25,6 @@ class GigEAttackerFrameInjection(GigEAttacker):
         self.gige_link.fake_still_image(
             img_path=self.config["injection"]["fake_path"],
             duration=time_left,
-            injection_effective_frame_rate=1
-            / self.config["timing"]["ampiric_frame_time_in_seconds"],
             fps=self.config["timing"]["fps"],
         )
 

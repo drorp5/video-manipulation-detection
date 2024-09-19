@@ -14,12 +14,12 @@ Options:
     -m, --mode        Attack mode (full_frame_injection, stripe_injection)
     -p, --path        Path to image file for injection
     -d, --duration    Duration of the attack in seconds
-    -r, --rate        Frame rate for injection
+    --fps             Stream Frame rate
     --setup           Setup to use (WINDOWS_VIMBA, WINDOWS_MATLAB_REC, WINDOWS_MATLAB_PREVIEW, LINUX_ROS)
     --help            Show this help message and exit
 
 Example:
-    python attack_tool/attack_tool_main.py -m full_frame_injection -p /path/to/image.jpg -d 10 -r 30 --setup WINDOWS_VIMBA
+    python attack_tool/attack_tool_main.py -m full_frame_injection -p /path/to/image.jpg -d 10 --fps 30 --setup WINDOWS_VIMBA
 """
 
 import argparse
@@ -50,7 +50,7 @@ def parse_arguments():
     parser.add_argument(
         "-d", "--duration", type=float, default=5, help="Duration of attack in seconds"
     )
-    parser.add_argument("-r", "--rate", type=float, help="Frame rate for injection")
+    parser.add_argument("--fps", required=True, type=float, help="Stream Frame Rate")
     parser.add_argument(
         "--setup",
         type=str,
@@ -86,7 +86,8 @@ def main():
     attack_tool.sniff_link_parameters()
 
     # Set the frame rate
-    frame_rate = args.rate or (1 / config["sendp_ampiric_frame_time"])
+    fps = args.fps
+    injection_frame_rate = args.rate or (1 / config["sendp_ampiric_frame_time"])
 
     if args.mode == "full_frame_injection":
         logger.info(
@@ -96,18 +97,18 @@ def main():
         attack_tool.fake_still_image(
             img_path=args.path,
             duration=args.duration,
-            injection_effective_frame_rate=frame_rate,
+            fps=fps,
         )
     elif args.mode == "stripe_injection":
         logger.info(
-            f"Injecting stripe from {args.path} for {args.duration} seconds at {frame_rate} fps"
+            f"Injecting stripe from {args.path} for {args.duration} seconds at {fps} fps and injection rate of {injection_frame_rate}"
         )
         logger.info(f"Using interface: {config['interface']}")
         attack_tool.inject_stripe_consecutive_frames(
             img_path=args.path,
             first_row=0,  # Adjust as needed
             num_rows=10,  # Adjust as needed
-            fps=frame_rate,
+            fps=fps,
             injection_duration=args.duration,
         )
 
