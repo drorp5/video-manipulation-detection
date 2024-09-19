@@ -53,9 +53,9 @@ def parse_arguments():
     parser.add_argument("-r", "--rate", type=float, help="Frame rate for injection")
     parser.add_argument(
         "--setup",
-        type=Setup,
-        choices=list(Setup),
-        default=Setup.WINDOWS_VIMBA,
+        type=str,
+        choices=Setup._member_names_,
+        default="WINDOWS_VIMBA",
         help="Setup to use",
     )
     return parser.parse_args()
@@ -66,6 +66,8 @@ def initialize_attack_tool(config: dict) -> GigEVisionAttackTool:
         interface=config["interface"],
         cp_ip=config["cp_ip"],
         camera_ip=config["camera_ip"],
+        cp_mac=config["cp_mac"],
+        camera_mac=config["camera_mac"],
         max_payload_bytes=config["max_payload_bytes"],
         img_width=config["img_width"],
         img_height=config["img_height"],
@@ -75,7 +77,7 @@ def initialize_attack_tool(config: dict) -> GigEVisionAttackTool:
 
 def main():
     args = parse_arguments()
-    config = get_config(args.setup)
+    config = get_config(Setup[args.setup])
 
     # Initialize the attack tool
     attack_tool = initialize_attack_tool(config)

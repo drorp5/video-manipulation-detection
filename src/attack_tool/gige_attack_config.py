@@ -73,4 +73,6 @@ def get_config(setup: Setup = DEFAULT_SETUP) -> dict:
     Returns:
         dict: A dictionary containing the configuration parameters.
     """
-    return SETUP_CONFIG[setup]
+    config = {"cp_mac": CP_MAC, "camera_mac": CAMERA_MAC}
+    config.update(SETUP_CONFIG[setup])
+    return config
